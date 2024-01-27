@@ -3,19 +3,19 @@ library(reshape2)
 library(ggplot2)
 library(quantmod)
 
-path_22='C:/Users/Thiti/Desktop/data_tennis/Bet_data/2022.xlsx'
+path_22='C:/Users/Thiti/Desktop/Tennis-Data/Bet_data/2022.xlsx'
 
 data_22=read_xlsx(path=path_22)
 
-path_21='C:/Users/Thiti/Desktop/data_tennis/Bet_data/2021.xlsx'
+path_21='C:/Users/Thiti/Desktop/Tennis-Data/Bet_data/2021.xlsx'
 
 data_21=read_xlsx(path=path_21)
 
-path_20='C:/Users/Thiti/Desktop/data_tennis/Bet_data/2020.xlsx'
+path_20='C:/Users/Thiti/Desktop/Tennis-Data/Bet_data/2020.xlsx'
 
 data_20=read_xlsx(path=path_20)
 
-path_19='C:/Users/Thiti/Desktop/data_tennis/Bet_data/2019.xlsx'
+path_19='C:/Users/Thiti/Desktop/Tennis-Data/Bet_data/2019.xlsx'
 
 data_19=read_xlsx(path=path_19)
 
@@ -84,7 +84,7 @@ t=table(data2$odd_play>=1.8&data2$odd_play<=odd_s,data2$Issue_match)
 t
 t[2,2]/(t[2,2]+t[2,1])
 
-# On regarde la moyenne des cotes jouées dans cette configuration
+# On regarde la moyenne des cotes jou?es dans cette configuration
 
 mean(data2$odd_play[data2$odd_play>=1.8&data2$odd_play<=odd_s],na.rm = T)
 # 2.42
@@ -92,14 +92,14 @@ mean(data2$odd_play[data2$odd_play>=1.8&data2$odd_play<=odd_s],na.rm = T)
 odd_t=100/((t[2,2]/(t[2,2]+t[2,1]))*100)
 odd_t
 
-# cote théorique
+# cote th?orique
 
 # On commence la simulation 
 
 data2=data2[data2$odd_play>=1.8&data2$odd_play<=odd_s,]
 data2=na.omit(data2)
 
-# tirer un numéro de ligne
+# tirer un num?ro de ligne
 # le mettre dans un data frame (odd_play & issue_match)
 # tirer 10000 fois une ligne
 
@@ -112,16 +112,16 @@ bk2=matrix(NA,nrow=n,ncol=k)
 for (j in 1:k){
   
   for (i in 1:n){
-    # on tire un numéro de ligne du data set 50/50
+    # on tire un num?ro de ligne du data set 50/50
     row=sample(1:nrow(data2),size=1,replace = T)
-    # on ajoute l'issue du match avec la cote jouée dans un data set
+    # on ajoute l'issue du match avec la cote jou?e dans un data set
     data3[i,1]=data2$Issue_match[row]
     data3[i,2]=data2$odd_play[row]
     
   }
-  # On calcul les gains cumulés suites au n paris
+  # On calcul les gains cumul?s suites au n paris
   cash=cumsum(ifelse(data3$Issue=='Underdog Win',5*data3$Odd-5,-5))
-  # on prend les gains finaux cumulés
+  # on prend les gains finaux cumul?s
   bk[j]=cash[n]
   # on stock une BK parmis les 500
   bk2[,j]=cash
@@ -152,7 +152,7 @@ ggplot(bk3,aes(x=NB))+
   geom_line(aes(y=Q1),color='steelblue')+
   geom_line(aes(y=Q2),color='steelblue')+
   geom_line(aes(y=0),color='red',linetype='dashed')+
-  scale_y_continuous("Gains cumulés",breaks = seq(-100,3000,250))+
+  scale_y_continuous("Gains cumul?s",breaks = seq(-100,3000,250))+
   scale_x_continuous("Nombre de paris")+
   theme_classic()
 
@@ -174,11 +174,11 @@ ggplot(mdat, aes(x=N_bet, y=value,color=variable)) +
   theme(panel.grid=element_blank()) +
   geom_line(size=0.3)+
   theme(legend.position = "none")+
-  scale_y_continuous("Gains cumulés",breaks = seq(-200,3000,250))+
+  scale_y_continuous("Gains cumul?s",breaks = seq(-200,3000,250))+
   scale_x_continuous("Nombre de paris")+
   ggtitle("Simulation de Monte Carlo sur des matchs avec un setup type 50/50 servbot")
 
-# Expérience comparative en jouant que des underdog mais à l'aveugle
+# Exp?rience comparative en jouant que des underdog mais ? l'aveugle
 
 data_naive=data
 data_naive$Fav_W=0
@@ -197,7 +197,7 @@ t=table(data_naive$odd_play>=1.8&data_naive$odd_play<=odd_s,data_naive$Issue_mat
 t
 t[2,2]/(t[2,2]+t[2,1])
 
-# On regarde la moyenne des cotes jouées dans cette configuration
+# On regarde la moyenne des cotes jou?es dans cette configuration
 
 mean(data_naive$odd_play[data_naive$odd_play>1.8&data_naive$odd_play<=odd_s],na.rm = T)
 # 2.42
@@ -212,7 +212,7 @@ data_naive=na.omit(data_naive)
 
 data_naive=data_naive[sample(c(1:nrow(data_naive)),size=600,replace=T),]
 
-# tirer un numéro de ligne
+# tirer un num?ro de ligne
 # le mettre dans un data frame (odd_play & issue_match)
 # tirer 10000 fois une ligne
 
@@ -225,16 +225,16 @@ bk_naive=matrix(NA,nrow=n,ncol=k)
 for (j in 1:k){
   
   for (i in 1:n){
-    # on tire un numéro de ligne du data set 50/50
+    # on tire un num?ro de ligne du data set 50/50
     row=sample(1:nrow(data_naive),size=1,replace = T)
-    # on ajoute l'issue du match avec la cote jouée dans un data set
+    # on ajoute l'issue du match avec la cote jou?e dans un data set
     data4[i,1]=data_naive$Issue_match[row]
     data4[i,2]=data_naive$odd_play[row]
     
   }
-  # On calcul les gains cumulés suites au n paris
+  # On calcul les gains cumul?s suites au n paris
   cash=cumsum(ifelse(data4$Issue=='Underdog Win',5*data4$Odd-5,-5))
-  # on prend les gains finaux cumulés
+  # on prend les gains finaux cumul?s
   bk[j]=cash[n]
   # on stock une BK parmis les 500
   bk_naive[,j]=cash
@@ -263,7 +263,7 @@ ggplot(bk3,aes(x=NB))+
   geom_line(aes(y=Q1),color='steelblue')+
   geom_line(aes(y=Q2),color='steelblue')+
   geom_line(aes(y=0),color='red',linetype='dashed')+
-  scale_y_continuous("Gains cumulés",breaks = seq(-100,3000,250))+
+  scale_y_continuous("Gains cumul?s",breaks = seq(-100,3000,250))+
   scale_x_continuous("Nombre de paris")+
   theme_classic()
 

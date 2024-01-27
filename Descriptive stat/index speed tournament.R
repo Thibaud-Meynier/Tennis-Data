@@ -1,4 +1,4 @@
-# Calcul de la rapidité des courts
+# Calcul de la rapidit? des courts
 
 library(ggpubr)
 library(gridExtra)
@@ -8,7 +8,7 @@ library(tidyverse)
 library(cowplot)
 library(sqldf)
 
-year=2003
+year=2022
 
 url="https://raw.githubusercontent.com/JeffSackmann/tennis_atp/master/atp_matches"
 
@@ -16,9 +16,9 @@ link=paste(url,'_',year,'.csv',sep='')
 
 data=read.csv2(link,sep=',')
 
-# on enlève les matchs finis avant terme (ab, wo ou disqualificaton)
+# on enl?ve les matchs finis avant terme (ab, wo ou disqualificaton)
 
-patern=c('RET','W/O','Def.','DEF') #patern à detecter dans la variable score
+patern=c('RET','W/O','Def.','DEF') #patern ? detecter dans la variable score
 patern2=c('Davis Cup','Olympics','Laver Cup')
 
 #filter for rows where status column contains one of several strings
@@ -40,7 +40,7 @@ data2=data[data$test==FALSE&data$test2==FALSE,]
 data2$game=NA
 
 for (i in 1:nrow(data2)){
-  # on nettoi la ièeme ligne
+  # on nettoi la i?eme ligne
   x=strsplit(gsub("\\s*\\([^\\)]+\\)","",data2$score[i]),"-| ",fixed=F)
   data2$game[i]=sum(as.numeric(as.character(x[[1]])))
   print(i)
@@ -129,7 +129,7 @@ head(df[order(df$index,decreasing=F),],10)
 
 quantile(df$index)
 
-# un DF par catégorie de tournoi (pour le plot ensuite)
+# un DF par cat?gorie de tournoi (pour le plot ensuite)
 
 df_gc=df[df$Category=='GC',]
 df_1000=df[df$Category=='ATP 1000',]
@@ -141,7 +141,7 @@ df_250=df[df$Category=='ATP 250',]
 # code couleur selon la surface
 col_code=data.frame('col'=c("Chocolate","chartreuse4","Steelblue","Purple"),'Surface'=c('Clay','Grass','Hard','Indoor'))
 
-# on selectionne les couleurs had hoc en fonction des surfaces à plot
+# on selectionne les couleurs had hoc en fonction des surfaces ? plot
 col=col=as.character(col_code$col[col_code$Surface%in%df_gc$Surface])
 
 GC=ggplot(df_gc, aes(x=Tournament, y=index, fill=Surface)) +
