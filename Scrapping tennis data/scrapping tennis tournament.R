@@ -7,10 +7,10 @@ get_tournament=function(tournament,year) {
   library(lubridate)
   
   url=paste('https://www.tennisexplorer.com/',tournament,'/',year,'/','atp-men/',sep='')
-  # extraire les données à partir de la page Web
+  # extraire les donn?es ? partir de la page Web
   page <- read_html(url)
   matches <- page %>% html_nodes("table.result") %>% html_table()
-  # nettoyer et organiser les données extraites
+  # nettoyer et organiser les donn?es extraites
   matches <- matches[[1]]
   colnames(matches)=matches[1,]
   matches=matches[-1,]
@@ -58,6 +58,10 @@ get_tournament=function(tournament,year) {
 year=2023
 tournament=c('hertogenbosch','stuttgart','halle',"queen-s-club","mallorca","eastbourne")
 df_final=data.frame(matrix(nrow=0,ncol=21,NA))
+
+year=2021
+tournament='olympics-tokyo'
+get_tournament('olympics-tokyo',2021)
 
 for (i in tournament){
   df=get_tournament(i,year)
