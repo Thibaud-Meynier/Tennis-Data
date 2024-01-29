@@ -6,15 +6,15 @@ library(tidyverse)
 library(sqldf)
 library(sjmisc)
 
-#Annee 2021
+#Annee 2020
 
 ##### IMPORT DES DONNEES #####
 
-path_21='C:/Users/Thiti/Desktop/Tennis-Data/Bet_data/2021.xlsx'
+path_20='C:/Users/Thiti/Desktop/Tennis-Data/Bet_data/2020.xlsx'
 
-data_21=read_xlsx(path=path_21)
+data_20=read_xlsx(path=path_20)
 
-year=2021
+year=2020
 
 url="https://raw.githubusercontent.com/JeffSackmann/tennis_atp/master/atp_matches"
 
@@ -32,7 +32,7 @@ data=read.csv2(link,sep=',')
 
 ##### NORMALISATION DES TOURNOIS DANS LES 2 BASES #####
 
-x=unique(data_21$Tournament) %>% data.frame()
+x=unique(data_20$Tournament) %>% data.frame()
 z=unique(data$tourney_name) %>% data.frame()
 
 z=sqldf("select distinct tourney_id,tourney_name,tourney_date,surface
@@ -41,7 +41,7 @@ z=sqldf("select distinct tourney_id,tourney_name,tourney_date,surface
 
 z$tourney_date=as.Date(paste0(substr(z$tourney_date,1,4),"-",substr(z$tourney_date,5,6),"-",substr(z$tourney_date,7,8)))
 
-x=data_21 %>% 
+x=data_20 %>% 
   group_by(Tournament,Location,Surface,Series) %>% 
   summarise(Date=min(Date)) %>% 
   arrange(Date)
@@ -66,13 +66,16 @@ x$Week=paste0(year(x$Date),"-",week(x$Date))
 #x$Location[x$Location=="Napoli"]="Naples"
 x$Location[x$Location=="'s-Hertogenbosch"]="Hertogenbosch"
 x$Location[x$Location=="Queens Club"]="Queen's Club"
+x$Location[x$Location=="New York" & x$Series=='Masters 1000']="Cincinnati"
+x$Location[x$Location=="St. Petersburg"]="St Petersburg"
 x$Series[x$Location=="Hamburg"]="ATP500"
 x$Tournament[x$Tournament=="French Open"]="Roland Garros"
 z$tourney_name2[z$tourney_name2=="Us Open"]="US Open"
 z$tourney_name2[z$tourney_name2=="Canada"]="Toronto"
 z$tourney_name2[z$tourney_name2=="s Hertogenbosch"]="Hertogenbosch"
-z$tourney_name2[z$tourney_name=="Tour Finals"]="Turin"
-
+z$tourney_name2[z$tourney_name=="Tour Finals"]="London"
+z$tourney_name2[z$tourney_name=="ATP Rio de Janeiro"]="Rio de Janeiro"
+z$tourney_name[z$tourney_name=="ATP Rio de Janeiro"]="Rio de Janeiro"
 
 ##Table de pivot des tournois
 
@@ -82,13 +85,17 @@ Tournament_pivot=sqldf("select distinct a.*,b.tourney_name
 
 data2=data %>% select(tourney_date,tourney_name,match_num,winner_name,loser_name,round,winner_rank,loser_rank,winner_rank_points,loser_rank_points,winner_hand,loser_hand,winner_ht,loser_ht,winner_id,loser_id,winner_age,loser_age,winner_ioc,loser_ioc)
 
+#Redressement sur le tournoi 
+
+data2$tourney_name[data2$tourney_name=="ATP Rio de Janeiro"]="Rio de Janeiro"
+
 #On importe les typologies de tournoi
 
 data2=sqldf("select a.*,c.Series
             from data2 a
             left join Tournament_pivot c on c.tourney_name=a.tourney_name")
 
-Round_pivot=data.frame(Round_data2=unique(data_21$Round),
+Round_pivot=data.frame(Round_data2=unique(data_20$Round),
                        Round_data=c("R128","R64","QF","SF","F","R32","R16","RR"),
                        Round_H=c("R1","R2","QF","SF","F","R3","R4","RR")) %>% data.frame()
 
@@ -104,16 +111,8 @@ data2=sqldf("select *,(case
 when Series='ATP250' and tourney_name not in ('Winston-Salem','Great Ocean Road Open','Murray River Open') and round='R32' then 'R128' 
 when Series='ATP250' and tourney_name not in ('Winston-Salem','Great Ocean Road Open','Murray River Open') and round='R16' then 'R64'
 
-when Series='ATP250' and tourney_name in ('Winston-Salem','Great Ocean Road Open','Murray River Open') and round='R64' then 'R128'
-when Series='ATP250' and tourney_name in ('Winston-Salem','Great Ocean Road Open','Murray River Open') and round='R32' then 'R64'
-when Series='ATP250' and tourney_name in ('Winston-Salem','Great Ocean Road Open','Murray River Open') and round='R16' then 'R32'
-
-when Series='ATP500' and tourney_name not in ('Barcelona','Washington','Dubai') and round='R32' then 'R128' 
-when Series='ATP500' and tourney_name not in ('Barcelona','Washington','Dubai') and round='R16' then 'R64'
-
-when Series='ATP500' and tourney_name in ('Barcelona','Washington','Dubai') and round='R64' then 'R128'
-when Series='ATP500' and tourney_name in ('Barcelona','Washington','Dubai') and round='R32' then 'R64'
-when Series='ATP500' and tourney_name in ('Barcelona','Washington','Dubai') and round='R16' then 'R32'
+when Series='ATP500' and tourney_name not in ('Barcelona','Washington') and round='R32' then 'R128' 
+when Series='ATP500' and tourney_name not in ('Barcelona','Washington') and round='R16' then 'R64'
 
 when Series='Masters 1000' and tourney_name not in ('Miami Masters','Indian Wells Masters') and round='R64' then 'R128'
 when Series='Masters 1000' and tourney_name not in ('Miami Masters','Indian Wells Masters') and round='R32' then 'R64'
@@ -129,78 +128,35 @@ data2=sqldf("select a.*,b.Round_H
 
 # Redressement de la table des paris
 
-data_21$Tournament[data_21$Tournament=="French Open"]="Roland Garros"
-data_21$Series[data_21$Location=="Hamburg"]="ATP500"
+data_20$Tournament[data_20$Tournament=="French Open"]="Roland Garros"
+data_20$Series[data_20$Location=="Hamburg"]="ATP500"
 
-data_21=data_21 %>% left_join(Round_pivot %>% select(Round_data2,Round_H),by=c("Round"="Round_data2")) %>% 
+data_20=data_20 %>% left_join(Round_pivot %>% select(Round_data2,Round_H),by=c("Round"="Round_data2")) %>% 
   left_join(Tournament_pivot %>% select(Tournament,Series,tourney_name),by=c("Tournament"="Tournament","Series"="Series"))
-
 
 # Redressement sur le classement manquant de certains joueurs
 
-data_21$WRank=ifelse(data_21$WRank=="N/A",1000,data_21$WRank)
-data_21$WPts=ifelse(data_21$WPts=="N/A",10,data_21$WPts)
-data_21$LRank=ifelse(data_21$LRank=="N/A",1000,data_21$LRank)
-data_21$LPts=ifelse(data_21$LPts=="N/A",10,data_21$LPts)
+data_20$WRank=ifelse(data_20$WRank=="N/A",1000,data_20$WRank)
+data_20$WPts=ifelse(data_20$WPts=="N/A",10,data_20$WPts)
+data_20$LRank=ifelse(data_20$LRank=="N/A",1000,data_20$LRank)
+data_20$LPts=ifelse(data_20$LPts=="N/A",10,data_20$LPts)
 
 data2$winner_rank=ifelse(is.na(data2$winner_rank)==T,1000,data2$winner_rank)
 data2$winner_rank_points=ifelse(is.na(data2$winner_rank_points)==T,10,data2$winner_rank_points)
 data2$loser_rank=ifelse(is.na(data2$loser_rank)==T,1000,data2$loser_rank)
 data2$loser_rank_points=ifelse(is.na(data2$loser_rank_points)==T,10,data2$loser_rank_points)
 
-# Redressement de certaines valeurs différentes d'une table à l'autre
+#Redressement de certaines valeurs différentes d'une table à l'autre
 
 data2$winner_rank_points[data2$winner_name=="Christian Harrison"&data2$tourney_name=="Delray Beach"]=225
 data2$winner_rank[data2$winner_name=="Christian Harrison"&data2$tourney_name=="Delray Beach"]=280
-
-data2$loser_rank_points[data2$loser_name=="Christian Harrison"&data2$tourney_name=="Delray Beach"]=225
-data2$loser_rank[data2$loser_name=="Christian Harrison"&data2$tourney_name=="Delray Beach"]=280
-
-data2$winner_rank_points[data2$winner_name=="Alex De Minaur"&data2$tourney_name=="Indian Wells Masters"]=1991
-data2$loser_rank_points[data2$loser_name=="Alex De Minaur"&data2$tourney_name=="Indian Wells Masters"]=1991
-
-data2$winner_rank_points[data2$winner_name=="Tommy Paul"&data2$tourney_name=="Indian Wells Masters"]=1058
-data2$loser_rank_points[data2$loser_name=="Tommy Paul"&data2$tourney_name=="Indian Wells Masters"]=1058
-
-data2$winner_rank_points[data2$winner_name=="Aslan Karatsev"&data2$tourney_name=="Indian Wells Masters"]=2109
-data2$loser_rank_points[data2$loser_name=="Aslan Karatsev"&data2$tourney_name=="Indian Wells Masters"]=2109
-
-data2$winner_rank_points[data2$winner_name=="Jannik Sinner"&data2$tourney_name=="Indian Wells Masters"]=3100
-data2$loser_rank_points[data2$loser_name=="Jannik Sinner"&data2$tourney_name=="Indian Wells Masters"]=3100
-
-data2$winner_rank_points[data2$winner_name=="Frances Tiafoe"&data2$tourney_name=="Indian Wells Masters"]=1312
-data2$loser_rank_points[data2$loser_name=="Frances Tiafoe"&data2$tourney_name=="Indian Wells Masters"]=1312
-
-data2$winner_rank_points[data2$winner_name=="Emil Ruusuvuori"&data2$tourney_name=="Indian Wells Masters"]=923
-data2$loser_rank_points[data2$loser_name=="Emil Ruusuvuori"&data2$tourney_name=="Indian Wells Masters"]=923
-
-data2$winner_rank_points[data2$winner_name=="John Millman"&data2$tourney_name=="Indian Wells Masters"]=1100
-data2$loser_rank_points[data2$loser_name=="John Millman"&data2$tourney_name=="Indian Wells Masters"]=1100
-
-data2$winner_rank_points[data2$winner_name=="Mackenzie Mcdonald"&data2$tourney_name=="Indian Wells Masters"]=1105
-data2$loser_rank_points[data2$loser_name=="Mackenzie Mcdonald"&data2$tourney_name=="Indian Wells Masters"]=1105
-
-data2$winner_rank_points[data2$winner_name=="Vasek Pospisil"&data2$tourney_name=="Indian Wells Masters"]=1000
-data2$loser_rank_points[data2$loser_name=="Vasek Pospisil"&data2$tourney_name=="Indian Wells Masters"]=1000
-
-data2$winner_rank_points[data2$winner_name=="Salvatore Caruso"&data2$tourney_name=="Indian Wells Masters"]=548
-data2$loser_rank_points[data2$loser_name=="Salvatore Caruso"&data2$tourney_name=="Indian Wells Masters"]=548
-
-data2$loser_rank_points[data2$loser_name=="Egor Gerasimov"&data2$tourney_name=="Indian Wells Masters"]=761
-data2$loser_rank_points[data2$loser_name=="Adrian Mannarino"&data2$tourney_name=="Indian Wells Masters"]=1287
-
-
-# data_21=sqldf("select distinct a.*,b.Round_H,c.tourney_name
-#             from data_21 a
-#             left join Round_pivot b on b.round_data2=a.round
-#             left join Tournament_pivot c on c.tournament=a.tournament and c.series=a.series") %>% select(!Date)
 
 # Merging entre les 2 bases
 
 merge=sqldf("select distinct a.*,b.date,b.W1,b.L1,b.W2,b.L2,b.W3,b.L3,b.W4,b.L4,b.W5,b.L5,b.Wsets,b.Lsets,
       b.PSW,b.PSL,b.AvgW,b.AvgL,b.comment
       from data2 a 
-      left join data_21 b on B.Round_H=a.Round_H and b.WPts=a.winner_rank_points and b.LPts=a.loser_rank_points and b.tourney_name=a.tourney_name")
+      left join data_20 b on B.Round_H=a.Round_H and b.WPts=a.winner_rank_points and b.LPts=a.loser_rank_points and b.tourney_name=a.tourney_name")
 
 # Test de correspondance de la jointure 
 
@@ -208,7 +164,7 @@ NA_df=merge %>% filter(is.na(merge$AvgW)==TRUE)
 
 Summary=NA_df %>% group_by(tourney_name) %>% summarise("NB"=n()) %>% filter(str_starts(tourney_name,"Davis Cup|Atp Cup|Laver Cup|NextGen Finals|Tokyo Olympics")==FALSE)
 
-Summary2=data_21 %>% group_by(Tournament) %>% summarise("NB"=sum(is.na(AvgW))) %>% filter(NB>0)
+Summary2=data_20 %>% group_by(Tournament) %>% summarise("NB"=sum(is.na(AvgW))) %>% filter(NB>0)
 
 
 List=sqldf("select *
