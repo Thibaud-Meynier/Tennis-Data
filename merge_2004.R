@@ -6,15 +6,15 @@ library(tidyverse)
 library(sqldf)
 library(sjmisc)
 
-#Annee 2010
+#Annee 2004
 
 ##### IMPORT DES DONNEES #####
 
-path_10='C:/Users/Thiti/Desktop/Tennis-Data/Bet_data/2010.xlsx'
+path_4='C:/Users/Thiti/Desktop/Tennis-Data/Bet_data/2004.xlsx'
 
-data_10=read_xlsx(path=path_10)
+data_4=read_xlsx(path=path_4)
 
-year=2010
+year=2004
 
 url="https://raw.githubusercontent.com/JeffSackmann/tennis_atp/master/atp_matches"
 
@@ -32,7 +32,7 @@ data=read.csv2(link,sep=',')
 
 ##### NORMALISATION DES TOURNOIS DANS LES 2 BASES #####
 
-x=unique(data_10$Tournament) %>% data.frame()
+x=unique(data_4$Tournament) %>% data.frame()
 z=unique(data$tourney_name) %>% data.frame()
 
 z=sqldf("select distinct tourney_id,tourney_name,tourney_date,surface
@@ -41,7 +41,7 @@ z=sqldf("select distinct tourney_id,tourney_name,tourney_date,surface
 
 z$tourney_date=as.Date(paste0(substr(z$tourney_date,1,4),"-",substr(z$tourney_date,5,6),"-",substr(z$tourney_date,7,8)))
 
-x=data_10 %>% 
+x=data_4 %>% 
   group_by(Tournament,Location,Surface,Series) %>% 
   summarise(Date=min(Date)) %>% 
   arrange(Date)
@@ -51,7 +51,7 @@ z$tourney_name2=str_remove(z$tourney_name," Masters| 1| 2")
 
 x$Date=as.Date(x$Date)
 
-patern2=c('Davis Cup','London Olympics','Laver Cup','Atp Cup','United Cup','NextGen Finals')
+patern2=c('Davis Cup','Athens Olympics','Laver Cup','Atp Cup','United Cup','NextGen Finals')
 
 z=z %>% filter(!tourney_name %in% patern2)
 
@@ -69,10 +69,13 @@ x$Location[x$Location=="'s-Hertogenbosch"]="Hertogenbosch"
 #x$Location[x$Location=="Queens Club"]="Queen's Club"
 #x$Week[x$Location=="Los Cabos"]="2019-30"
 #x$Location[x$Location=="St. Petersburg"]="St Petersburg"
-x$Series[x$Location=="Hamburg"]="ATP500"
-#x$Series[x$Location=="Nottingham"]="ATP250"
+#x$Series[x$Location=="Hamburg"]="ATP500"
+x$Series[x$Location=="Kitzbuhel"]="ATP250"
 x$Tournament[x$Tournament=="French Open"]="Roland Garros"
 x$Surface[x$Location=="Bogota"]="Hard"
+x$Surface[x$Location=="Zagreb"]="Hard"
+x$Surface[x$Surface=="Carpet"]="Hard"
+x$Surface[x$Location=="Washington"]="Hard"
 z$tourney_name2[z$tourney_name2=="Us Open"]="US Open"
 z$tourney_name2[z$tourney_name2=="Canada"]="Toronto"
 z$tourney_name2[z$tourney_name2=="s Hertogenbosch"]="Hertogenbosch"
@@ -83,14 +86,26 @@ z$tourney_name[z$tourney_name=="Queen's Club"]="Queens Club"
 z$tourney_name2[z$tourney_name2=="Queen's Club"]="Queens Club"
 # z$tourney_name[z$tourney_name=="Santiago"]="Vina del Mar"
 # z$tourney_name2[z$tourney_name2=="Santiago"]="Vina del Mar"
+z$surface[z$surface=="Carpet"]="Hard"
 #redressement des numéros de semaine
+z$tourney_name[z$tourney_name=="Poertschach"]="Portschach"
+z$tourney_name2[z$tourney_name2=="Poertschach"]="Portschach"
+z$tourney_name[z$tourney_name=='Ho Chi Minh City']='Ho Chi Min City'
+z$tourney_name2[z$tourney_name2=='Ho Chi Minh City']='Ho Chi Min City'
+z$tourney_name[z$tourney_name=='St. Poelten']='St. Polten'
+z$tourney_name2[z$tourney_name2=='St. Poelten']='St. Polten'
+x$Series=ifelse(x$Series=='International','ATP250',
+                ifelse(x$Series=='International Gold','ATP500',
+                       ifelse(x$Series=='Masters','Masters 1000',x$Series)))
+#z$Week[z$tourney_name=='Delray Beach']="2022-5"
 
 ##Table de pivot des tournois
 
 Tournament_pivot=sqldf("select a.*,b.tourney_name
       from x a
-      left join z b on (b.tourney_name2=a.location and b.Week<=a.Week and b.Surface=a.Surface) or (b.tourney_name2=a.Tournament and b.Week<=a.Week and b.Surface=a.Surface)
-                       /*where (substr(a.Week,6,2)-substr(b.Week,6,2)) in (-1,0,52)*/")
+      left join z b on (b.tourney_name2=a.location and b.Week<=a.Week and b.Surface=a.Surface) 
+      or (b.tourney_name2=a.Tournament and b.Week<=a.Week and b.Surface=a.Surface)
+       /*where (substr(a.Week,6,2)-substr(b.Week,6,2)) in (-1,0,52)*/")
 
 data2=data %>% select(tourney_date,tourney_name,match_num,winner_name,loser_name,round,winner_rank,loser_rank,winner_rank_points,loser_rank_points,winner_hand,loser_hand,winner_ht,loser_ht,winner_id,loser_id,winner_age,loser_age,winner_ioc,loser_ioc)
 
@@ -100,12 +115,15 @@ data2=data %>% select(tourney_date,tourney_name,match_num,winner_name,loser_name
 #data2$tourney_name[data2$tourney_name=="Santiago"]="Vina del Mar"
 #data2$tourney_name[data2$tourney_name=="Estoril"]="Oeiras"
 data2$tourney_name[data2$tourney_name=="Queen's Club"]="Queens Club"
+data2$tourney_name[data2$tourney_name=="Poertschach"]="Portschach"
+data2$tourney_name[data2$tourney_name=='Ho Chi Minh City']='Ho Chi Min City'
+data2$tourney_name[data2$tourney_name=='St. Poelten']='St. Polten'
 
 data2=sqldf("select a.*,c.Series
             from data2 a
             left join Tournament_pivot c on c.tourney_name=a.tourney_name")
 
-Round_pivot=data.frame(Round_data2=unique(data_10$Round),
+Round_pivot=data.frame(Round_data2=unique(data_4$Round),
                        Round_data=c("R128","R64","QF","SF","F","R32","R16","RR"),
                        Round_H=c("R1","R2","QF","SF","F","R3","R4","RR")) %>% data.frame()
 
@@ -118,19 +136,19 @@ sqldf("select distinct round,tourney_name from data2 where series='Masters 1000'
 # Redressement du tour dans la base pour joindre avec la base avec les cotes
 
 data2=sqldf("select *,(case 
-when Series='ATP250' and tourney_name not in ('New Haven','Queens Club') and round='R32' then 'R128' 
-when Series='ATP250' and tourney_name not in ('New Haven','Queens Club') and round='R16' then 'R64'
+when Series='ATP250' and tourney_name not in ('Queens Club','Kitzbuhel','Indianapolis') and round='R32' then 'R128' 
+when Series='ATP250' and tourney_name not in ('Queens Club','Kitzbuhel','Indianapolis') and round='R16' then 'R64'
 
-when Series='ATP250' and tourney_name in ('New Haven','Queens Club') and round='R64' then 'R128'
-when Series='ATP250' and tourney_name in ('New Haven','Queens Club') and round='R32' then 'R64'
-when Series='ATP250' and tourney_name in ('New Haven','Queens Club') and round='R16' then 'R32'
+when Series='ATP250' and tourney_name in ('Queens Club','Kitzbuhel','Indianapolis') and round='R64' then 'R128'
+when Series='ATP250' and tourney_name in ('Queens Club','Kitzbuhel','Indianapolis') and round='R32' then 'R64'
+when Series='ATP250' and tourney_name in ('Queens Club','Kitzbuhel','Indianapolis') and round='R16' then 'R32'
 
-when Series='ATP500' and tourney_name not in ('Barcelona','Hamburg','Washington') and round='R32' then 'R128' 
-when Series='ATP500' and tourney_name not in ('Barcelona','Hamburg','Washington') and round='R16' then 'R64'
+when Series='ATP500' and tourney_name not in ('Barcelona','Tokyo','Stuttgart') and round='R32' then 'R128' 
+when Series='ATP500' and tourney_name not in ('Barcelona','Tokyo','Stuttgart') and round='R16' then 'R64'
 
-when Series='ATP500' and tourney_name in ('Barcelona','Hamburg','Washington') and round='R64' then 'R128'
-when Series='ATP500' and tourney_name in ('Barcelona','Hamburg','Washington') and round='R32' then 'R64'
-when Series='ATP500' and tourney_name in ('Barcelona','Hamburg','Washington') and round='R16' then 'R32'
+when Series='ATP500' and tourney_name in ('Barcelona','Tokyo','Stuttgart') and round='R64' then 'R128'
+when Series='ATP500' and tourney_name in ('Barcelona','Tokyo','Stuttgart') and round='R32' then 'R64'
+when Series='ATP500' and tourney_name in ('Barcelona','Tokyo','Stuttgart') and round='R16' then 'R32'
 
 when Series='Masters 1000' and tourney_name not in ('Miami Masters','Indian Wells Masters') and round='R64' then 'R128'
 when Series='Masters 1000' and tourney_name not in ('Miami Masters','Indian Wells Masters') and round='R32' then 'R64'
@@ -146,25 +164,33 @@ data2=sqldf("select a.*,b.Round_H
 
 # Redressement de la table des paris
 
-data_10$Tournament[data_10$Tournament=="French Open"]="Roland Garros"
-data_10$Series[data_10$Location=="Hamburg"]="ATP500"
-#data_10$Series[data_10$Location=="Nottingham"]="ATP250"
-data_10$Surface[data_10$Location=="Bogota"]="Hard"
+data_4$Tournament[data_4$Tournament=="French Open"]="Roland Garros"
+data_4$Series[data_4$Location=="Kitzbuhel"]="ATP250"
+#data_4$Series[data_4$Location=="Nottingham"]="ATP250"
+data_4$Surface[data_4$Location=="Bogota"]="Hard"
+data_4$Surface[data_4$Location=="Washington"]="Hard"
+data_4$Series=ifelse(data_4$Series=='International','ATP250',
+                     ifelse(data_4$Series=='International Gold','ATP500',
+                            ifelse(data_4$Series=='Masters','Masters 1000',data_4$Series)))
 
-data_10=data_10 %>% left_join(Round_pivot %>% select(Round_data2,Round_H),by=c("Round"="Round_data2")) %>% 
+data_4=data_4 %>% 
+  left_join(Round_pivot %>% select(Round_data2,Round_H),by=c("Round"="Round_data2")) %>% 
   left_join(Tournament_pivot %>% select(Tournament,Series,tourney_name),by=c("Tournament"="Tournament","Series"="Series"))
 
 # Redressement sur le classement manquant de certains joueurs
 
-data_10$WRank=ifelse(data_10$WRank=="N/A",1000,data_10$WRank)
-data_10$WPts=ifelse(data_10$WPts=="N/A",10,data_10$WPts)
-data_10$LRank=ifelse(data_10$LRank=="N/A",1000,data_10$LRank)
-data_10$LPts=ifelse(data_10$LPts=="N/A",10,data_10$LPts)
+data_4$WRank=ifelse(data_4$WRank=="N/A",1000,data_4$WRank)
+data_4$LRank=ifelse(data_4$LRank=="N/A",1000,data_4$LRank)
 
 data2$winner_rank=ifelse(is.na(data2$winner_rank)==T,1000,data2$winner_rank)
 data2$winner_rank_points=ifelse(is.na(data2$winner_rank_points)==T,10,data2$winner_rank_points)
 data2$loser_rank=ifelse(is.na(data2$loser_rank)==T,1000,data2$loser_rank)
 data2$loser_rank_points=ifelse(is.na(data2$loser_rank_points)==T,10,data2$loser_rank_points)
+
+#Calcul de AVGW et AVGL
+
+data_4<- mutate(data_4, AvgW = round(rowMeans(select(data_4,c(B365W,EXW,CBW,PSW,IWW)), na.rm = TRUE),2))
+data_4<- mutate(data_4, AvgL = round(rowMeans(select(data_4,c(B365L,EXL,CBL,PSL,IWL)), na.rm = TRUE),2))
 
 #Redressement de certaines valeurs différentes d'une table à l'autre
 # # 
@@ -177,19 +203,19 @@ data2$loser_rank_points=ifelse(is.na(data2$loser_rank_points)==T,10,data2$loser_
 # Merging entre les 2 bases
 
 merge=sqldf("select distinct a.*,b.date,b.W1,b.L1,b.W2,b.L2,b.W3,b.L3,b.W4,b.L4,b.W5,b.L5,b.Wsets,b.Lsets,
-      b.PSW,b.PSL,b.AvgW,b.AvgL,b.comment
+      b.AvgW,b.AvgL,b.comment
       from data2 a 
-      left join data_10 b on B.Round_H=a.Round_H and b.WPts=a.winner_rank_points and b.LPts=a.loser_rank_points and b.tourney_name=a.tourney_name")
+      left join data_4 b on B.Round_H=a.Round_H and b.WRank=a.winner_rank and b.LRank=a.loser_rank and b.tourney_name=a.tourney_name")
 
 # Test de correspondance de la jointure 
 
 NA_df=merge %>% filter(is.na(merge$AvgW)==TRUE)
 
-Summary=NA_df %>% group_by(tourney_name) %>% summarise("NB"=n()) %>% filter(str_starts(tourney_name,"Davis Cup|Atp Cup|Laver Cup|NextGen Finals|Tokyo Olympics")==FALSE)
+Summary=NA_df %>% group_by(tourney_name) %>% summarise("NB"=n()) %>% filter(str_starts(tourney_name,"Davis Cup|Atp Cup|Laver Cup|NextGen Finals|Athens Olympics")==FALSE)
 
-Summary2=data_10 %>% group_by(Tournament) %>% summarise("NB"=sum(is.na(AvgW))) %>% filter(NB>0)
+Summary2=data_4 %>% group_by(Tournament) %>% summarise("NB"=sum(is.na(AvgW))) %>% filter(NB>0)
 
-list_na=merge %>% filter(tourney_name %in% unique(Summary$tourney_name) & is.na(Date)==T & tourney_name!='Dusseldorf')
+list_na=merge %>% filter(tourney_name %in% unique(Summary$tourney_name) & is.na(Date)==T & tourney_name!='Athens Olympics')
 
 # 
 List=sqldf("select *
