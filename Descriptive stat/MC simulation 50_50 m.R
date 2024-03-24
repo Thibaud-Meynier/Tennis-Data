@@ -1,44 +1,63 @@
 library(readxl)
 library(reshape2)
 library(ggplot2)
-library(quantmod)
+library(tidyverse)
+library(gt)
+library(openxlsx)
+#library(quantmod)
+# 
+# data2=data.frame()
+# 
+# for (i in seq(2010,2014,1)){
+#   path=paste0("C:/Users/Thiti/Desktop/Tennis-Data/Bet_data/",i,".xlsx")
+#   data=read_xlsx(path=path) %>% select(-c("SJW","SJL","EXW","EXL","LBW","LBL"))
+#   data2=rbind(data,data2)
+#   print(i)
+# }
 
-path_22='C:/Users/Thiti/Desktop/Tennis-Data/Bet_data/2022.xlsx'
+data2=data.frame()
 
-data_22=read_xlsx(path=path_22)
+for (i in seq(2015,2018,1)){
+  path=paste0("C:/Users/Thiti/Desktop/Tennis-Data/Bet_data/",i,".xlsx")
+  data=read_xlsx(path=path) %>% select(-c("EXW","EXL","LBW","LBL"))
+  data2=rbind(data,data2)
+  print(i)
+}
 
-path_21='C:/Users/Thiti/Desktop/Tennis-Data/Bet_data/2021.xlsx'
+for (i in seq(2019,2023,1)){
+  path=paste0("C:/Users/Thiti/Desktop/Tennis-Data/Bet_data/",i,".xlsx")
+  data=read_xlsx(path=path)
+  data2=rbind(data,data2)
+  print(i)
+}
 
-data_21=read_xlsx(path=path_21)
-
-path_20='C:/Users/Thiti/Desktop/Tennis-Data/Bet_data/2020.xlsx'
-
-data_20=read_xlsx(path=path_20)
-
-path_19='C:/Users/Thiti/Desktop/Tennis-Data/Bet_data/2019.xlsx'
-
-data_19=read_xlsx(path=path_19)
-
-data=rbind(data_19,data_20,data_21,data_22)
-
+data2=data2 %>% arrange(Date)
 # We delete matches with retired plauer or walkover
+
+data2=data2 %>% filter(year(Date)>=2017)
+data=data2
+rm(data2)
+
 data=data[data$Comment=='Completed',]
 
-data=data[,c("Tournament","Series","Surface","Winner","Loser","WRank","LRank","AvgW","AvgL")]
+data=data[,c("Tournament","Date","Series","Surface","Winner","Loser","WRank","LRank","PSW","PSL","AvgW",'AvgL')]
 data$WRank=as.numeric(data$WRank)
 data$LRank=as.numeric(data$LRank)
-data$WRank=na.approx(data$WRank)
-data$LRank=na.approx(data$LRank)
+data$WRank[is.na(data$WRank)]=1000
+data$LRank[is.na(data$LRank)]=1000
 data$Rank_diff=abs(data$WRank-data$LRank)
 
 head(data,10)
 
 data2=data[data$Rank_diff<=5,]
 
+1204/16421
 #data2$AvgW[data2$AvgW==161]=1.61
 
 data2$Fav_W=0
 data2$Fav_W[data2$WRank<data2$LRank]=1
+# data2$AvgL=data2$PSL
+# data2$AvgW=data2$PSW
 
 data2$Issue_match = ifelse(data2$Fav_W==1&data2$AvgW<data2$AvgL|
                              data2$Fav_W==0&data2$AvgW<data2$AvgL,"Fav Win", "Underdog Win")
@@ -47,22 +66,25 @@ table(data2$Fav_W)/nrow(data2)
 
 table(data2$Issue_match)/nrow(data2)
 
+addmargins(table(data2$Issue_match,data2$Series))
+
+addmargins(table(data2$Issue_match,data2$Surface))
+
 # Play always the underdog
 
 data2$odd_play=ifelse(data2$AvgW<data2$AvgL,data2$AvgL,data2$AvgW)
 
-g=hist(data2$odd_play,breaks =50,xlim=c(1,10),ylim=c(0,350))
+g=hist(data2$odd_play,breaks=100,xlim=c(1,10),ylim=c(0,350))
 g$breaks
-w=hist(data2$odd_play[data2$Issue_match=='Underdog Win'],breaks = 15,xlim=c(1,7),ylim = c(0,100))
+w=hist(data2$odd_play[data2$Issue_match=='Underdog Win'],breaks = 15,xlim=c(1,7),ylim = c(0,110))
 w$breaks
 breaks=as.data.frame(g$breaks)
 counts=as.data.frame(rbind(as.data.frame(g$counts),0))
 
-
 df_summary=cbind(breaks,counts)
 colnames(df_summary)[1:2]=c("breaks_g",'counts_g')
 df_summary=df_summary[df_summary$breaks_g<=max(w$breaks),]
-df_summary$count_w=as.data.frame(rbind(as.data.frame(w$counts),0))
+df_summary$count_w=as.data.frame(rbind(as.data.frame(w$counts),0)) #,0
 colnames(df_summary)[3]=c("counts_w")
 df_summary$ratio=round(df_summary$counts_w/df_summary$counts_g,2)*100
 df_summary$ratio_d=round(cumsum(df_summary$counts_w)/cumsum(df_summary$counts_g)*100,2)
@@ -86,7 +108,7 @@ t[2,2]/(t[2,2]+t[2,1])
 
 # On regarde la moyenne des cotes jou?es dans cette configuration
 
-mean(data2$odd_play[data2$odd_play>=1.8&data2$odd_play<=odd_s],na.rm = T)
+mean(data2$odd_play[data2$odd_play>=2&data2$odd_play<=odd_s],na.rm = T)
 # 2.42
 
 odd_t=100/((t[2,2]/(t[2,2]+t[2,1]))*100)
@@ -99,12 +121,29 @@ odd_t
 data2=data2[data2$odd_play>=1.8&data2$odd_play<=odd_s,]
 data2=na.omit(data2)
 
+u=100
+
+data3=data2 %>% filter(Series %in% c('ATP250','ATP500','Masters Cup'))
+
+data3$cumsum=cumsum(ifelse(data3$Issue_match=='Underdog Win',u*data3$odd_play-u,-u))
+
+plot(data3$cumsum,type='l',main="Paris Outsider dans match type 50/50 (2017-2023)",
+     ylab = "Gains", xlab = "Nb Paris")
+
+
+data3=data2 %>% filter(Series %in% c('Masters 1000','Grand Slam'))
+
+data3$cumsum=cumsum(ifelse(data3$Issue_match=='Underdog Win',u*data3$odd_play-u,-u))
+
+plot(data3$cumsum,type='l',main="Paris Outsider dans match type 50/50 (2017-2023)",
+     ylab = "Gains", xlab = "Nb Paris")
+
 # tirer un num?ro de ligne
 # le mettre dans un data frame (odd_play & issue_match)
 # tirer 10000 fois une ligne
 
 n=2000
-k=250
+k=500
 data3=data.frame("Issue"=matrix(NA,nrow=n),"Odd"=matrix(NA,nrow=n))
 bk=matrix(NA,nrow=k)
 bk2=matrix(NA,nrow=n,ncol=k)
@@ -132,7 +171,9 @@ bk2=as.data.frame(bk2)
 
 hist(bk)
 
-table(bk<0) # 1/250
+table(bk<0)
+
+447/500 #==> 90%
 
 B_quantile = apply(bk2, 1, function(x) quantile(x, c(0.025,0.5,0.975)))
 
@@ -152,7 +193,7 @@ ggplot(bk3,aes(x=NB))+
   geom_line(aes(y=Q1),color='steelblue')+
   geom_line(aes(y=Q2),color='steelblue')+
   geom_line(aes(y=0),color='red',linetype='dashed')+
-  scale_y_continuous("Gains cumul?s",breaks = seq(-100,3000,250))+
+  scale_y_continuous("Gains cumulés",breaks = seq(-100,3000,250))+
   scale_x_continuous("Nombre de paris")+
   theme_classic()
 
@@ -217,7 +258,7 @@ data_naive=data_naive[sample(c(1:nrow(data_naive)),size=600,replace=T),]
 # tirer 10000 fois une ligne
 
 n=2000
-k=250
+k=500
 data4=data.frame("Issue"=matrix(NA,nrow=n),"Odd"=matrix(NA,nrow=n))
 bk=matrix(NA,nrow=k)
 bk_naive=matrix(NA,nrow=n,ncol=k)

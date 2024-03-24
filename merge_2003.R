@@ -119,6 +119,9 @@ data2$tourney_name[data2$tourney_name=="Queen's Club"]="Queens Club"
 data2$tourney_name[data2$tourney_name=="Poertschach"]="Portschach"
 data2$tourney_name[data2$tourney_name=='Ho Chi Minh City']='Ho Chi Min City'
 data2$tourney_name[data2$tourney_name=='St. Poelten']='St. Polten'
+data2$loser_name[data2$tourney_name=='Marseille' & data2$winner_name=='Olivier Mutis']='Rainer Schuettler'
+data2$loser_rank[data2$tourney_name=='Marseille' & data2$loser_name=='Rainer Schuettler']=16
+data2$loser_rank_points[data2$tourney_name=='Marseille' & data2$loser_name=='Rainer Schuettler']=1570
 
 data2=sqldf("select a.*,c.Series
             from data2 a
@@ -151,9 +154,9 @@ when Series='ATP500' and tourney_name in ('Barcelona','Tokyo','Stuttgart','Washi
 when Series='ATP500' and tourney_name in ('Barcelona','Tokyo','Stuttgart','Washington') and round='R32' then 'R64'
 when Series='ATP500' and tourney_name in ('Barcelona','Tokyo','Stuttgart','Washington') and round='R16' then 'R32'
 
-when Series='Masters 1000' and tourney_name not in ('Miami Masters','Indian Wells Masters') and round='R64' then 'R128'
-when Series='Masters 1000' and tourney_name not in ('Miami Masters','Indian Wells Masters') and round='R32' then 'R64'
-when Series='Masters 1000' and tourney_name not in ('Miami Masters','Indian Wells Masters') and round='R16' then 'R32'
+when Series='Masters 1000' and tourney_name not in ('Miami Masters') and round='R64' then 'R128'
+when Series='Masters 1000' and tourney_name not in ('Miami Masters') and round='R32' then 'R64'
+when Series='Masters 1000' and tourney_name not in ('Miami Masters') and round='R16' then 'R32'
 else round end) as Round_red
 from data2")
 
@@ -217,7 +220,7 @@ Summary=NA_df %>% group_by(tourney_name) %>% summarise("NB"=n()) %>% filter(str_
 
 Summary2=data_3 %>% group_by(Tournament) %>% summarise("NB"=sum(is.na(AvgW))) %>% filter(NB>0)
 
-list_na=merge %>% filter(tourney_name %in% unique(Summary$tourney_name) & is.na(Date)==T & tourney_name!='Athens Olympics')
+list_na=merge %>% filter(tourney_name %in% unique(Summary$tourney_name) & is.na(Date)==T & tourney_name!='Dusseldorf')
 
 # 
 List=sqldf("select *

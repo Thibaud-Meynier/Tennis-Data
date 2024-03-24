@@ -1,8 +1,10 @@
 library(rvest)
-year=2021
+library(xml2)
 
-# URL de la page à scraper
-url <- "https://www.tennisexplorer.com/calendar/atp-men/2021/"
+year=2024
+
+# URL de la page ? scraper
+url <- "https://www.tennisexplorer.com/calendar/atp-men/2024/"
 
 # Fonction pour extraire le mois et le nom des tournois
 
@@ -36,6 +38,11 @@ for (i in 1:nrow(list)){
 }
 
 list
+
+list=list %>% 
+  mutate("Valid"=grepl("UTR Pro Tennis Series",list$tournament)) %>% 
+  filter(Valid==F) %>% 
+  select(1,2)
 
 elements_prize <- page %>%
   html_nodes("div.box.lGray div.inner div.content table#tournamentList tbody td.tr")

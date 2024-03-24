@@ -164,6 +164,7 @@ data_7$Surface[data_7$Location=="Bogota"]="Hard"
 data_7$Series=ifelse(data_7$Series=='International','ATP250',
                      ifelse(data_7$Series=='International Gold','ATP500',
                             ifelse(data_7$Series=='Masters','Masters 1000',data_7$Series)))
+data_7$Series[data_7$Location=="Kitzbuhel"]="ATP250"
 
 data_7=data_7 %>% left_join(Round_pivot %>% select(Round_data2,Round_H),by=c("Round"="Round_data2")) %>% 
   left_join(Tournament_pivot %>% select(Tournament,Series,tourney_name),by=c("Tournament"="Tournament","Series"="Series"))

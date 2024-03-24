@@ -55,6 +55,66 @@ get_tournament=function(tournament,year) {
   return(data_set)
 }
 
+# Function that scrap tennis playner full name
+
+get_players_name=function(tournament,year){
+  
+  url=paste('https://www.tennisexplorer.com/',tournament,'/',year,'/','atp-men/',sep='')
+  # extraire les donn?es ? partir de la page Web
+  page <- read_html(url)
+  
+  links <- page %>%
+    html_nodes("td:not([class])>a") 
+  
+  players_id=data.frame("P1"=NA,"P2"=NA,"N_match"=NA)
+  
+  for (i in 1:length(links)){
+    
+    match_id=paste0("https://tennisexplorer.com",xml_attrs(links[[i]])[["href"]])
+    
+    page_match <- read_html(match_id)
+    
+    players=page_match %>% html_nodes("th.plName") %>% html_text() 
+    
+    players_id[i,1]=players[1]
+    players_id[i,2]=players[2]
+    players_id[i,3]=i
+    #print(i)
+    
+  }
+  
+  return(players_id)
+}
+
+# Function that scrap player rank for a given date (only first 1000 players)
+
+rank_scrap=function(date){
+  
+  rank_scrap_end=data.frame()
+  
+  for (i in 1:20){
+    rank=paste0("https://www.tennisexplorer.com/ranking/atp-men/?date=",date,"&page=",i)
+    
+    page_rank=read_html(rank)
+    
+    rank_scrap <- page_rank %>%
+      html_nodes("table.result") %>% html_table() 
+    
+    rank_scrap=rank_scrap[[2]]
+    
+    colnames(rank_scrap)=rank_scrap[1,]
+    
+    rank_scrap=rank_scrap[-1,]
+    
+    rank_scrap_end=rbind(rank_scrap_end,rank_scrap)
+  }
+  
+  rank_scrap_end$Rank=substr(rank_scrap_end$Rank,1,nchar(rank_scrap_end$Rank)-1)
+  
+  return(rank_scrap_end)
+  
+}
+
 year=2023
 tournament=c('hertogenbosch','stuttgart','halle',"queen-s-club","mallorca","eastbourne")
 df_final=data.frame(matrix(nrow=0,ncol=21,NA))

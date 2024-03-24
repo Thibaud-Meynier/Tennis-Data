@@ -118,6 +118,9 @@ data2$tourney_name[data2$tourney_name=="Queen's Club"]="Queens Club"
 data2$tourney_name[data2$tourney_name=="Poertschach"]="Portschach"
 data2$tourney_name[data2$tourney_name=='Ho Chi Minh City']='Ho Chi Min City'
 data2$tourney_name[data2$tourney_name=='St. Poelten']='St. Polten'
+data2$loser_name[data2$tourney_name=='Indianapolis' & data2$winner_name=='Todd Reid' & data2$round=="R32"]='Taylor Dent'
+data2$loser_rank[data2$tourney_name=='Indianapolis' & data2$loser_name=='Taylor Dent' & data2$round=="R32"]=28
+data2$loser_rank_points[data2$tourney_name=='Indianapolis' & data2$loser_name=='Taylor Dent' & data2$round=="R32"]=1050
 
 data2=sqldf("select a.*,c.Series
             from data2 a

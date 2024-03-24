@@ -145,7 +145,7 @@ when Series='ATP250' and tourney_name not in ('Queens Club','Kitzbuhel','Long Is
 
 when Series='ATP250' and tourney_name in ('Queens Club','Kitzbuhel','Long Island') and round='R64' then 'R128'
 when Series='ATP250' and tourney_name in ('Queens Club','Kitzbuhel','Long Island') and round='R32' then 'R64'
-when Series='ATP250' and tourney_name in ('Queens Club','Kitzbuhel','Indianapolis') and round='R16' then 'R32'
+when Series='ATP250' and tourney_name in ('Queens Club','Kitzbuhel','Long Island') and round='R16' then 'R32'
 
 when Series='ATP500' and tourney_name not in ('Barcelona','Tokyo','Indianapolis','Washington') and round='R32' then 'R128' 
 when Series='ATP500' and tourney_name not in ('Barcelona','Tokyo','Indianapolis','Washington') and round='R16' then 'R64'
@@ -220,7 +220,7 @@ Summary=NA_df %>% group_by(tourney_name) %>% summarise("NB"=n()) %>% filter(str_
 
 Summary2=data_2 %>% group_by(Tournament) %>% summarise("NB"=sum(is.na(AvgW))) %>% filter(NB>0)
 
-list_na=merge %>% filter(tourney_name %in% unique(Summary$tourney_name) & is.na(Date)==T & tourney_name!='Athens Olympics')
+list_na=merge %>% filter(tourney_name %in% unique(Summary$tourney_name) & is.na(Date)==T & tourney_name!='Dusseldorf')
 
 # 
 List=sqldf("select *

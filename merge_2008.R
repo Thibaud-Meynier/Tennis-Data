@@ -205,7 +205,7 @@ Summary=NA_df %>% group_by(tourney_name) %>% summarise("NB"=n()) %>% filter(str_
 
 Summary2=data_8 %>% group_by(Tournament) %>% summarise("NB"=sum(is.na(AvgW))) %>% filter(NB>0)
 
-list_na=merge %>% filter(tourney_name %in% unique(Summary$tourney_name) & is.na(Date)==T & tourney_name!='Dusseldorf')
+list_na=merge %>% filter(tourney_name %in% unique(Summary$tourney_name) & is.na(Date)==T & !tourney_name %in% c('Beijing Olympics','Dusseldrof'))
 
 # 
 List=sqldf("select *
