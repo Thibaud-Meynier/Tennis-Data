@@ -5,6 +5,7 @@ get_tournament=function(tournament,year) {
   library(tidyverse)
   library(stringr)
   library(lubridate)
+  library(xml2)
   
   url=paste('https://www.tennisexplorer.com/',tournament,'/',year,'/','atp-men/',sep='')
   # extraire les donn?es ? partir de la page Web
@@ -51,6 +52,13 @@ get_tournament=function(tournament,year) {
   data_set$tournament=str_to_title(as.character(data_set$tournament))
   data_set$N_match=c(1:nrow(data_set))
   data_set=data_set[order(data_set$N_match,decreasing=T),]
+  #ajout du lieu du tournoi et de la surface
+  location=str_extract(page %>% html_nodes("h1") %>% html_text(), "(?<=\\().*?(?=\\))")
+  data_set$Location=location
+  surface=str_match(page %>% 
+                      html_nodes("#center > div:nth-child(2)") %>% 
+                      html_text(), "\\$\\s*,\\s*(\\w+)")[,2]
+  data_set$Surface=str_to_title(surface)
   
   return(data_set)
 }
@@ -115,52 +123,108 @@ rank_scrap=function(date){
   
 }
 
-year=2023
-tournament=c('hertogenbosch','stuttgart','halle',"queen-s-club","mallorca","eastbourne")
-df_final=data.frame(matrix(nrow=0,ncol=21,NA))
 
-year=2021
-tournament='olympics-tokyo'
-get_tournament('olympics-tokyo',2021)
-
-for (i in tournament){
-  df=get_tournament(i,year)
-  df_final=rbind(df_final,df)
-  rm(df)
-  print(i)
+list_tournament=function(year){
+  
+  # URL de la page a scraper
+  url <- paste0("https://www.tennisexplorer.com/calendar/atp-men/",year,"/")
+  
+  # Fonction pour extraire le mois et le nom des tournois
+  
+  page <- read_html(url)
+  
+  list=data.frame("tournament"=html_text(elements <- page %>%
+                                           html_nodes("div.box.lGray div.inner div.content table#tournamentList tbody th.t-name")))
+  
+  # On extrait les noms des tournois de la page
+  elements <- page %>%
+    html_nodes("div.box.lGray div.inner div.content table#tournamentList tbody tr th a")
+  
+  x=xml_attrs(elements)
+  
+  list[,2]=as.data.frame(matrix(nrow=length(elements),NA))
+  n=length(elements)
+  
+  for(i in 1:n){
+    
+    y=as.data.frame(x[[i]])
+    list[i,2]=as.character(y[,1])
+    #print(i)
+    
+  }
+  
+  list=list %>% 
+    mutate("Valid"=grepl("UTR Pro Tennis Series",list$tournament)) %>% 
+    filter(Valid==F) %>% 
+    select(1,2)
+  
+  list=list %>% filter(!tournament %in% c("Netflix Slam","Kooyong - exh.")) %>% 
+    rename("URL"=V1)
+  
+  table=page %>% html_nodes("table#tournamentList") %>% html_table()
+  table=table[[1]] %>% select(1,2)
+  colnames(table)=table[1,]
+  table=table[-1,]
+  
+  list=list %>% 
+    left_join(table,by=c("tournament"="Tournament"))
+  
+  list$Started=dmy(gsub("['^.^']", "-", substr(list$Started,1,10)))
+  
+  list=list %>% rename("Date"=Started)
+  
+  list=unique(list) %>% arrange(Date)
+  
+  return(list)
 }
 
-df_bet=data.frame("Tournament"=df_final$tournament,"Round"=df_final$Round,"Outcome"=df_final$Outcome,
-                  "Odd_play"=ifelse(df_final$Odd_W<df_final$Odd_L,df_final$Odd_L,df_final$Odd_W))
-
-df_bet$Gain=ifelse(df_bet$Outcome=='Out_W',(df_bet$Odd_play*1-1),-1)
-
-plot(cumsum(na.omit(df_bet$Gain)),type='l')
-
-table(na.omit(df_bet$Outcome))
-
-mean(df_bet$Odd_play,na.rm=T)
-
-odd_dist=hist(df_bet$Odd_play,breaks = 30)
-
-n=length(odd_dist$breaks)
-
-odd=matrix(nrow=n,ncol=4,NA)
-odd[,1][2:n]=odd_dist$breaks[1:(n-1)]
-odd[,2]=odd_dist$breaks
-odd[,3][2:n]=odd_dist$counts
-odd=odd[-1,]
-
-n2=length(hist(df_bet[df_bet$Outcome=='Out_W',]$Odd_play,breaks = 20)$counts)
-
-odd[,4][1:n2]=hist(df_bet[df_bet$Outcome=='Out_W',]$Odd_play,breaks = 20)$counts
-
-# Bet odd between 2 and max_odd_winner
-obs=min(which(is.na(odd[,4])))-1
-odd_max=odd[obs,2]
-
-df_bet2=df_bet[df_bet$Odd_play>=2&df_bet$Odd_play<=odd_max,]
-
-plot(cumsum(na.omit(df_bet2$Gain)),type='l')
-
-table(df_bet2$Outcome)
+# 
+# year=2023
+# tournament=c('hertogenbosch','stuttgart','halle',"queen-s-club","mallorca","eastbourne")
+# df_final=data.frame(matrix(nrow=0,ncol=21,NA))
+# 
+# year=2021
+# tournament='olympics-tokyo'
+# get_tournament('olympics-tokyo',2021)
+# 
+# for (i in tournament){
+#   df=get_tournament(i,year)
+#   df_final=rbind(df_final,df)
+#   rm(df)
+#   print(i)
+# }
+# 
+# df_bet=data.frame("Tournament"=df_final$tournament,"Round"=df_final$Round,"Outcome"=df_final$Outcome,
+#                   "Odd_play"=ifelse(df_final$Odd_W<df_final$Odd_L,df_final$Odd_L,df_final$Odd_W))
+# 
+# df_bet$Gain=ifelse(df_bet$Outcome=='Out_W',(df_bet$Odd_play*1-1),-1)
+# 
+# plot(cumsum(na.omit(df_bet$Gain)),type='l')
+# 
+# table(na.omit(df_bet$Outcome))
+# 
+# mean(df_bet$Odd_play,na.rm=T)
+# 
+# odd_dist=hist(df_bet$Odd_play,breaks = 30)
+# 
+# n=length(odd_dist$breaks)
+# 
+# odd=matrix(nrow=n,ncol=4,NA)
+# odd[,1][2:n]=odd_dist$breaks[1:(n-1)]
+# odd[,2]=odd_dist$breaks
+# odd[,3][2:n]=odd_dist$counts
+# odd=odd[-1,]
+# 
+# n2=length(hist(df_bet[df_bet$Outcome=='Out_W',]$Odd_play,breaks = 20)$counts)
+# 
+# odd[,4][1:n2]=hist(df_bet[df_bet$Outcome=='Out_W',]$Odd_play,breaks = 20)$counts
+# 
+# # Bet odd between 2 and max_odd_winner
+# obs=min(which(is.na(odd[,4])))-1
+# odd_max=odd[obs,2]
+# 
+# df_bet2=df_bet[df_bet$Odd_play>=2&df_bet$Odd_play<=odd_max,]
+# 
+# plot(cumsum(na.omit(df_bet2$Gain)),type='l')
+# 
+# table(df_bet2$Outcome)
