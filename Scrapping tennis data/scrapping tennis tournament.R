@@ -63,6 +63,75 @@ get_tournament=function(tournament,year) {
   return(data_set)
 }
 
+get_tournament_qualif=function(tournament,year) {
+  # import des librairies
+  library(rvest)
+  library(dplyr)
+  library(tidyverse)
+  library(stringr)
+  library(lubridate)
+  library(xml2)
+  
+  url=paste0('https://www.tennisexplorer.com/',tournament,'/',year,'/','atp-men/?phase=qualification')
+  # extraire les donn?es ? partir de la page Web
+  page <- read_html(url)
+  matches <- page %>% html_nodes("table.result") %>% html_table()
+  
+  if (length(matches)<5){
+  data_set=data.frame()  
+  }else{
+  # nettoyer et organiser les donn?es extraites
+  matches <- matches[[1]]
+  colnames(matches)=matches[1,]
+  matches=matches[-1,]
+  # rennomer toutes les colonnes
+  colnames(matches)=c('Date','Round','Player','Score','Set1','Set2','Set3','Set4','Set5','Odd_W','Odd_L','Info')
+  matches=matches[matches$Player!='',]
+  # extraire les jeux des sets tb
+  matches$Set1=as.numeric(substr(matches$Set1, 1, 1))
+  matches$Set2=as.numeric(substr(matches$Set2, 1, 1))
+  matches$Set3=as.numeric(substr(matches$Set3, 1, 1))
+  # On transforme la date
+  matches$Date=dmy(paste(gsub("['^.^']", "-", substr(matches$Date,1,5)),sep="-",year))
+  matches$Player=str_replace(matches$Player,'\\s+\\((.*$)',"")
+  matches$test=c(1:nrow(matches))%%2
+  # un data set winner et undata set looser
+  winner=matches[matches$test==1,]
+  colnames(winner)=c('Date','Round','Winner','Score_W','Set1_W','Set2_W','Set3_W','Set4_W','Set5_W','Odd_W','Odd_L','Info')
+  winner=winner[,c(1:10)]
+  loser=matches[matches$test==0,]
+  colnames(loser)=c('Date','Round','Loser','Score_L','Set1_L','Set2_L','Set3_L','Set4_L','Set5_L','Odd_W','Odd_L','Info')
+  loser=loser[,c(1:9,11)]
+  data_set=winner[,1:2]
+  
+  for (i in 1:8){
+    data_set=cbind(data_set,winner[,(2+i)],loser[,(2+i)])
+    n=ncol(data_set)
+    colnames(data_set)[(n-1):n]=c(colnames(winner)[(2+i)],colnames(loser)[(2+i)])
+    #print(i)
+  }
+  data_set$Score_W=as.numeric(as.character(data_set$Score_W))
+  data_set$Score_L=as.numeric(as.character(data_set$Score_L))
+  data_set$Odd_W=as.numeric(as.character(data_set$Odd_W))
+  data_set$Odd_L=as.numeric(as.character(data_set$Odd_L))
+  data_set$info=ifelse(data_set$Score_W<=1,'Walkover or Retired','Completed')
+  data_set$Outcome=ifelse(data_set$Odd_W<=data_set$Odd_L,'Fav_W','Out_W')
+  data_set=cbind(tournament,data_set)
+  #Passage du nom du tournoi en maj
+  data_set$tournament=str_to_title(as.character(data_set$tournament))
+  data_set$N_match=c(1:nrow(data_set))
+  data_set=data_set[order(data_set$N_match,decreasing=T),]
+  #ajout du lieu du tournoi et de la surface
+  location=str_extract(page %>% html_nodes("h1") %>% html_text(), "(?<=\\().*?(?=\\))")
+  data_set$Location=location
+  surface=str_match(page %>% 
+                      html_nodes("#center > div:nth-child(2)") %>% 
+                      html_text(), "\\$\\s*,\\s*(\\w+)")[,2]
+  data_set$Surface=str_to_title(surface)
+  }
+  return(data_set)
+}
+
 # Function that scrap tennis playner full name
 
 get_players_name=function(tournament,year){
@@ -91,6 +160,40 @@ get_players_name=function(tournament,year){
     
   }
   
+  return(players_id)
+}
+
+
+get_players_name_qualif=function(tournament,year){
+  
+  url=paste('https://www.tennisexplorer.com/',tournament,'/',year,'/','atp-men/?phase=qualification',sep='')
+  # extraire les donn?es ? partir de la page Web
+  page <- read_html(url)
+  
+  links <- page %>%
+    html_nodes("td:not([class])>a") 
+  
+  if (length(links)<1){
+    players_id=data.frame()
+  }else{
+  
+  players_id=data.frame("P1"=NA,"P2"=NA,"N_match"=NA)
+  
+  for (i in 1:length(links)){
+    
+    match_id=paste0("https://tennisexplorer.com",xml_attrs(links[[i]])[["href"]])
+    
+    page_match <- read_html(match_id)
+    
+    players=page_match %>% html_nodes("th.plName") %>% html_text() 
+    
+    players_id[i,1]=players[1]
+    players_id[i,2]=players[2]
+    players_id[i,3]=i
+    #print(i)
+    
+  }
+}  
   return(players_id)
 }
 
@@ -123,6 +226,36 @@ rank_scrap=function(date){
   
 }
 
+
+race_scrap=function(date){
+  
+  race_scrap_end=data.frame()
+  
+  for (i in 1:20){
+    race=paste0("https://www.tennisexplorer.com/ranking/atp-men/?t=race&date=",date,"&page=",i)
+    
+    page_race=read_html(race)
+    
+    race_scrap <- page_race %>%
+      html_nodes("table.result") %>% html_table() 
+    
+    race_scrap=race_scrap[[2]]
+    
+    colnames(race_scrap)=race_scrap[1,]
+    
+    race_scrap=race_scrap[-1,]
+    
+    race_scrap_end=rbind(race_scrap_end,race_scrap)
+  }
+  
+  race_scrap_end$Rank=substr(race_scrap_end$Rank,1,nchar(race_scrap_end$Rank)-1)
+  
+  race_scrap_end=race_scrap_end %>% 
+    rename("Race_Rank"=Rank,"Race_Points"=Points)
+  
+  return(race_scrap_end)
+  
+}
 
 list_tournament=function(year){
   

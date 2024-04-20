@@ -3,7 +3,7 @@ library(xml2)
 library(tidyverse)
 library(sjmisc)
 
-year=2024
+year=2023
 
 list_tournament=function(year){
   
@@ -64,12 +64,86 @@ list_tournament=function(year){
                           "Challenger","ATP")
   }
   
+  list$URL=paste0("https://www.tennisexplorer.com",list$URL)
+  
   return(list)
 }
 
 
+tournament_list=list_tournament(year)
 
+# get tournament info (points and prize)
+
+# page=read_html("https://www.tennisexplorer.com/brisbane/2024/atp-men/")
 # 
+# tournament_info=page %>% html_nodes("#center > div:nth-child(7) > div > div > table") %>% html_table()
+# 
+# tournament_info=tournament_info[[1]]
+# 
+# colnames(tournament_info)=tournament_info[1,]
+# 
+# tournament_info=tournament_info[-1,]
+# 
+
+i="Savannah chall."
+
+calendar_info=data.frame()
+
+for (i in tournament_list$tournament){
+  
+  url=tournament_list %>% filter(tournament==i) %>% select(URL) %>% as.character()
+  
+  page=read_html(url)
+  
+  tournament_info=page %>% html_nodes("#center > div:nth-child(7) > div > div > table") %>% html_table()
+  
+if (length(tournament_info)>0){
+    
+    tournament_info=tournament_info[[1]]
+  
+  if (nrow(tournament_info)>9|nrow(tournament_info)<3){
+    tournament_info=data.frame("Round"=NA,"Prize money"=NA,"Ranking points"=NA)
+    tournament_info$tournament=i
+    tournament_info=tournament_info %>% rename("Prize money"=Prize.money,
+                                               "Ranking points"=Ranking.points)
+  }else{
+    
+    colnames(tournament_info)=tournament_info[1,]
+    
+    tournament_info=tournament_info[-1,]
+    
+    tournament_info$tournament=i
+    
+    tournament_info=tournament_info %>% 
+      mutate(Round=case_when(Round=="1. round"~"1R",
+                             Round=="2. round"~"2R",
+                             Round=="3. round"~"3R",
+                             Round=="round of 16"~"R16",
+                             Round=="quarterfinal"~"QF",
+                             Round=="semifinal"~"SF",
+                             Round=="final"~"F",
+                             TRUE~"Winner"))
+    
+  }
+    calendar_info=rbind(calendar_info,tournament_info)
+}else{
+  tournament_info=data.frame("Round"=NA,"Prize money"=NA,"Ranking points"=NA)
+  tournament_info$tournament=i
+  tournament_info=tournament_info %>% rename("Prize money"=Prize.money,
+                                             "Ranking points"=Ranking.points)
+  
+  calendar_info=rbind(calendar_info,tournament_info)
+}
+  
+  
+  print(i)
+}
+
+
+
+
+
+
 # elements_prize <- page %>%
 #   html_nodes("div.box.lGray div.inner div.content table#tournamentList tbody td.tr")
 # 

@@ -1,5 +1,7 @@
 # sortir la liste des tournois joués une année  donnée
 
+start=Sys.time()
+
 year=2022
 
 tournament_name="montreal"
@@ -31,15 +33,28 @@ date=mondays$Date[mondays$week==week(min(tournament$Date))]
 
 rank=rank_scrap(date)
 
+race=race_scrap(date)
+
 # On croise le rang avec les joueurs 
 
 tournament=tournament %>% 
   left_join(rank %>% select(1,3,5),by=c("P1"="Player name")) %>% 
   left_join(rank %>% select(1,3,5),by=c("P2"="Player name")) %>% 
+  left_join(race %>% select(1,3,4,5),by=c("P1"="Player name")) %>% 
+  left_join(race %>% select(1,3,4,5),by=c("P2"="Player name")) %>% 
   rename("Rank_W"=Rank.x,
          "Rank_L"=Rank.y,
          "Pts_W"=Points.x,
-         "Pts_L"=Points.y)
+         "Pts_L"=Points.y,
+         "Rank_Race_W"=Race_Rank.x,
+         "Rank_Race_L"=Race_Rank.y,
+         "Pts_Race_W"=Race_Points.x,
+         "Pts_Race_L"=Race_Points.y,
+         "Country_W"=Country.x,
+         "Country_L"=Country.y) %>% 
+  mutate("Elo_W"=NA,"Elo_L"=NA)
+
+print(Sys.time()-start)
 
 # Get players profil url
 
