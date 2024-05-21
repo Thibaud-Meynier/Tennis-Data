@@ -2,9 +2,9 @@
 
 start=Sys.time()
 
-year=2022
+year=2024
 
-tournament_name="montreal"
+tournament_name="Rome"
 
 # tournoi et joueurs
 
@@ -27,7 +27,7 @@ mondays$week=week(mondays$Date)
 
 # on récupère la semaine du tournoi pour ensuite prendre le classement du lundi de cette semaine
 
-date=mondays$Date[mondays$week==week(min(tournament$Date))]
+date=mondays$Date[mondays$week==week(min(tournament$Date)+1)] # on prend le classement du lundi même pour les tournois commençants le dimanche
 
 # on récupère le classement de la semaine
 
@@ -38,8 +38,8 @@ race=race_scrap(date)
 # On croise le rang avec les joueurs 
 
 tournament=tournament %>% 
-  left_join(rank %>% select(1,3,5),by=c("P1"="Player name")) %>% 
-  left_join(rank %>% select(1,3,5),by=c("P2"="Player name")) %>% 
+  left_join(rank %>% select(1,3,5,6),by=c("P1"="Player name")) %>% 
+  left_join(rank %>% select(1,3,5,6),by=c("P2"="Player name")) %>% 
   left_join(race %>% select(1,3,4,5),by=c("P1"="Player name")) %>% 
   left_join(race %>% select(1,3,4,5),by=c("P2"="Player name")) %>% 
   rename("Rank_W"=Rank.x,
@@ -51,13 +51,11 @@ tournament=tournament %>%
          "Pts_Race_W"=Race_Points.x,
          "Pts_Race_L"=Race_Points.y,
          "Country_W"=Country.x,
-         "Country_L"=Country.y) %>% 
+         "Country_L"=Country.y,
+         "Winner_id"=P1,
+         "Loser_id"=P2,
+         "Winner_url"=URL_players.x,
+         "Loser_url"=URL_players.y) %>% 
   mutate("Elo_W"=NA,"Elo_L"=NA)
 
-print(Sys.time()-start)
-
-# Get players profil url
-
-url=paste0("https://www.tennisexplorer.com/ranking/atp-men/?date=",date,"&page=",1)
-page=read_html(url)
-page %>% html_nodes("td.t-name>a") %>% html_attr("href")
+print(round(Sys.time()-start,2))

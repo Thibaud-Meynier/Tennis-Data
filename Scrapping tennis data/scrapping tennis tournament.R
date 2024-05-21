@@ -217,11 +217,26 @@ rank_scrap=function(date){
     
     rank_scrap=rank_scrap[-1,]
     
+    rank_scrap=rank_scrap %>% mutate(row_number=row_number())
+    
+    player_id=page_rank %>% 
+    html_nodes("td.t-name>a") %>% 
+      html_attr("href") %>% 
+      as.data.frame() %>% 
+      head(50) %>% 
+      rename("URL_players"=".") %>% 
+      mutate(URL_players=paste0("https://www.tennisexplorer.com",URL_players),
+             row_number=row_number())
+    
+    rank_scrap=rank_scrap %>% 
+      left_join(player_id,by=c("row_number"))
+    
     rank_scrap_end=rbind(rank_scrap_end,rank_scrap)
   }
   
   rank_scrap_end$Rank=substr(rank_scrap_end$Rank,1,nchar(rank_scrap_end$Rank)-1)
   
+  rank_scrap_end=rank_scrap_end %>% select(-row_number)
   return(rank_scrap_end)
   
 }

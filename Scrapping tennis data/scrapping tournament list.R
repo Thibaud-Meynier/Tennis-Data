@@ -3,7 +3,7 @@ library(xml2)
 library(tidyverse)
 library(sjmisc)
 
-year=2023
+year=2020
 
 list_tournament=function(year){
   
@@ -39,7 +39,7 @@ list_tournament=function(year){
     filter(Valid==F) %>% 
     select(1,2)
   
-  list=list %>% filter(!tournament %in% c("Netflix Slam","Kooyong - exh.")) %>% 
+  list=list %>% filter(!tournament %in% exclusion) %>% 
     rename("URL"=V1)
   
   table=page %>% html_nodes("table#tournamentList") %>% html_table()
@@ -71,21 +71,6 @@ list_tournament=function(year){
 
 
 tournament_list=list_tournament(year)
-
-# get tournament info (points and prize)
-
-# page=read_html("https://www.tennisexplorer.com/brisbane/2024/atp-men/")
-# 
-# tournament_info=page %>% html_nodes("#center > div:nth-child(7) > div > div > table") %>% html_table()
-# 
-# tournament_info=tournament_info[[1]]
-# 
-# colnames(tournament_info)=tournament_info[1,]
-# 
-# tournament_info=tournament_info[-1,]
-# 
-
-i="Savannah chall."
 
 calendar_info=data.frame()
 
@@ -138,41 +123,3 @@ if (length(tournament_info)>0){
   
   print(i)
 }
-
-
-
-
-
-
-# elements_prize <- page %>%
-#   html_nodes("div.box.lGray div.inner div.content table#tournamentList tbody td.tr")
-# 
-# list$prize=gsub("???","",
-#           gsub(" ","",
-#                gsub(",","",
-#                     gsub("[$]","",html_text(elements_prize)))))
-# 
-# 
-# list
-# 
-# colnames(list)[2]="ref_tournament"
-# list$prize=as.numeric(list$prize)
-# 
-# list=na.omit(list[list$prize>=250000,])
-# row=as.numeric(row.names(list))
-# 
-# elements_surface <- page %>%
-#   html_nodes("div.box.lGray div.inner div.content table#tournamentList tbody th.t-name+td.s-color")
-# 
-# list$surface=NA
-# 
-# for (i in row){
-# 
-#   l=length(elements_surface[[i]]%>% html_nodes("span"))
-#   list[rownames(list)==i,]$surface=ifelse(l>0,as.character(xml_attrs(elements_surface[[i]]%>% html_nodes("span"))[[1]][1]),NA)
-#   print(i)
-# 
-# }
-# 
-# list$year=year
-
