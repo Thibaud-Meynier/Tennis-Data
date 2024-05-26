@@ -72,6 +72,9 @@ list_tournament=function(year){
 
 tournament_list=list_tournament(year)
 
+info_tournament=function(tournament_list){
+  
+
 calendar_info=data.frame()
 
 for (i in tournament_list$tournament){
@@ -119,7 +122,11 @@ if (length(tournament_info)>0){
   
   calendar_info=rbind(calendar_info,tournament_info)
 }
-  
-  
-  print(i)
+
 }
+
+return(calendar_info)
+
+}
+
+calendar_info=info_tournament(list)

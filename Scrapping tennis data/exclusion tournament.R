@@ -1,25 +1,25 @@
-list_calendar=data.frame()
-
-for (i in seq(2017,2023,by=1)){
-  
-  list=list_tournament(i)
-  list$Annee=i
-  list_calendar=rbind(list_calendar,list)
-  print(i)
-}
-
-library(openxlsx)
-
-wb <- createWorkbook()
-
-# Ajouter une feuille et écrire les données
-addWorksheet(wb, "List_Tournament")
-writeData(wb, sheet = "List_Tournament", x = list_calendar)
-
-# Sauvegarder le fichier
-saveWorkbook(wb, file = "list_tournament.xlsx", overwrite = TRUE)
-
-getwd()
+# list_calendar=data.frame()
+# 
+# for (i in seq(2017,2023,by=1)){
+#   
+#   list=list_tournament(i)
+#   list$Annee=i
+#   list_calendar=rbind(list_calendar,list)
+#   print(i)
+# }
+# 
+# library(openxlsx)
+# 
+# wb <- createWorkbook()
+# 
+# # Ajouter une feuille et écrire les données
+# addWorksheet(wb, "List_Tournament")
+# writeData(wb, sheet = "List_Tournament", x = list_calendar)
+# 
+# # Sauvegarder le fichier
+# saveWorkbook(wb, file = "list_tournament.xlsx", overwrite = TRUE)
+# 
+# getwd()
 
 
 exclusion=c("International Tennis Series",
@@ -186,11 +186,14 @@ exclusion=c("International Tennis Series",
             "World Tennis League",
             "Battle of the Brits",
             "Diriyah Tennis Cup"
+            # "Furth challenger",# pas de matche en 2017
+            # "Bangkok challenger",# pas de matche en 2017
+            # "Incheon challenger" # pas de matche en 2017
             
 )
 
-list_tournament(2020) %>% filter(Categorie=="ATP")
-
-start=Sys.time()
-data_rank=rank_scrap(date)
-Sys.time()-start
+# list_tournament(2020) %>% filter(Categorie=="ATP")
+# 
+# start=Sys.time()
+# data_rank=rank_scrap(date)
+# Sys.time()-start

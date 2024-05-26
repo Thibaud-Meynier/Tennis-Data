@@ -1,0 +1,18 @@
+Collecter le calendrier des tournois par année
+
+Pour une ligne, de la base 
+charger les données du tournoi 
+stocker les données du tournoi dans une table par année
+
+Faire une union des tables par année 
+
+calcul de la race
+
+pour un joueur donnée, 
+pour chaque tournoi disputée, calculer son nombre de
+point gagné lié à son résultat
+
+à la fin sommer ces points en dynamique 
+à chaque semaine, calculer le classement
+
+Faire une ecxeption pour la coupe davis

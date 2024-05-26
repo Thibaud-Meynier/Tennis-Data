@@ -1,84 +1,30 @@
-get_tournament=function(tournament,year) {
-  # import des librairies
-  library(rvest)
-  library(dplyr)
-  library(tidyverse)
-  library(stringr)
-  library(lubridate)
-  library(xml2)
-  
-  url=paste('https://www.tennisexplorer.com/',tournament,'/',year,'/','atp-men/',sep='')
-  # extraire les donn?es ? partir de la page Web
-  page <- read_html(url)
-  matches <- page %>% html_nodes("table.result") %>% html_table()
-  # nettoyer et organiser les donn?es extraites
-  matches <- matches[[1]]
-  colnames(matches)=matches[1,]
-  matches=matches[-1,]
-  # rennomer toutes les colonnes
-  colnames(matches)=c('Date','Round','Player','Score','Set1','Set2','Set3','Set4','Set5','Odd_W','Odd_L','Info')
-  matches=matches[matches$Player!='',]
-  # extraire les jeux des sets tb
-  matches$Set1=as.numeric(substr(matches$Set1, 1, 1))
-  matches$Set2=as.numeric(substr(matches$Set2, 1, 1))
-  matches$Set3=as.numeric(substr(matches$Set3, 1, 1))
-  # On transforme la date
-  matches$Date=dmy(paste(gsub("['^.^']", "-", substr(matches$Date,1,5)),sep="-",year))
-  matches$Player=str_replace(matches$Player,'\\s+\\((.*$)',"")
-  matches$test=c(1:nrow(matches))%%2
-  # un data set winner et undata set looser
-  winner=matches[matches$test==1,]
-  colnames(winner)=c('Date','Round','Winner','Score_W','Set1_W','Set2_W','Set3_W','Set4_W','Set5_W','Odd_W','Odd_L','Info')
-  winner=winner[,c(1:10)]
-  loser=matches[matches$test==0,]
-  colnames(loser)=c('Date','Round','Loser','Score_L','Set1_L','Set2_L','Set3_L','Set4_L','Set5_L','Odd_W','Odd_L','Info')
-  loser=loser[,c(1:9,11)]
-  data_set=winner[,1:2]
-  
-  for (i in 1:8){
-    data_set=cbind(data_set,winner[,(2+i)],loser[,(2+i)])
-    n=ncol(data_set)
-    colnames(data_set)[(n-1):n]=c(colnames(winner)[(2+i)],colnames(loser)[(2+i)])
-    #print(i)
-  }
-  data_set$Score_W=as.numeric(as.character(data_set$Score_W))
-  data_set$Score_L=as.numeric(as.character(data_set$Score_L))
-  data_set$Odd_W=as.numeric(as.character(data_set$Odd_W))
-  data_set$Odd_L=as.numeric(as.character(data_set$Odd_L))
-  data_set$info=ifelse(data_set$Score_W<=1,'Walkover or Retired','Completed')
-  data_set$Outcome=ifelse(data_set$Odd_W<=data_set$Odd_L,'Fav_W','Out_W')
-  data_set=cbind(tournament,data_set)
-  #Passage du nom du tournoi en maj
-  data_set$tournament=str_to_title(as.character(data_set$tournament))
-  data_set$N_match=c(1:nrow(data_set))
-  data_set=data_set[order(data_set$N_match,decreasing=T),]
-  #ajout du lieu du tournoi et de la surface
-  location=str_extract(page %>% html_nodes("h1") %>% html_text(), "(?<=\\().*?(?=\\))")
-  data_set$Location=location
-  surface=str_match(page %>% 
-                      html_nodes("#center > div:nth-child(2)") %>% 
-                      html_text(), "\\$\\s*,\\s*(\\w+)")[,2]
-  data_set$Surface=str_to_title(surface)
-  
-  return(data_set)
-}
+# import des librairies
+library(rvest)
+library(dplyr)
+library(tidyverse)
+library(stringr)
+library(lubridate)
+library(xml2)
+library(sjmisc)
 
-get_tournament_qualif=function(tournament,year) {
-  # import des librairies
-  library(rvest)
-  library(dplyr)
-  library(tidyverse)
-  library(stringr)
-  library(lubridate)
-  library(xml2)
-  
-  url=paste0('https://www.tennisexplorer.com/',tournament,'/',year,'/','atp-men/?phase=qualification')
+colnames_calc=c("tournament","Date","Round","Winner" ,"Loser","Score_W","Score_L",   
+                "Set1_W","Set1_L","Set2_W","Set2_L","Set3_W","Set3_L","Set4_W",    
+                "Set4_L","Set5_W","Set5_L","Odd_W","Odd_L","info","Outcome" , 
+                 "N_match","Location","Surface","Winner_id","Loser_id","Rank_W","Country_W" ,
+                 "Pts_W","Winner_url","Rank_L","Country_L","Pts_L", "Loser_url","Elo_W" ,    
+                 "Elo_L" )
+
+get_tournament=function(tournament,year,url_tournament) {
+
+    #url=paste('https://www.tennisexplorer.com/',tournament,'/',year,'/','atp-men/',sep='')
+  url=url_tournament
   # extraire les donn?es ? partir de la page Web
   page <- read_html(url)
   matches <- page %>% html_nodes("table.result") %>% html_table()
   
-  if (length(matches)<5){
-  data_set=data.frame()  
+  if (nrow(matches[[1]])<=2){
+    data_set=data.frame(matrix(ncol = 36,nrow = 0))  
+    colnames(data_set)=colnames_calc
   }else{
   # nettoyer et organiser les donn?es extraites
   matches <- matches[[1]]
@@ -132,12 +78,136 @@ get_tournament_qualif=function(tournament,year) {
   return(data_set)
 }
 
+get_tournament_qualif=function(tournament,year,url_tournament) {
+  #url=paste0('https://www.tennisexplorer.com/',tournament,'/',year,'/','atp-men/?phase=qualification')
+  url=paste0(url_tournament,"?phase=qualification")
+  # extraire les donn?es ? partir de la page Web
+  page <- read_html(url)
+  matches <- page %>% html_nodes("table.result") %>% html_table()
+  
+  if (length(matches)<=5 & nrow(matches[[1]])<=2){
+  data_set=data.frame(matrix(ncol = 36,nrow = 0))  
+  colnames(data_set)=colnames_calc
+  }else{
+  # nettoyer et organiser les donn?es extraites
+  matches <- matches[[1]]
+  colnames(matches)=matches[1,]
+  matches=matches[-1,]
+  # rennomer toutes les colonnes
+  colnames(matches)=c('Date','Round','Player','Score','Set1','Set2','Set3','Set4','Set5','Odd_W','Odd_L','Info')
+  matches=matches[matches$Player!='',]
+  # extraire les jeux des sets tb
+  matches$Set1=as.numeric(substr(matches$Set1, 1, 1))
+  matches$Set2=as.numeric(substr(matches$Set2, 1, 1))
+  matches$Set3=as.numeric(substr(matches$Set3, 1, 1))
+  # On transforme la date
+  matches$Date=dmy(paste(gsub("['^.^']", "-", substr(matches$Date,1,5)),sep="-",year))
+  matches$Player=str_replace(matches$Player,'\\s+\\((.*$)',"")
+  matches$test=c(1:nrow(matches))%%2
+  # un data set winner et undata set looser
+  winner=matches[matches$test==1,]
+  colnames(winner)=c('Date','Round','Winner','Score_W','Set1_W','Set2_W','Set3_W','Set4_W','Set5_W','Odd_W','Odd_L','Info')
+  winner=winner[,c(1:10)]
+  loser=matches[matches$test==0,]
+  colnames(loser)=c('Date','Round','Loser','Score_L','Set1_L','Set2_L','Set3_L','Set4_L','Set5_L','Odd_W','Odd_L','Info')
+  loser=loser[,c(1:9,11)]
+  data_set=winner[,1:2]
+  
+  for (i in 1:8){
+    data_set=cbind(data_set,winner[,(2+i)],loser[,(2+i)])
+    n=ncol(data_set)
+    colnames(data_set)[(n-1):n]=c(colnames(winner)[(2+i)],colnames(loser)[(2+i)])
+    #print(i)
+  }
+  data_set$Score_W=as.numeric(as.character(data_set$Score_W))
+  data_set$Score_L=as.numeric(as.character(data_set$Score_L))
+  data_set$Odd_W=as.numeric(as.character(data_set$Odd_W))
+  data_set$Odd_L=as.numeric(as.character(data_set$Odd_L))
+  data_set$info=ifelse(data_set$Score_W<=1,'Walkover or Retired','Completed')
+  data_set$Outcome=ifelse(data_set$Odd_W<=data_set$Odd_L,'Fav_W','Out_W')
+  data_set=cbind(tournament,data_set)
+  #Passage du nom du tournoi en maj
+  data_set$tournament=str_to_title(as.character(data_set$tournament))
+  data_set$N_match=c(1:nrow(data_set))
+  data_set=data_set[order(data_set$N_match,decreasing=T),]
+  #ajout du lieu du tournoi et de la surface
+  location=str_extract(page %>% html_nodes("h1") %>% html_text(), "(?<=\\().*?(?=\\))")
+  data_set$Location=location
+  surface=str_match(page %>% 
+                      html_nodes("#center > div:nth-child(2)") %>% 
+                      html_text(), "\\$\\s*,\\s*(\\w+)")[,2]
+  data_set$Surface=str_to_title(surface)
+  }
+  return(data_set)
+}
+
+get_davis_cup=function(tournament,year,url_tournament) {
+
+    #url=paste('https://www.tennisexplorer.com/',tournament,'/',year,'/','atp-men/',sep='')
+  url=url_tournament
+  # extraire les donn?es ? partir de la page Web
+  page <- read_html(url)
+  matches <- page %>% html_nodes("table.result") %>% html_table()
+  # nettoyer et organiser les donn?es extraites
+  matches <- matches[[2]]
+  colnames(matches)=matches[1,]
+  matches=matches[-1,]
+  # rennomer toutes les colonnes
+  colnames(matches)=c('Date','Round','Player','Score','Set1','Set2','Set3','Set4','Set5','Odd_W','Odd_L','Info')
+  matches=matches[matches$Player!='',]
+  # extraire les jeux des sets tb
+  matches$Set1=as.numeric(substr(matches$Set1, 1, 1))
+  matches$Set2=as.numeric(substr(matches$Set2, 1, 1))
+  matches$Set3=as.numeric(substr(matches$Set3, 1, 1))
+  # On transforme la date
+  matches$Date=dmy(paste(gsub("['^.^']", "-", substr(matches$Date,1,5)),sep="-",year))
+  matches$Player=str_replace(matches$Player,'\\s+\\((.*$)',"")
+  matches$test=c(1:nrow(matches))%%2
+  # un data set winner et undata set looser
+  winner=matches[matches$test==1,]
+  colnames(winner)=c('Date','Round','Winner','Score_W','Set1_W','Set2_W','Set3_W','Set4_W','Set5_W','Odd_W','Odd_L','Info')
+  winner=winner[,c(1:10)]
+  loser=matches[matches$test==0,]
+  colnames(loser)=c('Date','Round','Loser','Score_L','Set1_L','Set2_L','Set3_L','Set4_L','Set5_L','Odd_W','Odd_L','Info')
+  loser=loser[,c(1:9,11)]
+  data_set=winner[,1:2]
+  
+  for (i in 1:8){
+    data_set=cbind(data_set,winner[,(2+i)],loser[,(2+i)])
+    n=ncol(data_set)
+    colnames(data_set)[(n-1):n]=c(colnames(winner)[(2+i)],colnames(loser)[(2+i)])
+    #print(i)
+  }
+  data_set$Score_W=as.numeric(as.character(data_set$Score_W))
+  data_set$Score_L=as.numeric(as.character(data_set$Score_L))
+  data_set$Odd_W=as.numeric(as.character(data_set$Odd_W))
+  data_set$Odd_L=as.numeric(as.character(data_set$Odd_L))
+  data_set$info=ifelse(data_set$Score_W<=1,'Walkover or Retired','Completed')
+  data_set$Outcome=ifelse(data_set$Odd_W<=data_set$Odd_L,'Fav_W','Out_W')
+  data_set=cbind(tournament,data_set)
+  #Passage du nom du tournoi en maj
+  data_set$tournament=str_to_title(as.character(data_set$tournament))
+  data_set$N_match=c(1:nrow(data_set))
+  data_set=data_set[order(data_set$N_match,decreasing=T),]
+  #ajout du lieu du tournoi et de la surface
+  location=str_extract(page %>% html_nodes("h1") %>% html_text(), "(?<=\\().*?(?=\\))")
+  data_set$Location=location
+  surface=str_match(page %>% 
+                      html_nodes("#center > div:nth-child(2)") %>% 
+                      html_text(), "\\$\\s*,\\s*(\\w+)")[,2]
+  data_set$Surface=str_to_title(surface)
+  
+  return(data_set)
+}
+
+
 # Function that scrap tennis playner full name
 
-get_players_name=function(tournament,year){
+get_players_name=function(tournament,year,url_tournament){
   
-  url=paste('https://www.tennisexplorer.com/',tournament,'/',year,'/','atp-men/',sep='')
+  #url=paste('https://www.tennisexplorer.com/',tournament,'/',year,'/','atp-men/',sep='')
   # extraire les donn?es ? partir de la page Web
+  url=url_tournament
   page <- read_html(url)
   
   links <- page %>%
@@ -164,9 +234,10 @@ get_players_name=function(tournament,year){
 }
 
 
-get_players_name_qualif=function(tournament,year){
+get_players_name_qualif=function(tournament,year,url_tournament){
   
-  url=paste('https://www.tennisexplorer.com/',tournament,'/',year,'/','atp-men/?phase=qualification',sep='')
+  #url=paste('https://www.tennisexplorer.com/',tournament,'/',year,'/','atp-men/?phase=qualification',sep='')
+  url=paste0(url_tournament,"?phase=qualification")
   # extraire les donn?es ? partir de la page Web
   page <- read_html(url)
   
@@ -272,6 +343,7 @@ race_scrap=function(date){
   
 }
 
+
 list_tournament=function(year){
   
   # URL de la page a scraper
@@ -306,7 +378,7 @@ list_tournament=function(year){
     filter(Valid==F) %>% 
     select(1,2)
   
-  list=list %>% filter(!tournament %in% c("Netflix Slam","Kooyong - exh.")) %>% 
+  list=list %>% filter(!tournament %in% exclusion) %>% 
     rename("URL"=V1)
   
   table=page %>% html_nodes("table#tournamentList") %>% html_table()
@@ -323,7 +395,65 @@ list_tournament=function(year){
   
   list=unique(list) %>% arrange(Date)
   
+  list$Categorie=NA
+  
+  for (i in 1:nrow(list)){
+    
+    list$Categorie[i]=ifelse(str_contains(list$tournament[i],c("chall.","challenger"),logic="or")==TRUE,
+                             "Challenger","ATP")
+  }
+  
+  list$URL=paste0("https://www.tennisexplorer.com",list$URL)
+  
   return(list)
+}
+
+
+calcul_date_rank=function(year,tournament){
+  
+  
+  # Filtrer les lundis
+  days_year <- seq.Date(as.Date(paste(year-1, "-01-01", sep = "")), 
+                        as.Date(paste(year, "-12-31", sep = "")), by = "day")
+  
+  mondays <- days_year[weekdays(days_year) == "lundi"] %>% as.data.frame()
+  
+  colnames(mondays)[1]="Date"
+  
+  mondays$week=week(mondays$Date)
+  
+  # on récupère la semaine du tournoi pour ensuite prendre le classement du lundi de cette semaine
+  
+  date=mondays %>% filter(Date<min(tournament$Date)+5
+                          & Date>=min(tournament$Date)-1) %>% 
+    select(Date) %>% 
+    as.matrix()
+  
+  return(date)
+}
+
+
+calcul_date_rank_qualif=function(year,tournament){
+  
+  
+  # Filtrer les lundis
+  days_year <- seq.Date(as.Date(paste(year-1, "-01-01", sep = "")), 
+                        as.Date(paste(year, "-12-31", sep = "")), by = "day")
+  
+  mondays <- days_year[weekdays(days_year) == "lundi"] %>% as.data.frame()
+  
+  colnames(mondays)[1]="Date"
+  
+  mondays$week=week(mondays$Date)
+  
+  # on récupère la semaine du tournoi pour ensuite prendre le classement du lundi de cette semaine
+  
+  date_qualif=mondays %>% filter(Date>=min(tournament_qualif$Date)-5
+                                 & Date<=min(tournament_qualif$Date)-1) %>% 
+    select(Date) %>% 
+    as.matrix()
+  
+  return(date_qualif)
 }
 
 # 
