@@ -12,6 +12,7 @@ tournament=get_tournament(year=year,
                           tournament=tournament_name,
                           url_tournament=url_tournament)
 
+if (nrow(tournament)>=1){
 players=get_players_name(year = year,
                          tournament = tournament_name,
                          url_tournament=url_tournament)
@@ -48,6 +49,8 @@ tournament=tournament %>%
          "Loser_id"=P2,
          "Winner_url"=URL_players.x,
          "Loser_url"=URL_players.y) %>% 
-  mutate("Elo_W"=NA,"Elo_L"=NA)
+  mutate("Elo_W"=NA,"Elo_L"=NA,"Phase"="Main Draw")
+
+}
 
 print(round(Sys.time()-start,2))

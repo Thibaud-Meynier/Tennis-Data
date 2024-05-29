@@ -15,4 +15,8 @@ point gagné lié à son résultat
 à la fin sommer ces points en dynamique 
 à chaque semaine, calculer le classement
 
-Faire une ecxeption pour la coupe davis
+Pour les tournois à scrapper, faire à partir de la liste un check de la disponniblité des données
+Si pas de données pour le match, le rajouter à la liste d'exclusion, eventuellement conditionellement
+
+Faire une boucle sur le test de la condition length(match[[1]])<=2 pour les tournois du calendrier
+pour une année donnée.

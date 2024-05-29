@@ -74,7 +74,6 @@ tournament_list=list_tournament(year)
 
 info_tournament=function(tournament_list){
   
-
 calendar_info=data.frame()
 
 for (i in tournament_list$tournament){
@@ -130,3 +129,181 @@ return(calendar_info)
 }
 
 calendar_info=info_tournament(list)
+
+list=list %>% 
+  left_join(calendar_info %>% 
+                          group_by(tournament) %>% 
+                          mutate(Points=max(as.numeric(`Ranking points`))) %>% 
+                          select(tournament,Points) %>% 
+              unique(),by=c("tournament"="tournament"))
+
+# Categorie Points Race
+
+# GS
+
+# Qualif
+
+#Q1 = 0
+#Q2 = 8
+#Q3 = 16
+#Q-F=25
+
+# Main Draw
+
+#R1 = 10
+#R2 = 45
+#R3 = 90
+#R4 = 180
+#QF = 360
+#SF = 720
+#Final = 1200
+#Winner = 2000
+
+# M1000 (IW, Miami)
+
+# Qualif
+
+#Q1 = 0
+#Q2 = 8
+#Q-F=16
+
+# Main Draw
+
+#R1 = 10
+#R2 = 25
+#R3 = 45
+#R4 = 90
+#QF = 180
+#SF = 360
+#Final = 600
+#Winner = 1000
+
+# MC, Bercy, Cinci
+
+# Qualif
+
+#Q1 = 0
+#Q2 = 8
+#Q-F=25
+
+# Main Draw
+
+#R2 = 10
+#R3 = 45
+#R4 = 90
+#QF = 180
+#SF = 360
+#Final = 600
+#Winner = 1000
+
+# ATP 500 (48 players)
+
+# Qualif
+
+#Q1 = 0
+#Q2 = 4
+#Q-F=10
+
+# Main Draw
+
+#R3 = 20
+#R4 = 45
+#QF = 90
+#SF = 180
+#Final = 300
+#Winner = 500
+
+# ATP 500 (32 players)
+
+# Qualif
+
+#Q1 = 0
+#Q2 = 10
+#Q-F=20
+
+# Main Draw
+
+#R4 = 45
+#QF = 90
+#SF = 180
+#Final = 300
+#Winner = 500
+
+# ATP 250 (48 players) Winston Salem
+
+# Qualif
+
+#Q1 = 0
+#Q2 = 3
+#Q-F=5
+
+# Main Draw
+
+#R3 = 10
+#R4 = 20
+#QF = 45
+#SF = 90
+#Final = 150
+#Winner = 250
+
+
+# ATP 250 (32 players)
+
+# Qualif
+
+#Q1 = 0
+#Q2 = 6
+#Q-F=12
+
+# Main Draw
+
+#R4 = 20
+#QF = 45
+#SF = 90
+#Final = 150
+#Winner = 250
+
+# ATP 125
+
+#R3 = 5
+#R4 = 10
+#QF = 25
+#SF = 45
+#Final = 75
+#Winner = 125
+
+# ATP 110
+
+#R3 = 5
+#R4 = 9
+#QF = 20
+#SF = 40
+#Final = 65
+#Winner = 110
+
+# ATP 100
+
+#R3 = 5
+#R4 = 8
+#QF = 18
+#SF = 35
+#Final = 60
+#Winner = 100
+
+# ATP 90
+
+#R3 = 5
+#R4 = 8
+#QF = 17
+#SF = 33
+#Final = 55
+#Winner = 90
+
+# ATP 80
+
+#R3 = 3
+#R4 = 7
+#QF = 15
+#SF = 29
+#Final = 48
+#Winner = 80

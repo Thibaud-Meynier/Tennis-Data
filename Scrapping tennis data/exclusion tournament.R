@@ -185,11 +185,10 @@ exclusion=c("International Tennis Series",
             "Netherlands - Championship",
             "World Tennis League",
             "Battle of the Brits",
-            "Diriyah Tennis Cup"
-            # "Furth challenger",# pas de matche en 2017
-            # "Bangkok challenger",# pas de matche en 2017
-            # "Incheon challenger" # pas de matche en 2017
-            
+            "Diriyah Tennis Cup",
+            "Czech Indoor Championship",
+            "Brussels - seniors",
+            "Hawaii Open"
 )
 
 # list_tournament(2020) %>% filter(Categorie=="ATP")

@@ -2,11 +2,11 @@
 
 start=Sys.time()
 
-year=2017
-
-tournament_name="Davis Cup"
-
-url_tournament="https://www.tennisexplorer.com/davis-cup/2017/atp-men/"
+# year=2017
+# 
+# tournament_name="Davis Cup"
+# 
+# url_tournament="https://www.tennisexplorer.com/davis-cup/2017/atp-men/"
 
 # tournoi et joueurs
 
@@ -79,7 +79,7 @@ tournament=tournament %>%
          "Loser_id"=P2,
          "Winner_url"=URL_players.x,
          "Loser_url"=URL_players.y) %>% 
-  mutate("Elo_W"=NA,"Elo_L"=NA) %>% 
+  mutate("Elo_W"=NA,"Elo_L"=NA,"Phase"="Main Draw") %>% 
   select(-Week)
 
 print(round(Sys.time()-start,2))

@@ -12,6 +12,8 @@ tournament_qualif=get_tournament_qualif(year=year,
                                         tournament=tournament_name,
                                         url_tournament=url_tournament)
 
+if (nrow(tournament_qualif)>=1){
+  
 players_qualif=get_players_name_qualif(year = year,
                                        tournament = tournament_name,
                                        url_tournament=url_tournament)
@@ -48,6 +50,8 @@ tournament_qualif=tournament_qualif %>%
          "Loser_id"=P2,
          "Winner_url"=URL_players.x,
          "Loser_url"=URL_players.y) %>% 
-  mutate("Elo_W"=NA,"Elo_L"=NA)
+  mutate("Elo_W"=NA,"Elo_L"=NA,"Phase"="Qualification")
+
+}
 
 print(round(Sys.time()-start,2))

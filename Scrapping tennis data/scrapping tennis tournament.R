@@ -12,7 +12,7 @@ colnames_calc=c("tournament","Date","Round","Winner" ,"Loser","Score_W","Score_L
                 "Set4_L","Set5_W","Set5_L","Odd_W","Odd_L","info","Outcome" , 
                  "N_match","Location","Surface","Winner_id","Loser_id","Rank_W","Country_W" ,
                  "Pts_W","Winner_url","Rank_L","Country_L","Pts_L", "Loser_url","Elo_W" ,    
-                 "Elo_L" )
+                 "Elo_L","Phase")
 
 get_tournament=function(tournament,year,url_tournament) {
 
@@ -23,7 +23,7 @@ get_tournament=function(tournament,year,url_tournament) {
   matches <- page %>% html_nodes("table.result") %>% html_table()
   
   if (nrow(matches[[1]])<=2){
-    data_set=data.frame(matrix(ncol = 36,nrow = 0))  
+    data_set=data.frame(matrix(ncol = 37,nrow = 0))  
     colnames(data_set)=colnames_calc
   }else{
   # nettoyer et organiser les donn?es extraites
@@ -86,7 +86,7 @@ get_tournament_qualif=function(tournament,year,url_tournament) {
   matches <- page %>% html_nodes("table.result") %>% html_table()
   
   if (length(matches)<=5 & nrow(matches[[1]])<=2){
-  data_set=data.frame(matrix(ncol = 36,nrow = 0))  
+  data_set=data.frame(matrix(ncol = 37,nrow = 0))  
   colnames(data_set)=colnames_calc
   }else{
   # nettoyer et organiser les donn?es extraites

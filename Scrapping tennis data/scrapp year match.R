@@ -15,11 +15,11 @@ table_stock=data.frame()
 
 Start=Sys.time()
 
-  for (a in 91:nrow(list)){
+  for (a in 1:nrow(list)){
     
     tournament_name=list[a,1]
     
-    print(tournament_name)
+    print(paste0(tournament_name," ",a))
     
     url_tournament=list[a,2]
     
@@ -36,8 +36,10 @@ Start=Sys.time()
       source(paste0(getwd(),"/Scrapping tennis data/Code to get all informations DC.R"))
       
     }else {
-      # Retourne 0 lignes normalement car pas de qualif pour ces tournois
-      source(paste0(getwd(),"/Scrapping tennis data/Code to get all informations qualif.R"))
+      
+      tournament_qualif=data.frame(matrix(ncol = 37,nrow = 0))  
+      
+      colnames(tournament_qualif)=colnames_calc
       
       source(paste0(getwd(),"/Scrapping tennis data/Code to get all informations.R"))
       
@@ -51,4 +53,5 @@ Start=Sys.time()
 #}
 
 Sys.time()-Start
-# LExington pb avec la règle de gestion ifelse
+
+save(table_stock,file = paste0(getwd(),"/Scrapping tennis data/","ATP_",year,"_Extraction.RData"))
