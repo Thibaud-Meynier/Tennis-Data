@@ -188,7 +188,10 @@ exclusion=c("International Tennis Series",
             "Diriyah Tennis Cup",
             "Czech Indoor Championship",
             "Brussels - seniors",
-            "Hawaii Open"
+            "Hawaii Open",
+            "Basel Open",
+            "Atlanta Open",
+            "A Day at the Drive (Adelaide)"
 )
 
 # list_tournament(2020) %>% filter(Categorie=="ATP")

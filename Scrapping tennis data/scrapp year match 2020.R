@@ -1,5 +1,5 @@
 
-year=2023
+year=2020
 
 source(paste0(getwd(),"/Scrapping tennis data/exclusion tournament.R"))
 
@@ -25,27 +25,22 @@ Start=Sys.time()
     
     # year=i
     
-    if (!tournament_name %in% c("Davis Cup","Next Gen ATP Finals","Masters Cup ATP",
-                                "ATP Cup","Olympics - Tokyo","United Cup")){
+    if (!tournament_name %in% c("Davis Cup","Next Gen ATP Finals","Masters Cup ATP","ATP Cup","US Open")){
       
     source(paste0(getwd(),"/Scrapping tennis data/Code to get all informations qualif.R"))
     
     source(paste0(getwd(),"/Scrapping tennis data/Code to get all informations.R"))
     
     }else if (tournament_name=="Davis Cup"){
-
-      tournament_qualif=data.frame(matrix(ncol = 37,nrow = 0))
-
-      colnames(tournament_qualif)=colnames_calc
-
+      
       source(paste0(getwd(),"/Scrapping tennis data/Code to get all informations DC.R"))
-
-    }else if (tournament_name=="ATP Cup"|tournament_name=="United Cup"){
-
-      tournament_qualif=data.frame(matrix(ncol = 37,nrow = 0))
-
+      
+    }else if (tournament_name=="ATP Cup"){
+      
+      tournament_qualif=data.frame(matrix(ncol = 37,nrow = 0))  
+      
       colnames(tournament_qualif)=colnames_calc
-
+      
       source(paste0(getwd(),"/Scrapping tennis data/Code to get all informations ATP_Cup.R"))
       
     }else {

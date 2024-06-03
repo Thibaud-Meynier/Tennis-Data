@@ -307,3 +307,13 @@ list=list %>%
 #SF = 29
 #Final = 48
 #Winner = 80
+
+##### Table technique calcul classement Race #####
+
+QualifGS=data.frame("Phase"="Qualification",
+                    "Round"=c("Q-Q1","Q-Q2","Q-Q3","Q-QF"),
+                    "Points"=c(0,8,16,25))
+
+MainDrawGS=data.frame("Phase"="Main Draw",
+                      "Round"=c("R1","R2","R3","R4","QF","SF","F","W"),
+                      "Points"=c(10,45,90,180,360,720,1200,2000))
