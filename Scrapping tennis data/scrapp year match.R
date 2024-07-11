@@ -15,7 +15,7 @@ table_stock=data.frame()
 
 Start=Sys.time()
 
-  for (a in 1:nrow(list)){
+  for (a in 127:nrow(list)){
     
     tournament_name=list[a,1]
     
