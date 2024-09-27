@@ -15,7 +15,7 @@ table_stock=data.frame()
 
 Start=Sys.time()
 
-  for (a in 127:nrow(list)){
+  for (a in 26:nrow(list)){
     
     tournament_name=list[a,1]
     
@@ -63,7 +63,7 @@ Start=Sys.time()
     table_stock=rbind(table_stock,tournament_tot)
 
 }
-#}
+ #}
 
 Sys.time()-Start
 
