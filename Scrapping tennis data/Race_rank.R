@@ -207,17 +207,88 @@ matches_long <- matches_long %>%
 ##### Table technique calcul classement Race #####
 
 QualifGS=data.frame("Phase"="Qualification",
-                    "Round"=c("Q-Q1","Q-Q2","Q-Q3","Q-QF"),
+                    "Round"=c("Q-1R","Q-2R","Q-3R","Q-QW"),
                     "Points"=c(0,8,16,25))
 
 MainDrawGS=data.frame("Phase"="Main Draw",
                       "Round"=c("R1","R2","R3","R4","QF","SF","F","W"),
                       "Points"=c(10,45,90,180,360,720,1200,2000))
 
+# ATP cup
+
+MainDrawATP_CUP_1_10=data.frame("Phase"="Main Draw",
+                                "Rank_Range"="1-10",
+                      "Round"=c("RR","QF","SF","F","W"),
+                      "Points"=c(75,120,180,0,250))
+
+MainDrawATP_CUP_11_25=data.frame("Phase"="Main Draw",
+                                "Rank_Range"="11-25",
+                                "Round"=c("RR","QF","SF","F","W"),
+                                "Points"=c(65,100,140,0,200))
+
+MainDrawATP_CUP_26_50=data.frame("Phase"="Main Draw",
+                                "Rank_Range"="26-50",
+                                "Round"=c("RR","QF","SF","F","W"),
+                                "Points"=c(50,75,105,0,150))
+
+MainDrawATP_CUP_51_100=data.frame("Phase"="Main Draw",
+                                "Rank_Range"="51-100",
+                                "Round"=c("RR","QF","SF","F","W"),
+                                "Points"=c(25,35,50,0,75))
+
+MainDrawATP_CUP_101=data.frame("Phase"="Main Draw",
+                                "Rank_Range"="101+",
+                                "Round"=c("RR","QF","SF","F","W"),
+                                "Points"=c(20,25,35,0,50))
+
+
+# United Cup 
+
+MainDrawUnited_CUP_1_10=data.frame("Phase"="Main Draw",
+                                "Rank_Range"="1-10",
+                                "Round"=c("RR","QF","SF","F","W"),
+                                "Points"=c(55,80,130,0,180))
+
+MainDrawUnited_11_20=data.frame("Phase"="Main Draw",
+                                 "Rank_Range"="11-20",
+                                 "Round"=c("RR","QF","SF","F","W"),
+                                 "Points"=c(45,65,105,0,140))
+
+MainDrawUnited_21_30=data.frame("Phase"="Main Draw",
+                                 "Rank_Range"="21_30",
+                                 "Round"=c("RR","QF","SF","F","W"),
+                                 "Points"=c(40,55,90,0,120))
+
+MainDrawUnited_31_50=data.frame("Phase"="Main Draw",
+                                  "Rank_Range"="31-50",
+                                  "Round"=c("RR","QF","SF","F","W"),
+                                  "Points"=c(35,40,60,0,90))
+
+MainDrawUnited_51_100=data.frame("Phase"="Main Draw",
+                               "Rank_Range"="101+",
+                               "Round"=c("RR","QF","SF","F","W"),
+                               "Points"=c(25,35,40,0,60))
+
+MainDrawUnited_101_250=data.frame("Phase"="Main Draw",
+                                 "Rank_Range"="101_250",
+                                 "Round"=c("RR","QF","SF","F","W"),
+                                 "Points"=c(20,25,35,0,40))
+
+MainDrawUnited_251=data.frame("Phase"="Main Draw",
+                                 "Rank_Range"="251+",
+                                 "Round"=c("RR","QF","SF","F","W"),
+                                 "Points"=c(15,20,25,0,35))
+# Masters Cup
+
+MainDrawMC=data.frame("Phase"="Main Draw",
+                      "Round"=c("RR","SF","F","W"),
+                      "Points"=c(200,400,0,500))
+
+
 # M1000
 
 QualifM1000_96=data.frame("Phase"="Qualification",
-                    "Round"=c("Q-Q1","Q-Q2","Q-QF"),
+                    "Round"=c("Q-R16","Q-QF","Q-QW"),
                     "Points"=c(0,8,16))
 
 MainDrawM1000_96=data.frame("Phase"="Main Draw",
@@ -227,7 +298,7 @@ MainDrawM1000_96=data.frame("Phase"="Main Draw",
 
 
 QualifM1000=data.frame("Phase"="Qualification",
-                          "Round"=c("Q-Q1","Q-Q2","Q-QF"),
+                          "Round"=c("Q-R16","Q-QF","Q-QW"),
                           "Points"=c(0,8,25))
 
 MainDrawM1000=data.frame("Phase"="Main Draw",
@@ -237,7 +308,7 @@ MainDrawM1000=data.frame("Phase"="Main Draw",
 # ATP 500
 
 Qualif500_48=data.frame("Phase"="Qualification",
-                          "Round"=c("Q-Q1","Q-Q2","Q-QF"),
+                          "Round"=c("Q-R16","Q-QF","Q-QW"),
                           "Points"=c(0,4,10))
 
 MainDraw500_48=data.frame("Phase"="Main Draw",
@@ -246,7 +317,7 @@ MainDraw500_48=data.frame("Phase"="Main Draw",
 
 
 Qualif500_32=data.frame("Phase"="Qualification",
-                         "Round"=c("Q-Q1","Q-Q2","Q-QF"),
+                         "Round"=c("Q-R16","Q-QF","Q-QW"),
                          "Points"=c(0,10,20))
 
 MainDraw500_32=data.frame("Phase"="Main Draw",
@@ -257,7 +328,7 @@ MainDraw500_32=data.frame("Phase"="Main Draw",
 # ATP 250
 
 Qualif250_48=data.frame("Phase"="Qualification",
-                         "Round"=c("Q-Q1","Q-Q2","Q-QF"),
+                         "Round"=c("Q-R16","Q-QF","Q-QW"),
                          "Points"=c(0,3,5))
 
 MainDraw250_48=data.frame("Phase"="Main Draw",
@@ -266,7 +337,7 @@ MainDraw250_48=data.frame("Phase"="Main Draw",
 
 
 Qualif250=data.frame("Phase"="Qualification",
-                         "Round"=c("Q-Q1","Q-Q2","Q-QF"),
+                         "Round"=c("Q-R16","Q-QF","Q-QW"),
                          "Points"=c(0,6,12))
 
 MainDraw250=data.frame("Phase"="Main Draw",
@@ -274,3 +345,6 @@ MainDraw250=data.frame("Phase"="Main Draw",
                            "Points"=c(20,45,90,150,250))
 
 
+# Dans le cas des qualifications ou victoire finale, il y a une catégorie en plus par rapport aux nombre de tour
+# par exemple W, donc si round==F et statut==Winner round=W else round
+# pour els qualif même chose, si round=Q-QF et statut==winner round=Q-QW

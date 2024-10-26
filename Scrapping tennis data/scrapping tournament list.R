@@ -3,7 +3,7 @@ library(xml2)
 library(tidyverse)
 library(sjmisc)
 
-year=2020
+#year=2020
 
 list_tournament=function(year){
   
@@ -70,7 +70,7 @@ list_tournament=function(year){
 }
 
 
-tournament_list=list_tournament(year)
+#tournament_list=list_tournament(year)
 
 info_tournament=function(tournament_list){
   
@@ -82,7 +82,9 @@ for (i in tournament_list$tournament){
   
   page=read_html(url)
   
-  tournament_info=page %>% html_nodes("#center > div:nth-child(7) > div > div > table") %>% html_table()
+  tournament_info=page %>% 
+    html_nodes("#center > div:nth-child(7) > div > div > table") %>% 
+    html_table()
   
 if (length(tournament_info)>0){
     
@@ -128,12 +130,12 @@ return(calendar_info)
 
 }
 
-calendar_info=info_tournament(list)
+#calendar_info=info_tournament(tournament_list)
 
-list=list %>% 
-  left_join(calendar_info %>% 
-                          group_by(tournament) %>% 
-                          mutate(Points=max(as.numeric(`Ranking points`))) %>% 
-                          select(tournament,Points) %>% 
-              unique(),by=c("tournament"="tournament"))
+# list=list %>% 
+#   left_join(calendar_info %>% 
+#                           group_by(tournament) %>% 
+#                           mutate(Points=max(as.numeric(`Ranking points`))) %>% 
+#                           select(tournament,Points) %>% 
+#               unique(),by=c("tournament"="tournament"))
 

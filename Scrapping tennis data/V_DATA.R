@@ -29,6 +29,8 @@ for (i in 2017:2023){
   
   load(file = paste0(getwd(),"/Scrapping tennis data/Extraction/ATP_",i,"_Extraction.RData"))
   
+  table_stock$Season=i
+  
   V_MATCH=rbind(V_MATCH,table_stock)
   
   print(i)  
@@ -80,27 +82,81 @@ for (i in 1:nrow(V_TOURNAMENT)){
   names(ranking_points_tournament)=ranking_points_tournament[1,]
   ranking_points_tournament=ranking_points_tournament[-1,]
   
+  ranking_points_tournament$tournament=V_TOURNAMENT$tournament[i]
+  
+  ranking_points_tournament=ranking_points_tournament %>% 
+    mutate(Round=case_when(Round=="1. round"~"1R",
+                         Round=="2. round"~"2R",
+                         Round=="3. round"~"3R",
+                         Round=="round of 16"~"R16",
+                         Round=="quarterfinal"~"QF",
+                         Round=="semifinal"~"SF",
+                         Round=="final"~"F",
+                         TRUE~"Winner"))
+  
   points=max(as.numeric(ranking_points_tournament$`Ranking points`))
   
   V_TOURNAMENT$Country_tournament[i]=info
   V_TOURNAMENT$Surface_tournament[i]=info2
   V_TOURNAMENT$Points_tournament[i]=points
   
-  print(url)
+  #V_TOURNAMENT=V_TOURNAMENT %>% left_join(ranking_points_tournament,by=c("tournament"))
+  
+  print(i)
   
 }
 
 
 V_TOURNAMENT$Week_tournament=isoweek(V_TOURNAMENT$Date)
 
-V_TOURNAMENT$Year=ifelse(V_TOURNAMENT$Week_tournament>=52 & month(V_TOURNAMENT$Date)==1,year(V_TOURNAMENT$Date)-1,
-                         ifelse(V_TOURNAMENT$Week_tournament>=52 & month(V_TOURNAMENT$Date)==12,year(V_TOURNAMENT$Date),
-                                year(V_TOURNAMENT$Date)))
+V_TOURNAMENT$Year=case_when(V_TOURNAMENT$Week_tournament>=52 & month(V_TOURNAMENT$Date)==1 ~year(V_TOURNAMENT$Date),
+                            V_TOURNAMENT$Week_tournament>=52 & month(V_TOURNAMENT$Date)==12 ~ year(V_TOURNAMENT$Date)+1,
+                            V_TOURNAMENT$Week_tournament==1 & month(V_TOURNAMENT$Date)==12 ~ year(V_TOURNAMENT$Date)+1,
+                            TRUE ~ year(V_TOURNAMENT$Date))
 
+V_TOURNAMENT=V_TOURNAMENT %>% 
+  mutate(Categorie=paste(Categorie,ifelse(is.na(points)==T,"",points))) %>% 
+  
 V_TOURNAMENT= V_TOURNAMENT %>%  
   mutate(tournament = gsub("chall", "Chall", tournament, ignore.case = TRUE))
 
+V_TOURNAMENT2=data.frame()
+
+for (i in seq(2017,2023,by=1)){
+  
+  list=list_tournament(i)
+  
+  calendar_info=info_tournament(list)
+  
+  list=list %>% 
+    left_join(calendar_info,by=c("tournament"="tournament")) %>% 
+    group_by(tournament) %>% 
+    mutate(Max_Pts=max(as.numeric(`Ranking points`))) %>% 
+    ungroup() %>% 
+    mutate(Categorie=paste(Categorie,ifelse(is.na(Max_Pts)==T,"",Max_Pts))) %>% 
+    select(tournament,Date,Categorie,Round,`Ranking points`)
+  
+  V_TOURNAMENT2=rbind(V_TOURNAMENT2,list)
+  
+  print(i)
+  
+}
+
 save(V_TOURNAMENT,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT.RData"))
+
+
+V_TOURNAMENT3=V_TOURNAMENT2 %>% 
+  left_join(V_TOURNAMENT %>% select(tournament,Country_tournament,Date,Surface_tournament,Week_tournament,Year),by=c("tournament","Date"))
+
+V_TOURNAMENT3=V_TOURNAMENT3 %>% 
+  mutate(tournament = gsub("chall", "Chall", tournament, ignore.case = TRUE)) %>% 
+  mutate(tournament = gsub("Masters Cup ATP","Masters Cup Atp",tournament, ignore.case = TRUE)) %>% 
+  mutate(tournament = gsub("Rio de Janeiro","Rio De Janeiro",tournament, ignore.case = TRUE)) %>% 
+  mutate(tournament = gsub("ATP Cup","Atp Cup",tournament, ignore.case = TRUE)) %>% 
+  mutate(tournament = gsub("US Open","Us Open",tournament, ignore.case = TRUE)) %>% 
+  rename(Ranking_points=`Ranking points`)
+
+save(V_TOURNAMENT3,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT3.RData"))
 
 V_PLAYERS=V_RANK %>% select(Player_name,Country,URL_players) %>% distinct()
 

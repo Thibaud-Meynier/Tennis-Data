@@ -2,9 +2,9 @@
 
 start=Sys.time()
 
-# year=2017
-# 
-# tournament_name="Brisbane"
+# year=2022
+# # 
+# tournament_name="Charleston Chall."
 
 # tournoi et joueurs
 
