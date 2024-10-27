@@ -281,8 +281,8 @@ MainDrawUnited_251=data.frame("Phase"="Main Draw",
 # Masters Cup
 
 MainDrawMC=data.frame("Phase"="Main Draw",
-                      "Round"=c("RR","SF","F","W"),
-                      "Points"=c(200,400,0,500))
+                      "Round"=c("RR","RRW","SF","SFW","F","W"),
+                      "Points"=c(0,200,0,400,0,500))
 
 
 # M1000

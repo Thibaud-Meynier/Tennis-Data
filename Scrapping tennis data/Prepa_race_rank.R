@@ -63,19 +63,19 @@ NO=NO %>% filter(!is.na(N))
 
 ##### Stats tournois ATP #####
 
-ATP_250=V_TOURNAMENT3 %>% filter(Categorie=="ATP 250") %>% 
+ATP_250=V_TOURNAMENT4 %>% filter(Categorie=="ATP 250") %>% 
   select(tournament,Year,N,Surface_tournament)%>% 
   unique()
 
 table(ATP_250$N)
 
-ATP_500=V_TOURNAMENT3 %>% filter(Categorie=="ATP 500") %>% 
+ATP_500=V_TOURNAMENT4 %>% filter(Categorie=="ATP 500") %>% 
   select(tournament,Year,N,Surface_tournament)%>% 
   unique()
 
 table(ATP_500$N)
 
-ATP_1000=V_TOURNAMENT3 %>% filter(Categorie=="ATP 1000") %>% 
+ATP_1000=V_TOURNAMENT4 %>% filter(Categorie=="ATP 1000") %>% 
   select(tournament,Year,N,Surface_tournament)%>% 
   unique()
 
@@ -292,32 +292,77 @@ tournament=tournament %>%
 
 # Ajout des round et points pour Masters CUP et ATP_CUP/United_CUP
 
+t=t=V_TOURNAMENT4 %>% filter(!is.na(N) & is.na(Round)) %>% 
+  filter(!tournament %in% c("Davis Cup","Next Gen ATP Finals"))
+
+
+# Rajout des round et points pour ATP_CUP/United_CUP/Masters Cup
+
+# Masters Cup Atp
+tournament_red=V_TOURNAMENT4 %>% filter(tournament=="Masters Cup Atp") %>% select(-c(Round,Ranking_points))
+
+name=tournament_red$tournament %>% unique()
+
+MainDrawMC=data.frame("tournament"=name,
+                      "Round"=c("RR","RRW","SF","SFW","F","W"),
+                      "Ranking_points"=c(0,200,0,400,0,500))
+
+tournament_red=tournament_red %>% 
+  left_join(MainDrawMC,by=c("tournament")) %>% 
+  select(tournament,Date,Categorie,Round,Ranking_points,Country_tournament,Surface_tournament,Week_tournament,Year,N)
+
+V_TOURNAMENT4=V_TOURNAMENT4 %>% filter(tournament!=name)
+
+V_TOURNAMENT4=rbind(V_TOURNAMENT4,tournament_red)
+
+# Pour le calcul de la race avec ATP Cup/United Cup on appliquera un calcul séparé
+
+save(V_TOURNAMENT4,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT4.RData"))
+
 ###### AJOUT des Points de Qualifs ####
 
 
 # ETAPE 1
 # Filter sur une catégorie donnée
 
-if (Categorie=="ATP_250" & N<=31){
+V_250=V_TOURNAMENT4 %>% filter(Categorie=="ATP 250")
+
+V_TOURNAMENT_RED = V_250 %>% filter(N <= 31)
+    
+V_TOURNAMENT_RED2 = V_250 %>% filter(N <= 31) %>%
+  select(tournament, Round, Ranking_points) %>%
+  unique()
+    
+    # Créer les nouvelles lignes avec 3 lignes par tournoi
+new_rows <- V_TOURNAMENT_RED2 %>%
+    distinct(tournament) %>%              # Obtenir les tournois uniques
+    slice(rep(1:n(), each = 3)) %>%        # Répéter chaque tournoi 3 fois
+    mutate(Round = rep(c("Q-R16", "Q-QF", "Q-QW"), times = n_distinct(tournament)),
+             Ranking_points = rep(c(0, 8, 16), times = n_distinct(tournament))) # Ajouter les rounds et points
+    
+    # Combiner avec les lignes existantes
+V_TOURNAMENT_RED2 = rbind(new_rows, V_TOURNAMENT_RED2)
+    
+    # Effectuer la jointure gauche avec les autres colonnes du dataset initial
+V_TOURNAMENT_RED = V_TOURNAMENT_RED %>%
+    select(tournament, Date, Categorie, Country_tournament, Surface_tournament, Week_tournament, Year) %>%
+    left_join(V_TOURNAMENT_RED2, by = "tournament") %>%
+    unique()
+    
+
   
 
-V_TOURNAMENT_RED=V_TOURNAMENT4 %>% filter(Categorie=="ATP 250" & tournament=="Brisbane")
 
-V_TOURNAMENT_RED2=V_TOURNAMENT4 %>% filter(Categorie=="ATP 250" & tournament=="Brisbane") %>% 
-  select(tournament,Round,Ranking_points) %>% unique()
 
-new_rows <- data.frame(
-  tournament = rep("Brisbane",3),  
-  Round = c("Q-R16", "Q-QF", "Q-QW"),
-  Ranking_points = c(0, 8, 16))
 
-V_TOURNAMENT_RED2=rbind(new_rows,V_TOURNAMENT_RED2)
 
-V_TOURNAMENT_RED=V_TOURNAMENT_RED %>% select(tournament,Date,Categorie,Country_tournament,Surface_tournament,Week_tournament,Year) %>% 
-  left_join(V_TOURNAMENT_RED2,by=c("tournament")) %>% 
-  unique()
 
-}
+
+
+
+
+
+
 
 
 
