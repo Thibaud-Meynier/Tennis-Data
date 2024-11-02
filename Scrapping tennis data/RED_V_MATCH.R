@@ -81,9 +81,10 @@ V_TABLE_MATCH_TEST=sqldf("select f.Country_tournament
                        
                        left join V_PLAYERS e on e.Player_name=a.Loser_id
                          
-                       left join V_TOURNAMENT4 f on f.tournament=a.tournament 
-                         and a.Date>=(f.Date-10) 
-                         and a.Date<=(f.Date+30)")
+                       left join V_TOURNAMENT_F f on f.tournament=a.tournament 
+                        and f.Year=a.Season 
+                         --and a.Date>=(f.Date-10) 
+                         --and a.Date<=(f.Date+30)")
 
 #Test simulation 50_50
 

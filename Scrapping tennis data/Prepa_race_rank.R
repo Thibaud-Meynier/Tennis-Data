@@ -325,37 +325,39 @@ save(V_TOURNAMENT4,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TO
 # ETAPE 1
 # Filter sur une catégorie donnée
 
-V_250=V_TOURNAMENT4 %>% filter(Categorie=="ATP 250")
+V_50=V_TOURNAMENT4 %>% filter(Categorie %in% c("Challenger 50"))
 
-V_TOURNAMENT_RED = V_250 %>% filter(N <= 31)
+V_TOURNAMENT_RED = V_50 
+#%>% filter(N < 95)
     
-V_TOURNAMENT_RED2 = V_250 %>% filter(N <= 31) %>%
+V_TOURNAMENT_RED2 = V_50 %>% 
+#%>% filter(N < 95) %>%
   select(tournament, Round, Ranking_points) %>%
   unique()
     
-    # Créer les nouvelles lignes avec 3 lignes par tournoi
+# Créer les nouvelles lignes avec 3 lignes par tournoi
 new_rows <- V_TOURNAMENT_RED2 %>%
     distinct(tournament) %>%              # Obtenir les tournois uniques
     slice(rep(1:n(), each = 3)) %>%        # Répéter chaque tournoi 3 fois
-    mutate(Round = rep(c("Q-R16", "Q-QF", "Q-QW"), times = n_distinct(tournament)),
-             Ranking_points = rep(c(0, 8, 16), times = n_distinct(tournament))) # Ajouter les rounds et points
+    mutate(Round = rep(c("Q-R16","Q-QF","Q-QW"), times = n_distinct(tournament)),
+             Ranking_points = rep(c(0,1,3), times = n_distinct(tournament))) # Ajouter les rounds et points
     
-    # Combiner avec les lignes existantes
+# Combiner avec les lignes existantes
 V_TOURNAMENT_RED2 = rbind(new_rows, V_TOURNAMENT_RED2)
     
-    # Effectuer la jointure gauche avec les autres colonnes du dataset initial
-V_TOURNAMENT_RED = V_TOURNAMENT_RED %>%
+# Effectuer la jointure gauche avec les autres colonnes du dataset initial
+V_TOURNAMENT_RED_P1 = V_TOURNAMENT_RED %>%
     select(tournament, Date, Categorie, Country_tournament, Surface_tournament, Week_tournament, Year) %>%
     left_join(V_TOURNAMENT_RED2, by = "tournament") %>%
     unique()
     
-
+V_1000=rbind(V_TOURNAMENT_RED_P1,V_TOURNAMENT_RED_P2) %>% arrange(Date)
   
+V_50=V_TOURNAMENT_RED_P1
 
+V_TOURNAMENT_F=rbind(V_50,V_75_80,V_90_125,V_175,V_250,V_500,V_1000,V_2000) %>% arrange(Date)
 
-
-
-
+save(V_TOURNAMENT_F,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F.RData"))
 
 
 

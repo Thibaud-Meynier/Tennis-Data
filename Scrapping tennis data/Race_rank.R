@@ -206,6 +206,8 @@ matches_long <- matches_long %>%
 
 ##### Table technique calcul classement Race #####
 
+# NB Les points entre qualifs et tournoi principale se cumule
+
 QualifGS=data.frame("Phase"="Qualification",
                     "Round"=c("Q-1R","Q-2R","Q-3R","Q-QW"),
                     "Points"=c(0,8,16,25))
@@ -348,3 +350,37 @@ MainDraw250=data.frame("Phase"="Main Draw",
 # Dans le cas des qualifications ou victoire finale, il y a une catégorie en plus par rapport aux nombre de tour
 # par exemple W, donc si round==F et statut==Winner round=W else round
 # pour els qualif même chose, si round=Q-QF et statut==winner round=Q-QW
+
+# ATP 175
+
+Qualif175=data.frame("Round"=c("Q-R16","Q-QF","Q-QW"),
+                        "Points"=c(0,3,6))
+
+# ATP 125
+
+Qualif125=data.frame("Round"=c("Q-R16","Q-QF","Q-QW"),
+                     "Points"=c(0,2,5))
+
+# ATP 100
+
+Qualif110=data.frame("Round"=c("Q-R16","Q-QF","Q-QW"),
+                     "Points"=c(0,2,5))
+
+Qualif100=data.frame("Round"=c("Q-R16","Q-QF","Q-QW"),
+                     "Points"=c(0,2,5))
+
+Qualif90=data.frame("Round"=c("Q-R16","Q-QF","Q-QW"),
+                     "Points"=c(0,2,5))
+
+# ATP 80
+
+Qualif75=data.frame("Round"=c("Q-R16","Q-QF","Q-QW"),
+                     "Points"=c(0,2,4))
+
+Qualif80=data.frame("Round"=c("Q-R16","Q-QF","Q-QW"),
+                    "Points"=c(0,2,4))
+
+# ATP 50
+
+Qualif50=data.frame("Round"=c("Q-R16","Q-QF","Q-QW"),
+                     "Points"=c(0,1,3))
