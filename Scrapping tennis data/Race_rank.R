@@ -384,3 +384,40 @@ Qualif80=data.frame("Round"=c("Q-R16","Q-QF","Q-QW"),
 
 Qualif50=data.frame("Round"=c("Q-R16","Q-QF","Q-QW"),
                      "Points"=c(0,1,3))
+
+
+
+##### Calcul classement race ####
+
+V_RACE_RANK=V_TABLE_MATCH_TEST %>% 
+  select(tournament,Categorie,Week,Season,Round,Phase,Winner_id,Loser_id)
+
+table(V_RACE_RANK$Round)
+# Gerer les Q-SF en Q-QF
+
+V_RACE_RANK=V_RACE_RANK %>% 
+  pivot_longer(
+    cols = c(Winner_id, Loser_id),       # Colonnes à transformer
+    names_to = "Issue",                  # Nouvelle colonne pour l'origine
+    values_to = "Player_ID"              # Nouvelle colonne pour les ID des joueurs
+  ) %>%
+  mutate(Issue = ifelse(Issue == "Winner_id", "W", "L")) %>% 
+  mutate(Round = ifelse(Round =="Q-SF", "Q-QF",Round))
+
+V_RACE_RANK=V_RACE_RANK %>% 
+  mutate(Round=case_when(Phase=="Main Draw" & Round=="F" & Issue=="W"~"Winner",
+                         Phase=="Qualification" & Categorie!="Grand Slam" & Round=="Q-QF" & Issue=="W"~"Q-QW",
+                         Phase=="Qualification" & Categorie=="Grand Slam" & Round=="Q-3R" & Issue=="W"~"Q-QW",
+                         Categorie=="Masters Cup" & Round=="-" & Issue=="W"~"RRW",
+                         Categorie=="Masters Cup" & Round=="-" & Issue=="L"~"RR",
+         TRUE~Round))
+#V_RACE_RANK=V_RACE_RANK %>% filter(is.na(Categorie_tournament))
+
+V_TABLE_MATCH_TEST %>% filter(tournament=="United Cup")
+
+table(V_RACE_RANK$tournament)
+
+V_RACE_RANK=V_RACE_RANK %>% 
+  left_join(V_TOURNAMENT_F %>% select(tournament,Categorie,Year,Round,Ranking_points),by=c("tournament","Categorie_tournament"="Categorie","Season"="Year","Round"))
+
+# Pb Tournoi de bergame 2020

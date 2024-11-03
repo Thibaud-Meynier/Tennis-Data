@@ -357,6 +357,21 @@ V_50=V_TOURNAMENT_RED_P1
 
 V_TOURNAMENT_F=rbind(V_50,V_75_80,V_90_125,V_175,V_250,V_500,V_1000,V_2000) %>% arrange(Date)
 
+V_TOURNAMENT_F=rbind(V_TOURNAMENT_F,V_TOURNAMENT4 %>% 
+                       filter(Categorie=="ATP ") %>% 
+                       select(-N) %>% 
+                       filter(tournament !="Next Gen ATP Finals"))
+
+V_TOURNAMENT_F <- V_TOURNAMENT_F %>%
+  mutate(Categorie = case_when(
+    tournament %in% c('Australian Open', 'French Open', 'Wimbledon', 'US Open') ~ 'Grand Slam',
+    grepl('Olympics', tournament) ~ 'Olympics',
+    tournament == 'Davis Cup' ~ 'Davis Cup',
+    tournament %in% c('United Cup', 'Atp Cup') ~ 'Team Cup',
+    tournament == 'Masters Cup Atp' ~ 'Masters Cup',
+    TRUE ~ Categorie            # Cas par défaut : utilise la valeur de f.Categorie
+  ))
+
 save(V_TOURNAMENT_F,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F.RData"))
 
 

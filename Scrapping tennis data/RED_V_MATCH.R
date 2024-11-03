@@ -38,18 +38,9 @@ V_TABLE_MATCH=rbind(V_TABLE_MATCH,tournament)
 
 save(V_TABLE_MATCH,file = paste0(getwd(),"/Scrapping tennis data/Extraction/V_TABLE_MATCH.RData"))
 
-V_TABLE_MATCH_TEST=sqldf("select f.Country_tournament
-                        ,(case when f.Categorie='ATP' and f.Points_tournament=250 then 'ATP_250'
-                               when f.Categorie='ATP' and f.Points_tournament=500 then 'ATP_500'
-                               when f.Categorie='ATP' and f.Points_tournament=1000 then 'ATP_1000'
-                               when a.tournament in ('Australian Open','French Open','Wimbledon','US Open') then 'GC'
-                               when a.tournament like '%Olympics%' then 'Olympics'
-                               when a.tournament='Davis Cup' then 'Davis Cup'
-                               when a.tournament in ('United Cup','ATP Cup') then 'Team Cup'
-                               when a.tournament='Masters Cup ATP' then 'Masters Cup'
-                               when a.tournament='Hamburg' then 'ATP_500'
-                               when a.tournament in ('Metz','Cologne','Cologne 2','Eastbourne') then 'ATP_250'
-                               else f.Categorie||'_'||f.Points_tournament end) as Categorie_tournament
+V_TABLE_MATCH_TEST=sqldf("select distinct 
+                         f.Country_tournament
+                        ,f.Categorie
                         ,f.Surface_tournament
                         ,a.*
                         ,b.Rank as Rank_W
@@ -71,11 +62,11 @@ V_TABLE_MATCH_TEST=sqldf("select f.Country_tournament
                        
                        left join V_RANK b on b.Player_name=a.Winner_id 
                         and b.Week=a.Week 
-                        and b.Year=a.Year
+                        and b.Year=a.Season
                        
                        left join V_RANK c on c.Player_name=a.Loser_id 
                         and c.Week=a.Week 
-                        and c.Year=a.Year
+                        and c.Year=a.Season
                             
                        left join V_PLAYERS d on d.Player_name=a.Winner_id   
                        
@@ -86,6 +77,11 @@ V_TABLE_MATCH_TEST=sqldf("select f.Country_tournament
                          --and a.Date>=(f.Date-10) 
                          --and a.Date<=(f.Date+30)")
 
+# verif1=table(V_TABLE_MATCH$tournament,V_TABLE_MATCH$Season) %>% as.data.frame()
+# 
+# verif2=table(V_TABLE_MATCH_TEST$tournament,V_TABLE_MATCH_TEST$Season) %>% as.data.frame()
+# 
+# setdiff(verif1,verif2)
 #Test simulation 50_50
 
 T50_50=V_TABLE_MATCH_TEST %>% filter(abs(as.numeric(Rank_W)-as.numeric(Rank_L))<=5 
