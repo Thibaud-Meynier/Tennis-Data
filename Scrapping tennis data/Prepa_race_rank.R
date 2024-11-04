@@ -183,7 +183,7 @@ save(V_TOURNAMENT4,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TO
 
 # Rajout de ces matchs à la base V_MATCH
 
-get_tournament_charleston=function(tournament,year,url_tournament) {
+get_tournament_red=function(tournament,year,url_tournament) {
   
   #url=paste('https://www.tennisexplorer.com/',tournament,'/',year,'/','atp-men/',sep='')
   url=url_tournament
@@ -325,12 +325,12 @@ save(V_TOURNAMENT4,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TO
 # ETAPE 1
 # Filter sur une catégorie donnée
 
-V_50=V_TOURNAMENT4 %>% filter(Categorie %in% c("Challenger 50"))
+V_2000=V_TOURNAMENT4 %>% filter(Categorie %in% c("ATP 2000"))
 
-V_TOURNAMENT_RED = V_50 
+V_TOURNAMENT_RED = V_2000
 #%>% filter(N < 95)
     
-V_TOURNAMENT_RED2 = V_50 %>% 
+V_TOURNAMENT_RED2 = V_2000 %>% 
 #%>% filter(N < 95) %>%
   select(tournament, Round, Ranking_points) %>%
   unique()
@@ -375,11 +375,55 @@ V_TOURNAMENT_F <- V_TOURNAMENT_F %>%
 save(V_TOURNAMENT_F,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F.RData"))
 
 
+bergame=get_tournament_red("Bergamo Challenger",
+                           2020,
+                           "https://www.tennisexplorer.com/bergamo-challenger/2020/atp-men/")
 
+if (nrow(bergame)>=1){
+  players=get_players_name(year = 2020,
+                           tournament = "Bergamo Challenger",
+                           url_tournament="https://www.tennisexplorer.com/bergamo-challenger/2020/atp-men/")
+  
+  bergame=bergame %>% 
+    left_join(players,by=c("N_match"))
+}
 
+bergame=bergame %>% 
+  mutate(Week=isoweek(Date),
+         Season=year(Date),
+         Phase="Main Draw") %>% 
+  rename(Winner_id="P1",
+         Loser_id="P2") %>% 
+  select(-c(Winner,Loser,Surface)) %>% 
+  left_join(V_PLAYERS %>% select(Player_name,Country),by=c("Winner_id"="Player_name")) %>% 
+  left_join(V_PLAYERS %>% select(Player_name,Country),by=c("Loser_id"="Player_name")) %>% 
+  rename(Country_W="Country.x",
+         Country_L="Country.y") %>% 
+  select(tournament,
+         Date,
+         Week,
+         Season,
+         N_match,
+         Round ,
+         Phase,
+         info,      
+         Winner_id,
+         Loser_id,
+         Country_W,
+         Country_L,
+         Score_W,
+         Score_L,
+         Set1_W,
+         Set1_L,    
+         Set2_W,  
+         Set2_L,    
+         Set3_W,    
+         Set3_L,     
+         Set4_W,    
+         Set4_L,    
+         Set5_W,     
+         Set5_L ,   
+         Odd_W ,    
+         Odd_L)
 
-
-
-
-
-
+V_TABLE_MATCH=rbind(V_TABLE_MATCH,bergame)

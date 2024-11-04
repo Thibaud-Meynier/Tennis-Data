@@ -39,10 +39,11 @@ V_TABLE_MATCH=rbind(V_TABLE_MATCH,tournament)
 save(V_TABLE_MATCH,file = paste0(getwd(),"/Scrapping tennis data/Extraction/V_TABLE_MATCH.RData"))
 
 V_TABLE_MATCH_TEST=sqldf("select distinct 
-                         f.Country_tournament
-                        ,f.Categorie
-                        ,f.Surface_tournament
-                        ,a.*
+                         --f.Country_tournament
+                        --,f.Categorie
+                        --,f.Surface_tournament
+                        --,
+                        a.*
                         ,b.Rank as Rank_W
                         ,b.Points as Points_W
                         ,d.Size as Size_W
@@ -72,8 +73,8 @@ V_TABLE_MATCH_TEST=sqldf("select distinct
                        
                        left join V_PLAYERS e on e.Player_name=a.Loser_id
                          
-                       left join V_TOURNAMENT_F f on f.tournament=a.tournament 
-                        and f.Year=a.Season 
+                      -- left join V_TOURNAMENT_F f on f.tournament=a.tournament 
+                       -- and f.Year=a.Season 
                          --and a.Date>=(f.Date-10) 
                          --and a.Date<=(f.Date+30)")
 
