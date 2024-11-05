@@ -18,7 +18,6 @@ V_TABLE_MATCH_TEST=V_TABLE_MATCH_TEST %>%
   select(-tournamentU)
 
 
-
 V_RACE_RANK=V_TABLE_MATCH_TEST %>% 
   select(tournament,Categorie,Week,Season,Round,N_match,Phase,Winner_id,Loser_id,Rank_W,Rank_L) %>% 
   distinct()
@@ -76,8 +75,3 @@ V_RACE_RANK_t2=V_RACE_RANK_t %>%
   select(-tournamentU) %>% 
   distinct()
 
-
-t1=table(V_RACE_RANK_t$tournament,V_RACE_RANK_t$Categorie) %>% as.data.frame()
-t2=table(V_RACE_RANK_t2$tournament,V_RACE_RANK_t2$Categorie) %>% as.data.frame()
-
-setdiff(t1,t2)

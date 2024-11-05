@@ -325,6 +325,19 @@ save(V_TOURNAMENT4,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TO
 # ETAPE 1
 # Filter sur une catégorie donnée
 
+# ATP 2000 
+# ATP 1000
+# ATP 500
+# ATP 250
+# Challenger 175
+# Challenger 125
+# Challenger 110
+# Challenger 100
+# Challenger 90
+# Challenger 80
+# Challenger 75
+# Challenger 50
+
 V_2000=V_TOURNAMENT4 %>% filter(Categorie %in% c("ATP 2000"))
 
 V_TOURNAMENT_RED = V_2000
