@@ -92,6 +92,8 @@ V_RACE_RANK_t=V_RACE_RANK %>%
                          Phase=="Qualification" & Categorie=="Grand Slam" & Round=="Q-3R" & Issue=="W"~"Q-QW",
                          tournament=="Masters Cup Atp" & Round=="-" & Issue=="W"~"RRW",
                          tournament=="Masters Cup Atp" & Round=="-" & Issue=="L"~"RR",
+                         tournament=="Masters Cup Atp" & Round=="SF" & Issue=="W"~"SFW",
+                         tournament=="Masters Cup Atp" & Round=="SF" & Issue=="L"~"SF",
                          Phase=="Qualification" & !Categorie %in% c("ATP 1000","ATP 2000") & Round=="Q-1R"~"Q-R16",
                          tournament=="Cincinnati Masters (New York)" & Phase=="Qualification" & Round=="Q-2R" & Issue=="W"~"Q-QW",
                          tournament=="Cincinnati Masters (New York)" & Phase=="Qualification" & Round=="Q-2R" & Issue=="L"~"Q-R16",
@@ -116,6 +118,9 @@ V_RACE_RANK_t=V_RACE_RANK %>%
                          tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & N_match %in% c(3:6) & Issue=="L"~"SF",
                          tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & N_match>6 & Issue=="W"~"RRW",
                          tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & N_match>6 & Issue=="L"~"RR",
+                         
+                         grepl("Olympics",tournament)==TRUE & Round=="-"~"BM",
+                         
                          TRUE~Round))
 
 #V_RACE_RANK=V_RACE_RANK %>% filter(is.na(Categorie_tournament))
@@ -202,13 +207,69 @@ V_RACE_RANK_t2=V_RACE_RANK_t2 %>%
                                   
                                   TRUE~Ranking_points))
 
+V_RACE_RANK_t2=V_RACE_RANK_t2 %>% 
+  mutate(Categorie=case_when(is.na(Categorie)==TRUE & tournament %in% c("Davis Cup","United Cup","Atp Cup")~"Team Cup",
+                             is.na(Categorie)==TRUE & tournament %in% c("Masters Cup Atp","Next Gen Atp Finals")~"Masters Cup",
+                             is.na(Categorie)==TRUE & grepl("Olympics",tournament)==TRUE~"Olympics",
+                             TRUE~Categorie))
 
-Miss=V_RACE_RANK_t2 %>% filter(is.na(Ranking_points)==TRUE) %>% 
-  group_by(tournament,Season,Phase,Categorie,Round) %>% 
-  summarise(N=n())
+         
+# Miss_cat=V_RACE_RANK_t2 %>% 
+#   filter(is.na(Categorie)==TRUE) %>% 
+#   group_by(tournament) %>% 
+#   summarise(N=n())
+# 
+# Miss=V_RACE_RANK_t2 %>% filter(is.na(Ranking_points)==TRUE) %>% 
+#   group_by(tournament,Season,Phase,Categorie,Round) %>% 
+#   summarise(N=n())
 
 # V_RACE_RANK_t2 %>% 
 #   filter(tournament %in% c("Masters Cup Atp") & Round=="-" & Season==2017) 
 #  
 
+##### Calcul Race ####
 
+V_RACE_RANK_1=V_RACE_RANK_t2 %>% filter(!Categorie %in% c("Masters Cup","Team Cup"))
+
+V_RACE_RANK_2017_1=V_RACE_RANK_1 %>% 
+  filter(Season==2017) %>% 
+  group_by(tournament,Season) %>% 
+  mutate(Week=max(Week)) %>% 
+  group_by(tournament,Week,Season,Player_ID,Phase) %>% 
+  summarise(Race_points=max(Ranking_points))
+
+V_RACE_RANK_2017_1=V_RACE_RANK_2017_1 %>% 
+  group_by(tournament,Week,Season,Player_ID) %>% 
+  summarise(Race_points=sum(Race_points,na.rm = T))
+
+V_RACE_RANK_2=V_RACE_RANK_t2 %>% filter(Categorie %in% c("Masters Cup","Team Cup"))
+
+V_RACE_RANK_2017_2=V_RACE_RANK_2 %>% 
+  filter(Season==2017) %>% 
+  group_by(tournament,Season) %>% 
+  mutate(Week=max(Week)) %>% 
+  group_by(tournament,Week,Season,Player_ID) %>% 
+  summarise(Race_points=sum(Ranking_points,na.rm=T))
+
+V_RACE_RANK_2017=rbind(V_RACE_RANK_2017_1,V_RACE_RANK_2017_2)
+
+V_RACE_RANK_2017 %>% filter(Player_ID=="Federer Roger") %>% 
+  arrange(Week) %>% 
+  mutate(Week2=Week+1)
+
+Race_player=data.frame(Week=c(1:52))
+
+Race_player = Race_player %>% 
+  left_join(
+    V_RACE_RANK_2017 %>% filter(Player_ID=="Federer Roger") %>% 
+      arrange(Week) %>% 
+      mutate(Week2=Week+1),by=c("Week"="Week2")) %>% 
+    mutate(Race_points=ifelse(is.na(Race_points)==TRUE,0,Race_points)) %>% 
+  mutate(Cum_Race_points=cumsum(Race_points))
+
+Race_player %>% 
+  select(Week,tournament,Player_ID,Race_points) %>% 
+  mutate(Race_points=ifelse(is.na(na.locf(Race_points, na.rm = FALSE))==TRUE,0,
+                            na.locf(Race_points, na.rm = FALSE))) %>% 
+  mutate()
+library(zoo)
