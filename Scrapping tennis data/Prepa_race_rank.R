@@ -388,14 +388,14 @@ V_TOURNAMENT_F <- V_TOURNAMENT_F %>%
 save(V_TOURNAMENT_F,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F.RData"))
 
 
-bergame=get_tournament_red("Bergamo Challenger",
+bergame=get_tournament_red("Potchefstroom Chall.",
                            2020,
-                           "https://www.tennisexplorer.com/bergamo-challenger/2020/atp-men/")
+                           "https://www.tennisexplorer.com/potchefstroom-challenger/2020/atp-men/")
 
 if (nrow(bergame)>=1){
   players=get_players_name(year = 2020,
-                           tournament = "Bergamo Challenger",
-                           url_tournament="https://www.tennisexplorer.com/bergamo-challenger/2020/atp-men/")
+                           tournament = "Potchefstroom Chall.",
+                           url_tournament="https://www.tennisexplorer.com/potchefstroom-challenger/2020/atp-men/")
   
   bergame=bergame %>% 
     left_join(players,by=c("N_match"))
@@ -439,4 +439,8 @@ bergame=bergame %>%
          Odd_W ,    
          Odd_L)
 
-V_TABLE_MATCH=rbind(V_TABLE_MATCH,bergame)
+V_TABLE_MATCH=rbind(V_TABLE_MATCH,bergame) %>% unique()
+
+V_TABLE_MATCH=V_TABLE_MATCH %>% unique()
+
+save(V_TABLE_MATCH,file = paste0(getwd(),"/Scrapping tennis data/Extraction/V_TABLE_MATCH.RData"))

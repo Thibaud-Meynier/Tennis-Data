@@ -207,8 +207,8 @@ Miss=V_RACE_RANK_t2 %>% filter(is.na(Ranking_points)==TRUE) %>%
   group_by(tournament,Season,Phase,Categorie,Round) %>% 
   summarise(N=n())
 
-V_RACE_RANK_t2 %>% 
-  filter(tournament %in% c("Masters Cup Atp") & Round=="-" & Season==2017) 
- 
+# V_RACE_RANK_t2 %>% 
+#   filter(tournament %in% c("Masters Cup Atp") & Round=="-" & Season==2017) 
+#  
 
 
