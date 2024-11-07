@@ -98,26 +98,27 @@ save(V_TOURNAMENT_F,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_T
 
 ##### RED V_TOURNAMENT_F #####
 
-TOURNAMENT_RED=V_TOURNAMENT_F %>% filter(tournament=="Bergamo Challenger" & Year==2021)
+TOURNAMENT_RED=V_TOURNAMENT_F %>% filter(tournament=="Calgary Challenger" & Year==2020)
 
 new_rows=data.frame(
   tournament = TOURNAMENT_RED$tournament[1],
-  Date = "2020-02-22",
+  Date = TOURNAMENT_RED$Date[1],
   Categorie = TOURNAMENT_RED$Categorie[1],
   Country_tournament = TOURNAMENT_RED$Country_tournament[1],
   Surface_tournament = TOURNAMENT_RED$Surface_tournament[1],
-  Week_tournament = 8,
-  Year = 2020,
-  Round = c("Q-R16","Q-QF","Q-QW","1R","2R","R16","QF","SF","F","Winner"),              # Valeur manquante pour Round
-  Ranking_points = c(0,2,4,0,4,7,15,29,48,80)      # Valeur manquante pour Ranking_points
-)
+  Week_tournament = TOURNAMENT_RED$Week_tournament[1],
+  Year = TOURNAMENT_RED$Year[1],
+  Round = c("2R"),              # Valeur manquante pour Round
+  Ranking_points = 4)      # Valeur manquante pour Ranking_points
 
 
 TOURNAMENT_RED2=rbind(TOURNAMENT_RED,new_rows)
 
-V_TOURNAMENT_F=V_TOURNAMENT_F %>% filter(!(tournament=="Bergamo Challenger" & Year==2020))
+V_TOURNAMENT_F=V_TOURNAMENT_F %>% filter(!(tournament=="Calgary Challenger" & Year==2020))
 
-V_TOURNAMENT_F=rbind(V_TOURNAMENT_F,new_rows)
+#V_TOURNAMENT_F=rbind(V_TOURNAMENT_F,new_rows)
+
+V_TOURNAMENT_F=rbind(V_TOURNAMENT_F,TOURNAMENT_RED2)
 
 save(V_TOURNAMENT_F,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F.RData"))
 
