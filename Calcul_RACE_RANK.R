@@ -273,3 +273,24 @@ Race_player %>%
                             na.locf(Race_points, na.rm = FALSE))) %>% 
   mutate()
 library(zoo)
+
+# Fonction pour calculer le classement
+calculate_race_points <- function(player_id) {
+  Race_player <- V_RACE_RANK_2017 %>%
+    filter(Player_ID == player_id) %>%
+    arrange(Week) %>%
+    mutate(Week2 = Week + 1) %>%
+    left_join(V_RACE_RANK_2017 %>% filter(Player_ID == player_id) %>% arrange(Week), by = c("Week" = "Week2")) %>%
+    mutate(Race_points = ifelse(is.na(Race_points), 0, Race_points)) %>%
+    mutate(Cum_Race_points = cumsum(Race_points))
+
+  return(Race_player)
+}
+
+# Appliquer la fonction à chaque joueur et concaténer les résultats
+all_players <- unique(V_RACE_RANK_2017$Player_ID)
+RACE_RANK <- map_dfr(all_players, calculate_race_points)
+
+# Ordonner la table finale par semaine en ordre croissant
+RACE_RANK <- RACE_RANK %>%
+  arrange(Week)
