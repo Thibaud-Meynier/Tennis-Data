@@ -257,6 +257,8 @@ V_RACE_RANK_2017 %>% filter(Player_ID=="Federer Roger") %>%
   arrange(Week) %>% 
   mutate(Week2=Week+1)
 
+library(zoo)
+
 Race_player=data.frame(Week=c(1:52))
 
 Race_player = Race_player %>% 
@@ -265,25 +267,30 @@ Race_player = Race_player %>%
       arrange(Week) %>% 
       mutate(Week2=Week+1),by=c("Week"="Week2")) %>% 
     mutate(Race_points=ifelse(is.na(Race_points)==TRUE,0,Race_points)) %>% 
-  mutate(Cum_Race_points=cumsum(Race_points))
-
-Race_player %>% 
-  select(Week,tournament,Player_ID,Race_points) %>% 
-  mutate(Race_points=ifelse(is.na(na.locf(Race_points, na.rm = FALSE))==TRUE,0,
-                            na.locf(Race_points, na.rm = FALSE))) %>% 
-  mutate()
-library(zoo)
+  mutate(Cum_Race_points=cumsum(Race_points)) %>% 
+  mutate(Player_ID=na.locf(Player_ID, na.rm = FALSE)) %>% 
+  mutate(Player_ID=ifelse(is.na(Player_ID)==TRUE,na.omit(Player_ID),Player_ID)) %>% 
+  mutate(Season=na.locf(Season, na.rm = FALSE)) %>% 
+  mutate(Season=ifelse(is.na(Season)==TRUE,na.omit(Season),Season)) %>% 
+  select(1,2,4,5,7)
 
 # Fonction pour calculer le classement
 calculate_race_points <- function(player_id) {
-  Race_player <- V_RACE_RANK_2017 %>%
-    filter(Player_ID == player_id) %>%
-    arrange(Week) %>%
-    mutate(Week2 = Week + 1) %>%
-    left_join(V_RACE_RANK_2017 %>% filter(Player_ID == player_id) %>% arrange(Week), by = c("Week" = "Week2")) %>%
-    mutate(Race_points = ifelse(is.na(Race_points), 0, Race_points)) %>%
-    mutate(Cum_Race_points = cumsum(Race_points))
-
+  Race_player=data.frame(Week=c(1:52))
+  
+  Race_player = Race_player %>% 
+    left_join(
+      V_RACE_RANK_2017 %>% filter(Player_ID==player_id) %>% 
+        arrange(Week) %>% 
+        mutate(Week2=Week+1),by=c("Week"="Week2")) %>% 
+    mutate(Race_points=ifelse(is.na(Race_points)==TRUE,0,Race_points)) %>% 
+    mutate(Cum_Race_points=cumsum(Race_points)) %>% 
+    mutate(Player_ID=na.locf(Player_ID, na.rm = FALSE)) %>% 
+    mutate(Player_ID=ifelse(is.na(Player_ID)==TRUE,na.omit(Player_ID),Player_ID)) %>% 
+    mutate(Season=na.locf(Season, na.rm = FALSE)) %>% 
+    mutate(Season=ifelse(is.na(Season)==TRUE,na.omit(Season),Season)) %>% 
+    select(1,2,4,5,7)
+  
   return(Race_player)
 }
 
