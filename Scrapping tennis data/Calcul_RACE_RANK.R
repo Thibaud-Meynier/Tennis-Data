@@ -1,3 +1,7 @@
+library(sqldf)
+library(tidyverse)
+library(zoo)
+
 load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Extraction/V_TABLE_MATCH.RData")
 
 load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Tournament/V_TOURNAMENT_F.RData")
@@ -233,7 +237,7 @@ V_RACE_RANK_1=V_RACE_RANK_t2 %>% filter(!Categorie %in% c("Masters Cup","Team Cu
 
 V_RACE_RANK_2=V_RACE_RANK_t2 %>% filter(Categorie %in% c("Masters Cup","Team Cup"))
 
-year <- unique(V_RACE_RANK$Season)
+year <- c(2017:2023)
 
 # Fonction pour calculer le classement
 calculate_race_points <- function(player_id) {
@@ -249,8 +253,7 @@ calculate_race_points <- function(player_id) {
     mutate(Player_ID=na.locf(Player_ID, na.rm = FALSE)) %>% 
     mutate(Player_ID=ifelse(is.na(Player_ID)==TRUE,na.omit(Player_ID),Player_ID)) %>% 
     mutate(Season=na.locf(Season, na.rm = FALSE)) %>% 
-    mutate(Season=ifelse(is.na(Season)==TRUE,na.omit(Season),Season)) %>% 
-    select(1,2,4,5,7)
+    mutate(Season=ifelse(is.na(Season)==TRUE,na.omit(Season),Season)) 
   
   return(Race_player)
 }
@@ -259,22 +262,35 @@ V_RACE_RANK_F=data.frame()
 
 for (i in year){
   
+  
+  V_RACE_RANK_1=V_RACE_RANK_t2 %>% 
+    filter(!Categorie %in% c("Masters Cup","Team Cup")) %>% 
+    filter(Season==i)
+  
+  V_RACE_RANK_2=V_RACE_RANK_t2 %>% 
+    filter(Categorie %in% c("Masters Cup","Team Cup")) %>% 
+    filter(Season==i)
+  
+  
   V_RACE_RANK_p1=V_RACE_RANK_1 %>% 
-    filter(Season==i) %>% 
+    #filter(Season==i) %>% 
     group_by(tournament,Season) %>% 
-    mutate(Week=max(Week)) %>% 
-    group_by(tournament,Week,Season,Player_ID,Phase) %>% 
+    mutate(Week=max(Week),Date=max(Date)) %>% 
+    group_by(tournament,Week,Date,Season,Player_ID,Phase) %>% 
     summarise(Race_points=max(Ranking_points))
   
   V_RACE_RANK_p1=V_RACE_RANK_p1 %>% 
-    group_by(tournament,Week,Season,Player_ID) %>% 
+    group_by(tournament,Week,Date,Season,Player_ID) %>% 
     summarise(Race_points=sum(Race_points,na.rm = T))
   
+  V_RACE_RANK_p1=V_RACE_RANK_p1 %>% 
+    mutate(Week=ifelse(month(Date)==1 & Week>=52,1,Week))
+  
   V_RACE_RANK_p2=V_RACE_RANK_2 %>% 
-    filter(Season==year) %>% 
+    #filter(Season==year) %>% 
     group_by(tournament,Season) %>% 
-    mutate(Week=max(Week)) %>% 
-    group_by(tournament,Week,Season,Player_ID) %>% 
+    mutate(Week=max(Week),Date=max(Date)) %>% 
+    group_by(tournament,Week,Date,Season,Player_ID) %>% 
     summarise(Race_points=sum(Ranking_points,na.rm=T))
   
   V_RACE_RANK=rbind(V_RACE_RANK_p1,V_RACE_RANK_p2)
@@ -283,14 +299,18 @@ for (i in year){
   
   RACE_RANK <- map_dfr(all_players, calculate_race_points)
   
-  RACE_RANK=RACE_RANK %>% mutate(Season=i)
+  RACE_RANK=RACE_RANK %>% 
+    group_by(Week) %>% 
+    mutate(Rank=dense_rank(desc(Cum_Race_points)))
   
   V_RACE_RANK_F=rbind(V_RACE_RANK_F,RACE_RANK)
+  
+  print(i)
   
 }
 
 
-
+save(V_RACE_RANK_F,file = paste0(getwd(),"/Scrapping tennis data/Rank/V_RACE_RANK.RData"))
 
 
 
@@ -299,37 +319,3 @@ for (i in year){
 
 
 
-
-# 
-# V_RACE_RANK_2017 %>% filter(Player_ID=="Federer Roger") %>% 
-#   arrange(Week) %>% 
-#   mutate(Week2=Week+1)
-# 
-# library(zoo)
-# 
-# Race_player=data.frame(Week=c(1:52))
-# 
-# Race_player = Race_player %>% 
-#   left_join(
-#     V_RACE_RANK_2017 %>% filter(Player_ID=="Federer Roger") %>% 
-#       arrange(Week) %>% 
-#       mutate(Week2=Week+1),by=c("Week"="Week2")) %>% 
-#     mutate(Race_points=ifelse(is.na(Race_points)==TRUE,0,Race_points)) %>% 
-#   mutate(Cum_Race_points=cumsum(Race_points)) %>% 
-#   mutate(Player_ID=na.locf(Player_ID, na.rm = FALSE)) %>% 
-#   mutate(Player_ID=ifelse(is.na(Player_ID)==TRUE,na.omit(Player_ID),Player_ID)) %>% 
-#   mutate(Season=na.locf(Season, na.rm = FALSE)) %>% 
-#   mutate(Season=ifelse(is.na(Season)==TRUE,na.omit(Season),Season)) %>% 
-#   select(1,2,4,5,7)
-
-
-# Ordonner la table finale par semaine en ordre croissant
-RACE_RANK <- RACE_RANK %>%
-  arrange(Week)
-
-RACE_RANK=RACE_RANK %>% 
-  group_by(Week) %>% 
-  mutate(Rank=dense_rank(desc(Cum_Race_points)))
-
-
-test=V_RACE_RANK_F %>% filter(Season==2023)
