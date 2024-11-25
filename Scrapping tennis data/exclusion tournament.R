@@ -196,7 +196,11 @@ exclusion=c("International Tennis Series",
             "Czech Championship",
             "Hua Hin - exhibition",
             "US Open pre-qualifier",
-            "Antalya-Kaya Belek 10 ITF"
+            "Antalya-Kaya Belek 10 ITF",
+            "Knokke - seniors",	
+            "Champions Tennis League",
+            "Edinburgh - seniors",
+            "AO Wildcard Playoff - USA"
             
 )
 
