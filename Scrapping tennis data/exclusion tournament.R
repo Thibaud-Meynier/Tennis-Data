@@ -191,7 +191,9 @@ exclusion=c("International Tennis Series",
             "Hawaii Open",
             "Basel Open",
             "Atlanta Open",
-            "A Day at the Drive (Adelaide)"
+            "A Day at the Drive (Adelaide)",
+            "Int. Premier Tennis League",
+            "Czech Championship"
 )
 
 # list_tournament(2020) %>% filter(Categorie=="ATP")

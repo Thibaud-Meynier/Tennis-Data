@@ -1,5 +1,5 @@
 
-year=2023
+year=2016
 
 source(paste0(getwd(),"/Scrapping tennis data/exclusion tournament.R"))
 
@@ -15,7 +15,7 @@ table_stock=data.frame()
 
 Start=Sys.time()
 
-  for (a in 26:nrow(list)){
+  for (a in 40:nrow(list)){
     
     tournament_name=list[a,1]
     
@@ -26,7 +26,7 @@ Start=Sys.time()
     # year=i
     
     if (!tournament_name %in% c("Davis Cup","Next Gen ATP Finals","Masters Cup ATP",
-                                "ATP Cup","Olympics - Tokyo","United Cup")){
+                                "ATP Cup","Olympics - Tokyo","United Cup","Olympics - Rio de Janeiro")){
       
     source(paste0(getwd(),"/Scrapping tennis data/Code to get all informations qualif.R"))
     

@@ -315,7 +315,3 @@ save(V_RACE_RANK_F,file = paste0(getwd(),"/Scrapping tennis data/Rank/V_RACE_RAN
 
 
 # Appliquer la fonction à chaque joueur et concaténer les résultats
-
-
-
-

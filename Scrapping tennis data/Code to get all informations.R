@@ -18,7 +18,8 @@ players=get_players_name(year = year,
                          url_tournament=url_tournament)
 
 tournament=tournament %>% 
-  left_join(players,by=c("N_match"))
+  left_join(players,by=c("N_match"))%>% 
+  mutate("Phase"="Main Draw")
 # 
 # date=calcul_date_rank(year,tournament) # on prend le classement du lundi même pour les tournois commençants le dimanche
 # 

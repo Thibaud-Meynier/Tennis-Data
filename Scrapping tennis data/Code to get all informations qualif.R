@@ -19,7 +19,8 @@ players_qualif=get_players_name_qualif(year = year,
                                        url_tournament=url_tournament)
 
 tournament_qualif=tournament_qualif %>% 
-  left_join(players_qualif,by=c("N_match"))
+  left_join(players_qualif,by=c("N_match")) %>% 
+  mutate("Phase"="Qualification")
 
 # date_qualif=calcul_date_rank_qualif(year,tournament_qualif)  # on prend le classement de la semaine des qualifs
 # 
