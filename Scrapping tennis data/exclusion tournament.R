@@ -194,7 +194,9 @@ exclusion=c("International Tennis Series",
             "A Day at the Drive (Adelaide)",
             "Int. Premier Tennis League",
             "Czech Championship",
-            "Hua Hin - exhibition'
+            "Hua Hin - exhibition",
+            "US Open pre-qualifier"
+            
 )
 
 # list_tournament(2020) %>% filter(Categorie=="ATP")
