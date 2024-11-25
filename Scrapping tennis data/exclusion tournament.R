@@ -193,7 +193,8 @@ exclusion=c("International Tennis Series",
             "Atlanta Open",
             "A Day at the Drive (Adelaide)",
             "Int. Premier Tennis League",
-            "Czech Championship"
+            "Czech Championship",
+            "Hua Hin - exhibition'
 )
 
 # list_tournament(2020) %>% filter(Categorie=="ATP")
