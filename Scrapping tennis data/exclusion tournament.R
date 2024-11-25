@@ -203,7 +203,9 @@ exclusion=c("International Tennis Series",
             "AO Wildcard Playoff - USA",
             "Medellin - seniors",
             "Hua Hin (exh.)",
-            "Paris - exhibition"
+            "Paris - exhibition",
+            "Sao Paulo - seniors",
+            "World Team Cup"
             
 )
 
