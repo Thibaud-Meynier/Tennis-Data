@@ -25,7 +25,7 @@ Start=Sys.time()
     
     # year=i
     
-    if (!tournament_name %in% c("Davis Cup","Next Gen ATP Finals","Masters Cup ATP",
+    if (!tournament_name %in% c("Davis Cup","Next Gen ATP Finals","Masters Cup ATP","Challenger Tour Finals",
                                 "ATP Cup","Olympics - Tokyo","United Cup","Olympics - Rio de Janeiro")){
       
     source(paste0(getwd(),"/Scrapping tennis data/Code to get all informations qualif.R"))
