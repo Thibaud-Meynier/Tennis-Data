@@ -195,7 +195,8 @@ exclusion=c("International Tennis Series",
             "Int. Premier Tennis League",
             "Czech Championship",
             "Hua Hin - exhibition",
-            "US Open pre-qualifier"
+            "US Open pre-qualifier",
+            "Antalya-Kaya Belek 10 ITF"
             
 )
 
