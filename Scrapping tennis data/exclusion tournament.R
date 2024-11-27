@@ -224,7 +224,16 @@ exclusion=c("International Tennis Series",
             "Los Cabos - seniors",
             "Newport - seniors",
             "Charlotte - seniors",
-            "France Masters"
+            "France Masters",
+            "Karlovy Vary futures",
+            "Luxembourg - seniors",
+            "Eindhoven - seniors",
+            "Budapest - seniors",
+            "Stanford - seniors",
+            "Copa Petrobras - finals",
+            "St. Anton - exhibice",
+            "Malaga Masters",
+            "Dubai - seniors"
             
 )
 
