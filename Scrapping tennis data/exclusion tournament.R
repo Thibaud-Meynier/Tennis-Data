@@ -218,7 +218,8 @@ exclusion=c("International Tennis Series",
             "Surprise - seniors",
             "Grand Cayman - seniors",
             "Sydney - seniors",
-            "Bilbao Masters"
+            "Bilbao Masters",
+            "Paris - seniors"
             
 )
 
