@@ -219,7 +219,12 @@ exclusion=c("International Tennis Series",
             "Grand Cayman - seniors",
             "Sydney - seniors",
             "Bilbao Masters",
-            "Paris - seniors"
+            "Paris - seniors",
+            "Rio de Janeiro - seniors",
+            "Los Cabos - seniors",
+            "Newport - seniors",
+            "Charlotte - seniors",
+            "France Masters"
             
 )
 
