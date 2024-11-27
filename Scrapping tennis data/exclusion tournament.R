@@ -205,7 +205,20 @@ exclusion=c("International Tennis Series",
             "Hua Hin (exh.)",
             "Paris - exhibition",
             "Sao Paulo - seniors",
-            "World Team Cup"
+            "World Team Cup",
+            "Hong Kong",
+            "Zurich - seniors",
+            "Bogotá - seniors",
+            "Santiago - seniors",
+            "Barcelona - seniors",
+            "Boston - seniors",
+            "Algarve - seniors",
+            "Commonwealth Games",
+            "Chengdu - Sr.",
+            "Surprise - seniors",
+            "Grand Cayman - seniors",
+            "Sydney - seniors",
+            "Bilbao Masters"
             
 )
 
