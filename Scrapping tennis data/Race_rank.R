@@ -280,12 +280,15 @@ MainDrawUnited_251=data.frame("Phase"="Main Draw",
                                  "Rank_Range"="251+",
                                  "Round"=c("RR","QF","SF","F","W"),
                                  "Points"=c(15,20,25,0,35))
-# Masters Cup
+# Masters Cup/Challenger tour finals
 
 MainDrawMC=data.frame("Phase"="Main Draw",
                       "Round"=c("RR","RRW","SF","SFW","F","W"),
                       "Points"=c(0,200,0,400,0,500))
 
+MainDrawMC=data.frame("Phase"="Main Draw",
+                      "Round"=c("RR","RRW","SF","SFW","F","W"),
+                      "Points"=c(0,15,0,30,0,80))
 
 # M1000
 

@@ -124,6 +124,8 @@ if (length(tournament_info)>0){
   calendar_info=rbind(calendar_info,tournament_info)
 }
 
+  print(i)
+  
 }
 
 return(calendar_info)
