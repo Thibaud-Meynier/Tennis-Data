@@ -235,7 +235,9 @@ exclusion=c("International Tennis Series",
             "Malaga Masters",
             "Dubai - seniors",
             "Spain - Championship",
-            "Punta del Este"
+            "Punta del Este",
+            "Slovenská extraliga",
+            "Riyadh - exhibition"
             
 )
 
