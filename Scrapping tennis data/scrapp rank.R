@@ -3,7 +3,7 @@
 library(tidyverse)
 library(lubridate)
 
-year=2016
+year=2009
 
 # Filtrer les lundis
 days_year <- seq.Date(as.Date(paste(year, "-01-01", sep = "")), 
@@ -35,4 +35,4 @@ for (i in 1:nrow(mondays)){
   
 }
 
-save(rank,file = paste0(getwd(),"/Scrapping tennis data/","RANK_ATP_",year,".RData"))
+save(rank,file = paste0(getwd(),"/Scrapping tennis data/Rank/","RANK_ATP_",year,".RData"))
