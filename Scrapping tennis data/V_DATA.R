@@ -4,7 +4,7 @@ V_RANK=data.frame()
 
 #i=2016
 
-for (i in 2016:2023){
+for (i in 2009:2024){
 
 load(file = paste0(getwd(),"/Scrapping tennis data/Rank/RANK_ATP_",i,".RData"))
   
@@ -181,6 +181,8 @@ V_TOURNAMENT3=V_TOURNAMENT3 %>%
 
 save(V_TOURNAMENT3,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT3_2012_2016.RData"))
 
+##### V_PLAYERS #####
+
 V_PLAYERS=V_RANK %>% select(Player_name,Country,URL_players) %>% distinct()
 
 V_PLAYERS$Size=NA
@@ -210,5 +212,15 @@ for (i in 1:nrow(V_PLAYERS)){
   print(i)
 
 }
+
+V_PLAYERS=V_PLAYERS %>% select(-Best_Rank)
+
+
+V_PLAYERS=V_PLAYERS %>% 
+  left_join(V_RANK %>% 
+              group_by(Player_name) %>% 
+              summarise(Best_Rank=min(as.numeric(Rank),na.rm=T)),by="Player_name")
+
+
 
 save(V_PLAYERS,file = paste0(getwd(),"/Scrapping tennis data/Info_players/V_PLAYERS.RData"))
