@@ -1,4 +1,6 @@
 
+library(data.table)
+
 V_TOURNAMENT2=data.frame()
 
 for (i in seq(2017,2023,by=1)){
@@ -431,6 +433,32 @@ save(V_TOURNAMENT4,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TO
 
 
 ##### Redressement des catégories avant ajout qualif #####
+
+table(V_TOURNAMENT4$Categorie)
+
+V_TOURNAMENT4=V_TOURNAMENT4 %>% 
+  group_by(tournament,Date,Week_tournament,Year) %>% 
+  mutate(Categorie=case_when(Categorie %in% c("ATP ","ATP 0","ATP 900","Challenger ","Challenger 0")~paste(ifelse(Categorie %like% "ATP","ATP","Challenger"),
+                                                                                                         max(as.numeric(Ranking_points),na.rm = T)),
+                             TRUE~Categorie)) %>% 
+  ungroup() %>% 
+  mutate(Categorie=case_when(Categorie=="ATP -Inf"~"ATP",
+                             Categorie=="ATP 80"~"Challenger",
+                             TRUE~Categorie))
+
+V_TOURNAMENT4=V_TOURNAMENT4 %>% 
+  mutate(Categorie = case_when(
+    tournament %in% c('Australian Open', 'French Open', 'Wimbledon', 'Us Open') ~ 'Grand Slam',
+    grepl('Olympics', tournament) ~ 'Olympics',
+    tournament == 'Davis Cup' ~ 'Davis Cup',
+    tournament %in% c('United Cup', 'Atp Cup') ~ 'Team Cup',
+    tournament == 'Masters Cup Atp' ~ 'Masters Cup',
+    TRUE ~ Categorie            # Cas par défaut : utilise la valeur de f.Categorie
+  ))
+
+table(V_TOURNAMENT4$Categorie)
+
+save(V_TOURNAMENT4,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT4_2012_2016.RData"))
 
 ###### AJOUT des Points de Qualifs ####
 
