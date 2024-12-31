@@ -10,6 +10,13 @@ load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Info_players/V_PL
 
 load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/RANK/V_RANK.RData")
 
+V_MATCH=V_MATCH %>% 
+  rename("Winner_id"=P1,
+         "Loser_id"=P2) 
+
+V_MATCH=V_MATCH %>% 
+  mutate(Week=isoweek(Date))
+
 V_TABLE_MATCH_TEST=sqldf("select distinct 
                          --f.Country_tournament
                         --,f.Categorie
@@ -31,7 +38,7 @@ V_TABLE_MATCH_TEST=sqldf("select distinct
                         ,e.Birth_date as Birth_date_L
                         ,e.Hand as Hand_L
        
-                       from V_TABLE_MATCH a
+                       from V_MATCH a
                        
                        left join V_RANK b on b.Player_name=a.Winner_id 
                         and b.Week=a.Week 
@@ -48,6 +55,7 @@ V_TABLE_MATCH_TEST=sqldf("select distinct
                       -- left join V_TOURNAMENT_F f on f.tournament=a.tournament 
 ")
 
+
 ##### Calcul classement race ####
 
 V_TABLE_MATCH_TEST=V_TABLE_MATCH_TEST %>% 
@@ -57,12 +65,22 @@ V_TABLE_MATCH_TEST=V_TABLE_MATCH_TEST %>%
               select(tournamentU,Categorie,Surface_tournament,Year) %>% 
               distinct(),
             by=c("tournamentU","Season"="Year")) %>% 
-  select(-tournamentU)
+  select(-tournamentU) %>% 
+  unique()
 
 
 V_RACE_RANK=V_TABLE_MATCH_TEST %>% 
   select(tournament,Categorie,Week,Season,Date,Round,N_match,Phase,Winner_id,Loser_id,Rank_W,Rank_L) %>% 
   distinct()
+# 
+# double=V_RACE_RANK %>% 
+#   mutate(Key=paste(tournament,Season,Week,Round,Winner_id,Loser_id,sep = "_")) %>% 
+#   group_by(Key,tournament,Season,Week) %>% 
+#   summarise(N=n()) %>% 
+#   filter(N>1) %>% 
+#   ungroup() %>% 
+#   select(tournament,Season) %>% 
+#   unique()
 
 #table(V_RACE_RANK$Round)
 # Gerer les Q-SF en Q-QF
@@ -133,15 +151,20 @@ V_RACE_RANK_t=V_RACE_RANK %>%
 
 #table(V_RACE_RANK$tournament)
 
-V_RACE_RANK_t2=V_RACE_RANK_t %>% 
+V_RACE_RANK_t2=V_RACE_RANK %>% 
   mutate(tournamentU=toupper(tournament)) %>% 
   left_join(V_TOURNAMENT_F %>% 
               mutate(tournamentU=toupper(tournament)) %>% 
-              select(tournamentU,Year,Round,Ranking_points,Categorie) %>% 
+              select(tournamentU,Year,Round,Ranking_points,Categorie,Week_tournament) %>% 
               distinct(),
-            by=c("tournamentU","Season"="Year","Round","Categorie")) %>% 
+            by=c("tournamentU","Season"="Year","Round","Categorie","Week"="Week_tournament")) %>% 
   select(-tournamentU) %>% 
-  distinct()
+  unique()
+
+double=V_RACE_RANK_t2 %>% 
+  group_by(tournament,Season,Week,Categorie,Round) %>% 
+  summarise(N=n())
+
 
 V_RACE_RANK_t2$Rank_L=as.numeric(V_RACE_RANK_t2$Rank_L)
 V_RACE_RANK_t2$Rank_W=as.numeric(V_RACE_RANK_t2$Rank_W)

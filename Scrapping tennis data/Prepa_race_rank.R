@@ -456,7 +456,21 @@ V_TOURNAMENT4=V_TOURNAMENT4 %>%
     TRUE ~ Categorie            # Cas par défaut : utilise la valeur de f.Categorie
   ))
 
-table(V_TOURNAMENT4$Categorie)
+V_TOURNAMENT4 = V_TOURNAMENT4 %>% 
+  unique() %>% 
+  group_by(tournament,Date,Week_tournament,Year) %>% 
+  mutate(Categorie=case_when(Categorie %like% "Challenger"~paste("Challenger",max(as.numeric(Ranking_points),na.rm = T)),
+                             TRUE~Categorie)) %>% 
+  ungroup() %>% 
+  unique()
+
+# V_TOURNAMENT4=V_TOURNAMENT4 %>% 
+#     filter(!(tournament=="Barletta Chall." & Year==2012 & Categorie=="Challenger 90")) %>%
+#     filter(!(tournament=="Kazan Challenger" & Year==2013 & Categorie=="Challenger 80")) %>%
+#     filter(!(tournament=="Quimper Challenger" & Year==2013 & Categorie=="Challenger 80")) %>%
+#     filter(!(tournament=="Segovia Challenger" & Year==2013 & Categorie %in% c("Challenger 80","Challenger 100"))) %>%
+#     filter(!(tournament=="Todi Challenger" & Year==2013 & Categorie=="Challenger 80"))
+  
 
 save(V_TOURNAMENT4,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT4_2012_2016.RData"))
 
@@ -584,7 +598,8 @@ V_80=V_ATP(V_TOURNAMENT4,
            "Challenger 80",
            rule="N<m")
 
-V_TOURNAMENT_F=rbind(V_80,V_90_125,V_250,V_500,V_1000,V_2000) %>% arrange(Date)
+V_TOURNAMENT_F=rbind(V_80,V_90_125,V_250,V_500,V_1000,V_2000) %>% arrange(Date) %>% 
+  unique()
 
 save(V_TOURNAMENT_F,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2012_2016.RData"))
 
