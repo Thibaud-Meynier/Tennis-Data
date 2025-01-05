@@ -10,6 +10,9 @@ load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Info_players/V_PL
 
 load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/RANK/V_RANK.RData")
 
+
+# Début du calcul du classement RACE 
+
 V_MATCH=V_MATCH %>% 
   rename("Winner_id"=P1,
          "Loser_id"=P2) 
@@ -91,59 +94,86 @@ V_RACE_RANK=V_RACE_RANK %>%
     names_to = "Issue",                  # Nouvelle colonne pour l'origine
     values_to = "Player_ID"              # Nouvelle colonne pour les ID des joueurs
   ) %>%
-  mutate(Issue = ifelse(Issue == "Winner_id", "W", "L")) %>% 
-  mutate(Round = ifelse(Round =="Q-SF", "Q-QF",Round))
+  mutate(Issue = ifelse(Issue == "Winner_id", "W", "L")) #%>% 
+#  mutate(Round = ifelse(Round =="Q-SF", "Q-QF",Round))
 
+table(V_RACE_RANK$Round)
 
 #ATP_CUP=V_RACE_RANK_t %>% filter(tournament %in% c("Atp Cup","United Cup"))
 
+# V_RACE_RANK_t=V_RACE_RANK %>% 
+#   mutate(Round=case_when(tournament=="Bordeaux Chall." & Phase=="Qualification" & Season==2022 & Round=="Q-R16" & Issue=="W"~"Q-QW",
+#                          tournament=="Bordeaux Chall." & Phase=="Qualification" & Season==2022 & Round=="Q-R16" & Issue=="L"~"Q-QF",
+#                          tournament=="Bordeaux Chall." & Phase=="Qualification" & Season==2022 & Round=="Q-2R" & Issue=="W"~"Q-QW",
+#                          tournament=="Bordeaux Chall." & Phase=="Qualification" & Season==2022 & Round=="Q-2R" & Issue=="L"~"Q-QF",
+#                          tournament=="Bordeaux Chall." & Phase=="Qualification" & Season==2022 & Round=="Q-1R"~"Q-R16",
+#                          
+#                                                   
+#                          tournament=="Potchefstroom Chall." & Phase=="Qualification" & Season==2020 & Round=="Q-1R"~"Q-R16",
+#                          tournament=="Potchefstroom Chall." & Phase=="Qualification" & Season==2020 & Round=="Q-R16" & Issue=="W"~"Q-QW",
+#                          tournament=="Potchefstroom Chall." & Phase=="Qualification" & Season==2020 & Round=="Q-R16" & Issue=="L"~"Q-QF",
+#     
+#                          Phase=="Main Draw" & Round=="F" & Issue=="W"~"Winner",
+#                          Phase=="Qualification" & Categorie!="Grand Slam" & Round=="Q-QF" & Issue=="W"~"Q-QW",
+#                          Phase=="Qualification" & Categorie=="Grand Slam" & Round=="Q-3R" & Issue=="W"~"Q-QW",
+#                          tournament=="Masters Cup Atp" & Round=="-" & Issue=="W"~"RRW",
+#                          tournament=="Masters Cup Atp" & Round=="-" & Issue=="L"~"RR",
+#                          tournament=="Masters Cup Atp" & Round=="SF" & Issue=="W"~"SFW",
+#                          tournament=="Masters Cup Atp" & Round=="SF" & Issue=="L"~"SF",
+#                          Phase=="Qualification" & !Categorie %in% c("ATP 1000","ATP 2000") & Round=="Q-1R"~"Q-R16",
+#                          tournament=="Cincinnati Masters (New York)" & Phase=="Qualification" & Round=="Q-2R" & Issue=="W"~"Q-QW",
+#                          tournament=="Cincinnati Masters (New York)" & Phase=="Qualification" & Round=="Q-2R" & Issue=="L"~"Q-R16",
+#                          
+#                          Categorie=="ATP 1000" & Phase=="Qualification" & Round=="Q-R16" & Issue=="W"~"Q-QW",
+#                          Categorie=="ATP 1000" & Phase=="Qualification" & Round=="Q-R16" & Issue=="L"~"Q-R16",
+#                          
+#                          Categorie=="ATP 1000" & Phase=="Qualification" & Round=="Q-2R" & Issue=="W"~"Q-QW",
+#                          Categorie=="ATP 1000" & Phase=="Qualification" & Round=="Q-2R" & Issue=="L"~"Q-2R",
+#                          
+#                          tournament %in% c("Atp Cup","United Cup") & Season %in% c(2020) & N_match %in% c(1,2) & Issue=="W"~"Winner",
+#                          tournament %in% c("Atp Cup","United Cup") & Season %in% c(2020) & N_match %in% c(1,2) & Issue=="L"~"F",
+#                          tournament %in% c("Atp Cup","United Cup") & Season %in% c(2020) & N_match %in% c(3:6) & Issue=="W"~"SFW",
+#                          tournament %in% c("Atp Cup","United Cup") & Season %in% c(2020) & N_match %in% c(3:6) & Issue=="L"~"SF",
+#                          tournament %in% c("Atp Cup","United Cup") & Season %in% c(2020) & N_match %in% c(7:14) & Issue=="W"~"QFW",
+#                          tournament %in% c("Atp Cup","United Cup") & Season %in% c(2020) & N_match %in% c(7:14) & Issue=="L"~"QF",
+#                          tournament %in% c("Atp Cup","United Cup") & Season %in% c(2020) & N_match>=15 & Issue=="W"~"RRW",
+#                          tournament %in% c("Atp Cup","United Cup") & Season %in% c(2020) & N_match>=15 & Issue=="L"~"RR",
+#                          tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & N_match %in% c(1,2) & Issue=="W"~"Winner",
+#                          tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & N_match %in% c(1,2) & Issue=="L"~"F",
+#                          tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & N_match %in% c(3:6) & Issue=="W"~"SFW",
+#                          tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & N_match %in% c(3:6) & Issue=="L"~"SF",
+#                          tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & N_match>6 & Issue=="W"~"RRW",
+#                          tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & N_match>6 & Issue=="L"~"RR",
+#                          
+#                          grepl("Olympics",tournament)==TRUE & Round=="-"~"BM",
+#                          
+#                          TRUE~Round))
+
 V_RACE_RANK_t=V_RACE_RANK %>% 
-  mutate(Round=case_when(tournament=="Bordeaux Chall." & Phase=="Qualification" & Season==2022 & Round=="Q-R16" & Issue=="W"~"Q-QW",
-                         tournament=="Bordeaux Chall." & Phase=="Qualification" & Season==2022 & Round=="Q-R16" & Issue=="L"~"Q-QF",
-                         tournament=="Bordeaux Chall." & Phase=="Qualification" & Season==2022 & Round=="Q-2R" & Issue=="W"~"Q-QW",
-                         tournament=="Bordeaux Chall." & Phase=="Qualification" & Season==2022 & Round=="Q-2R" & Issue=="L"~"Q-QF",
-                         tournament=="Bordeaux Chall." & Phase=="Qualification" & Season==2022 & Round=="Q-1R"~"Q-R16",
-                         
-                                                  
-                         tournament=="Potchefstroom Chall." & Phase=="Qualification" & Season==2020 & Round=="Q-1R"~"Q-R16",
-                         tournament=="Potchefstroom Chall." & Phase=="Qualification" & Season==2020 & Round=="Q-R16" & Issue=="W"~"Q-QW",
-                         tournament=="Potchefstroom Chall." & Phase=="Qualification" & Season==2020 & Round=="Q-R16" & Issue=="L"~"Q-QF",
-    
-                         Phase=="Main Draw" & Round=="F" & Issue=="W"~"Winner",
-                         Phase=="Qualification" & Categorie!="Grand Slam" & Round=="Q-QF" & Issue=="W"~"Q-QW",
-                         Phase=="Qualification" & Categorie=="Grand Slam" & Round=="Q-3R" & Issue=="W"~"Q-QW",
-                         tournament=="Masters Cup Atp" & Round=="-" & Issue=="W"~"RRW",
-                         tournament=="Masters Cup Atp" & Round=="-" & Issue=="L"~"RR",
-                         tournament=="Masters Cup Atp" & Round=="SF" & Issue=="W"~"SFW",
-                         tournament=="Masters Cup Atp" & Round=="SF" & Issue=="L"~"SF",
-                         Phase=="Qualification" & !Categorie %in% c("ATP 1000","ATP 2000") & Round=="Q-1R"~"Q-R16",
-                         tournament=="Cincinnati Masters (New York)" & Phase=="Qualification" & Round=="Q-2R" & Issue=="W"~"Q-QW",
-                         tournament=="Cincinnati Masters (New York)" & Phase=="Qualification" & Round=="Q-2R" & Issue=="L"~"Q-R16",
-                         
-                         Categorie=="ATP 1000" & Phase=="Qualification" & Round=="Q-R16" & Issue=="W"~"Q-QW",
-                         Categorie=="ATP 1000" & Phase=="Qualification" & Round=="Q-R16" & Issue=="L"~"Q-R16",
-                         
-                         Categorie=="ATP 1000" & Phase=="Qualification" & Round=="Q-2R" & Issue=="W"~"Q-QW",
-                         Categorie=="ATP 1000" & Phase=="Qualification" & Round=="Q-2R" & Issue=="L"~"Q-2R",
-                         
-                         tournament %in% c("Atp Cup","United Cup") & Season %in% c(2020) & N_match %in% c(1,2) & Issue=="W"~"Winner",
-                         tournament %in% c("Atp Cup","United Cup") & Season %in% c(2020) & N_match %in% c(1,2) & Issue=="L"~"F",
-                         tournament %in% c("Atp Cup","United Cup") & Season %in% c(2020) & N_match %in% c(3:6) & Issue=="W"~"SFW",
-                         tournament %in% c("Atp Cup","United Cup") & Season %in% c(2020) & N_match %in% c(3:6) & Issue=="L"~"SF",
-                         tournament %in% c("Atp Cup","United Cup") & Season %in% c(2020) & N_match %in% c(7:14) & Issue=="W"~"QFW",
-                         tournament %in% c("Atp Cup","United Cup") & Season %in% c(2020) & N_match %in% c(7:14) & Issue=="L"~"QF",
-                         tournament %in% c("Atp Cup","United Cup") & Season %in% c(2020) & N_match>=15 & Issue=="W"~"RRW",
-                         tournament %in% c("Atp Cup","United Cup") & Season %in% c(2020) & N_match>=15 & Issue=="L"~"RR",
-                         tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & N_match %in% c(1,2) & Issue=="W"~"Winner",
-                         tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & N_match %in% c(1,2) & Issue=="L"~"F",
-                         tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & N_match %in% c(3:6) & Issue=="W"~"SFW",
-                         tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & N_match %in% c(3:6) & Issue=="L"~"SF",
-                         tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & N_match>6 & Issue=="W"~"RRW",
-                         tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & N_match>6 & Issue=="L"~"RR",
-                         
-                         grepl("Olympics",tournament)==TRUE & Round=="-"~"BM",
-                         
-                         TRUE~Round))
+  mutate(Round=case_when( Phase=="Main Draw" & Round=="F" & Issue=="W"~"Winner",
+                          Phase=="Qualification" & Categorie!="Grand Slam" & Round=="Q-QF" & Issue=="W"~"Q-QW",
+                          Phase=="Qualification" & Categorie=="Grand Slam" & Round=="Q-3R" & Issue=="W"~"Q-QW",
+                          tournament=="Masters Cup Atp" & Round=="-" & Issue=="W"~"RRW",
+                          tournament=="Masters Cup Atp" & Round=="-" & Issue=="L"~"RR",
+                          tournament=="Masters Cup Atp" & Round=="SF" & Issue=="W"~"SFW",
+                          tournament=="Masters Cup Atp" & Round=="SF" & Issue=="L"~"SF",
+                          
+                          tournament=="Challenger Tour Finals" & Round=="-" & Issue=="W"~"RRW",
+                          tournament=="Challenger Tour Finals" & Round=="-" & Issue=="L"~"RR",
+                          tournament=="Challenger Tour Finals" & Round=="SF" & Issue=="W"~"SFW",
+                          tournament=="Challenger Tour Finals" & Round=="SF" & Issue=="L"~"SF",
+                          
+                          Phase=="Qualification" & !Categorie %in% c("ATP 1000","ATP 2000") & Round=="Q-1R"~"Q-R16",
+                          
+                          Categorie=="ATP 1000" & Phase=="Qualification" & Round=="Q-R16" & Issue=="W"~"Q-QW",
+                          Categorie=="ATP 1000" & Phase=="Qualification" & Round=="Q-R16" & Issue=="L"~"Q-R16",
+                          
+                          Categorie=="ATP 1000" & Phase=="Qualification" & Round=="Q-2R" & Issue=="W"~"Q-QW",
+                          Categorie=="ATP 1000" & Phase=="Qualification" & Round=="Q-2R" & Issue=="L"~"Q-2R",
+                          grepl("Olympics",tournament)==TRUE & Round=="-"~"BM",
+                          TRUE~Round))
+
+
 
 #V_RACE_RANK=V_RACE_RANK %>% filter(is.na(Categorie_tournament))
 
@@ -151,19 +181,22 @@ V_RACE_RANK_t=V_RACE_RANK %>%
 
 #table(V_RACE_RANK$tournament)
 
-V_RACE_RANK_t2=V_RACE_RANK %>% 
+
+V_RACE_RANK_t2=V_RACE_RANK_t %>% 
   mutate(tournamentU=toupper(tournament)) %>% 
   left_join(V_TOURNAMENT_F %>% 
               mutate(tournamentU=toupper(tournament)) %>% 
-              select(tournamentU,Year,Round,Ranking_points,Categorie,Week_tournament) %>% 
+              select(tournamentU,Year,Round,Ranking_points,Week_tournament,Categorie) %>% 
               distinct(),
-            by=c("tournamentU","Season"="Year","Round","Categorie","Week"="Week_tournament")) %>% 
+            by=c("tournamentU","Season"="Year","Round","Categorie")) %>% 
   select(-tournamentU) %>% 
   unique()
 
 double=V_RACE_RANK_t2 %>% 
-  group_by(tournament,Season,Week,Categorie,Round) %>% 
-  summarise(N=n())
+  mutate(Key=paste(tournament,Date,Week,Round,Phase,Player_ID,Categorie,sep="_")) %>% 
+  group_by(Key,tournament,Date,Categorie,Round) %>% 
+  summarise(N=n()) %>% 
+  filter(N>1)
 
 
 V_RACE_RANK_t2$Rank_L=as.numeric(V_RACE_RANK_t2$Rank_L)
@@ -174,73 +207,87 @@ V_RACE_RANK_t2=V_RACE_RANK_t2 %>%
   mutate(Rank_W=ifelse(is.na(Rank_W)==TRUE,1000,Rank_W),
          Rank_L=ifelse(is.na(Rank_L)==TRUE,1000,Rank_L))
 
+# V_RACE_RANK_t2=V_RACE_RANK_t2 %>% 
+#   mutate(Ranking_points=case_when(tournament=="Atp Cup" & Season==2020 & Round %in% c("RR","QF","SF","F")~0,
+#                                   tournament=="Atp Cup" & Season==2020 & Round=="RRW" & between(Rank_L,1,10)~75,
+#                                   tournament=="Atp Cup" & Season==2020 & Round=="RRW" & between(Rank_L,11,25)~65,
+#                                   tournament=="Atp Cup" & Season==2020 & Round=="RRW" & between(Rank_L,26,50)~50,
+#                                   tournament=="Atp Cup" & Season==2020 & Round=="RRW" & between(Rank_L,51,100)~25,
+#                                   tournament=="Atp Cup" & Season==2020 & Round=="RRW" & Rank_L>=101~20,
+#                                   
+#                                   tournament=="Atp Cup" & Season==2020 & Round=="QFW" & between(Rank_L,1,10)~120,
+#                                   tournament=="Atp Cup" & Season==2020 & Round=="QFW" & between(Rank_L,11,25)~100,
+#                                   tournament=="Atp Cup" & Season==2020 & Round=="QFW" & between(Rank_L,26,50)~75,
+#                                   tournament=="Atp Cup" & Season==2020 & Round=="QFW" & between(Rank_L,51,100)~35,
+#                                   tournament=="Atp Cup" & Season==2020 & Round=="QFW" & Rank_L>=101~25,
+#                                   
+#                                   tournament=="Atp Cup" & Season==2020 & Round=="SFW" & between(Rank_L,1,10)~180,
+#                                   tournament=="Atp Cup" & Season==2020 & Round=="SFW" & between(Rank_L,11,25)~140,
+#                                   tournament=="Atp Cup" & Season==2020 & Round=="SFW" & between(Rank_L,26,50)~105,
+#                                   tournament=="Atp Cup" & Season==2020 & Round=="SFW" & between(Rank_L,51,100)~50,
+#                                   tournament=="Atp Cup" & Season==2020 & Round=="SFW" & Rank_L>=101~35,
+#                                   
+#                                   tournament=="Atp Cup" & Season==2020 & Round=="Winner" & between(Rank_L,1,10)~250,
+#                                   tournament=="Atp Cup" & Season==2020 & Round=="Winner" & between(Rank_L,11,25)~200,
+#                                   tournament=="Atp Cup" & Season==2020 & Round=="Winner" & between(Rank_L,26,50)~150,
+#                                   tournament=="Atp Cup" & Season==2020 & Round=="Winner" & between(Rank_L,51,100)~75,
+#                                   tournament=="Atp Cup" & Season==2020 & Round=="Winner" & Rank_L>=101~50,
+#                                   
+#                                   tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round %in% c("RR","SF","F")~0,
+#                                   tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="RRW" & between(Rank_L,1,10)~75,
+#                                   tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="RRW" & between(Rank_L,11,20)~65,
+#                                   tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="RRW" & between(Rank_L,21,30)~50,
+#                                   tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="RRW" & between(Rank_L,31,50)~35,
+#                                   tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="RRW" & between(Rank_L,51,100)~25,
+#                                   tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="RRW" & between(Rank_L,101,250)~20,
+#                                   tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="RRW" & Rank_L>=251~15,
+#                                 
+#                                   tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="SFW" & between(Rank_L,1,10)~150,
+#                                   tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="SFW" & between(Rank_L,11,20)~130,
+#                                   tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="SFW" & between(Rank_L,21,30)~100,
+#                                   tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="SFW" & between(Rank_L,31,50)~70,
+#                                   tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="SFW" & between(Rank_L,51,100)~45,
+#                                   tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="SFW" & between(Rank_L,101,250)~30,
+#                                   tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="SFW" & Rank_L>=251~20,
+#                                   
+#                                   tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="Winner" & between(Rank_L,1,10)~220,
+#                                   tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="Winner" & between(Rank_L,11,20)~180,
+#                                   tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="Winner" & between(Rank_L,21,30)~140,
+#                                   tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="Winner" & between(Rank_L,31,50)~100,
+#                                   tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="Winner" & between(Rank_L,51,100)~75,
+#                                   tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="Winner" & between(Rank_L,101,250)~45,
+#                                   tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="Winner" & Rank_L>=251~30,
+#                                   
+#                                   tournament=="Masters Cup Atp" & Round %in% c("RR","SF","F") ~0,
+#                                   tournament=="Masters Cup Atp" & Round=="RRW" ~200,
+#                                   tournament=="Masters Cup Atp" & Round=="SFW" ~400,
+#                                   tournament=="Masters Cup Atp" & Round=="Winner" ~500,
+#                                   
+#                                   grepl("Olympics",tournament)==TRUE|tournament %in% c("Davis Cup","Next Gen Atp Finals")~0,
+#                                   
+#                                   TRUE~Ranking_points))
+
 V_RACE_RANK_t2=V_RACE_RANK_t2 %>% 
-  mutate(Ranking_points=case_when(tournament=="Atp Cup" & Season==2020 & Round %in% c("RR","QF","SF","F")~0,
-                                  tournament=="Atp Cup" & Season==2020 & Round=="RRW" & between(Rank_L,1,10)~75,
-                                  tournament=="Atp Cup" & Season==2020 & Round=="RRW" & between(Rank_L,11,25)~65,
-                                  tournament=="Atp Cup" & Season==2020 & Round=="RRW" & between(Rank_L,26,50)~50,
-                                  tournament=="Atp Cup" & Season==2020 & Round=="RRW" & between(Rank_L,51,100)~25,
-                                  tournament=="Atp Cup" & Season==2020 & Round=="RRW" & Rank_L>=101~20,
-                                  
-                                  tournament=="Atp Cup" & Season==2020 & Round=="QFW" & between(Rank_L,1,10)~120,
-                                  tournament=="Atp Cup" & Season==2020 & Round=="QFW" & between(Rank_L,11,25)~100,
-                                  tournament=="Atp Cup" & Season==2020 & Round=="QFW" & between(Rank_L,26,50)~75,
-                                  tournament=="Atp Cup" & Season==2020 & Round=="QFW" & between(Rank_L,51,100)~35,
-                                  tournament=="Atp Cup" & Season==2020 & Round=="QFW" & Rank_L>=101~25,
-                                  
-                                  tournament=="Atp Cup" & Season==2020 & Round=="SFW" & between(Rank_L,1,10)~180,
-                                  tournament=="Atp Cup" & Season==2020 & Round=="SFW" & between(Rank_L,11,25)~140,
-                                  tournament=="Atp Cup" & Season==2020 & Round=="SFW" & between(Rank_L,26,50)~105,
-                                  tournament=="Atp Cup" & Season==2020 & Round=="SFW" & between(Rank_L,51,100)~50,
-                                  tournament=="Atp Cup" & Season==2020 & Round=="SFW" & Rank_L>=101~35,
-                                  
-                                  tournament=="Atp Cup" & Season==2020 & Round=="Winner" & between(Rank_L,1,10)~250,
-                                  tournament=="Atp Cup" & Season==2020 & Round=="Winner" & between(Rank_L,11,25)~200,
-                                  tournament=="Atp Cup" & Season==2020 & Round=="Winner" & between(Rank_L,26,50)~150,
-                                  tournament=="Atp Cup" & Season==2020 & Round=="Winner" & between(Rank_L,51,100)~75,
-                                  tournament=="Atp Cup" & Season==2020 & Round=="Winner" & Rank_L>=101~50,
-                                  
-                                  tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round %in% c("RR","SF","F")~0,
-                                  tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="RRW" & between(Rank_L,1,10)~75,
-                                  tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="RRW" & between(Rank_L,11,20)~65,
-                                  tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="RRW" & between(Rank_L,21,30)~50,
-                                  tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="RRW" & between(Rank_L,31,50)~35,
-                                  tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="RRW" & between(Rank_L,51,100)~25,
-                                  tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="RRW" & between(Rank_L,101,250)~20,
-                                  tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="RRW" & Rank_L>=251~15,
-                                
-                                  tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="SFW" & between(Rank_L,1,10)~150,
-                                  tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="SFW" & between(Rank_L,11,20)~130,
-                                  tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="SFW" & between(Rank_L,21,30)~100,
-                                  tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="SFW" & between(Rank_L,31,50)~70,
-                                  tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="SFW" & between(Rank_L,51,100)~45,
-                                  tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="SFW" & between(Rank_L,101,250)~30,
-                                  tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="SFW" & Rank_L>=251~20,
-                                  
-                                  tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="Winner" & between(Rank_L,1,10)~220,
-                                  tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="Winner" & between(Rank_L,11,20)~180,
-                                  tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="Winner" & between(Rank_L,21,30)~140,
-                                  tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="Winner" & between(Rank_L,31,50)~100,
-                                  tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="Winner" & between(Rank_L,51,100)~75,
-                                  tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="Winner" & between(Rank_L,101,250)~45,
-                                  tournament %in% c("Atp Cup","United Cup") & Season %in% c(2021,2022,2023) & Round=="Winner" & Rank_L>=251~30,
-                                  
-                                  tournament=="Masters Cup Atp" & Round %in% c("RR","SF","F") ~0,
+  mutate(Ranking_points=case_when(tournament=="Masters Cup Atp" & Round %in% c("RR","SF","F") ~0,
                                   tournament=="Masters Cup Atp" & Round=="RRW" ~200,
                                   tournament=="Masters Cup Atp" & Round=="SFW" ~400,
                                   tournament=="Masters Cup Atp" & Round=="Winner" ~500,
                                   
+                                  tournament=="Challenger Tour Finals" & Round %in% c("RR","SF","F") ~0,
+                                  tournament=="Challenger Tour Finals" & Round=="RRW"~15,
+                                  tournament=="Challenger Tour Finals" & Round=="SFW"~30,
+                                  tournament=="Challenger Tour Finals" & Round=="Winner"~80,
+                                  
                                   grepl("Olympics",tournament)==TRUE|tournament %in% c("Davis Cup","Next Gen Atp Finals")~0,
                                   
                                   TRUE~Ranking_points))
-
+    
 V_RACE_RANK_t2=V_RACE_RANK_t2 %>% 
   mutate(Categorie=case_when(is.na(Categorie)==TRUE & tournament %in% c("Davis Cup","United Cup","Atp Cup")~"Team Cup",
                              is.na(Categorie)==TRUE & tournament %in% c("Masters Cup Atp","Next Gen Atp Finals")~"Masters Cup",
                              is.na(Categorie)==TRUE & grepl("Olympics",tournament)==TRUE~"Olympics",
                              TRUE~Categorie))
 
-         
 # Miss_cat=V_RACE_RANK_t2 %>% 
 #   filter(is.na(Categorie)==TRUE) %>% 
 #   group_by(tournament) %>% 
@@ -260,7 +307,7 @@ V_RACE_RANK_1=V_RACE_RANK_t2 %>% filter(!Categorie %in% c("Masters Cup","Team Cu
 
 V_RACE_RANK_2=V_RACE_RANK_t2 %>% filter(Categorie %in% c("Masters Cup","Team Cup"))
 
-year <- c(2017:2023)
+year <- c(2012:2016)
 
 # Fonction pour calculer le classement
 calculate_race_points <- function(player_id) {
@@ -332,7 +379,8 @@ for (i in year){
   
 }
 
-
+# Corriger le calcul de la race et de la week calculé, plusieurs fois la même semaine sur 2 dates différentes
+# ex 2013
 save(V_RACE_RANK_F,file = paste0(getwd(),"/Scrapping tennis data/Rank/V_RACE_RANK.RData"))
 
 

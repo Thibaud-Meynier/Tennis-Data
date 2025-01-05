@@ -601,6 +601,16 @@ V_80=V_ATP(V_TOURNAMENT4,
 V_TOURNAMENT_F=rbind(V_80,V_90_125,V_250,V_500,V_1000,V_2000) %>% arrange(Date) %>% 
   unique()
 
+V_TOURNAMENT_F=V_TOURNAMENT_F %>% 
+  group_by(tournament,Date,Categorie,Round,Week_tournament,Year,Country_tournament,Surface_tournament) %>% 
+  mutate(Ranking_points=max(Ranking_points,na.rm = T)) %>% 
+  ungroup() %>% 
+  unique()
+
+
+V_TOURNAMENT_F=V_TOURNAMENT_F %>% 
+  mutate(Ranking_points=as.numeric(Ranking_points))
+
 save(V_TOURNAMENT_F,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2012_2016.RData"))
 
 
