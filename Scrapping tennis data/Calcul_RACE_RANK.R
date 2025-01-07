@@ -353,6 +353,7 @@ V_RACE_RANK_F=data.frame()
 
 for (i in year){
   
+  Start=Sys.time()
   
   V_RACE_RANK_1=V_RACE_RANK_t2 %>% 
     filter(!Categorie %in% c("Masters Cup","Team Cup")) %>% 
@@ -396,6 +397,9 @@ for (i in year){
   
   V_RACE_RANK_F=rbind(V_RACE_RANK_F,RACE_RANK)
   
+  End=Sys.time()-Start
+  
+  print(End)
   print(i)
   
 }
@@ -404,6 +408,7 @@ for (i in year){
 # ex 2013
 save(V_RACE_RANK_F,file = paste0(getwd(),"/Scrapping tennis data/Rank/V_RACE_RANK_2012_2016.RData"))
 
+save(V_RACE_RANK_F,file = paste0(getwd(),"/Scrapping tennis data/Rank/V_RACE_RANK.RData"))
 
 
 # Appliquer la fonction à chaque joueur et concaténer les résultats

@@ -613,6 +613,7 @@ V_TOURNAMENT_F=V_TOURNAMENT_F %>%
 
 save(V_TOURNAMENT_F,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2012_2016.RData"))
 
+save(V_TOURNAMENT_F,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F.RData"))
 
 bergame=get_tournament_red("Potchefstroom Chall.",
                            2020,
@@ -670,3 +671,12 @@ V_TABLE_MATCH=rbind(V_TABLE_MATCH,bergame) %>% unique()
 V_TABLE_MATCH=V_TABLE_MATCH %>% unique()
 
 save(V_TABLE_MATCH,file = paste0(getwd(),"/Scrapping tennis data/Extraction/V_TABLE_MATCH.RData"))
+
+
+
+V_TOURNAMENT_F_RED=V_TOURNAMENT_F %>%
+  filter(tournament=="Adelaide" & Year==2022)
+
+V_TOURNAMENT_F_RED$tournament=tournament_name
+
+V_TOURNAMENT_F=rbind(V_TOURNAMENT_F,V_TOURNAMENT_F_RED)
