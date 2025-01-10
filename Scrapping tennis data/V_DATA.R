@@ -41,7 +41,7 @@ save(V_MATCH,file = paste0(getwd(),"/Scrapping tennis data/Extraction/V_MATCH_20
 
 V_TOURNAMENT=data.frame()
 
-for (i in 2012:2016){
+for (i in 2024:2024){
   
   list=list_tournament(i)
   
@@ -138,7 +138,7 @@ V_TOURNAMENT= V_TOURNAMENT %>%
 
 V_TOURNAMENT2=data.frame()
 
-for (i in seq(2012,2016,by=1)){
+for (i in seq(2024,2024,by=1)){
   
   list=list_tournament(i)
   
@@ -179,7 +179,7 @@ V_TOURNAMENT3=V_TOURNAMENT3 %>%
   mutate(tournament = gsub("US Open","Us Open",tournament, ignore.case = TRUE)) %>% 
   rename(Ranking_points=`Ranking points`)
 
-save(V_TOURNAMENT3,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT3_2012_2016.RData"))
+save(V_TOURNAMENT3,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT3_2024.RData"))
 
 ##### V_PLAYERS #####
 

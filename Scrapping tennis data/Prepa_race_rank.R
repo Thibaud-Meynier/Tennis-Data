@@ -33,6 +33,8 @@ calendar_info=info_tournament(tournament_list)
 
 
 #### DEBUT REDRESSEMENT #####
+V_MATCH=table_stock %>% 
+  mutate(Season=2024)
 
 count=V_MATCH %>% 
   filter(Phase=="Main Draw") %>% 
@@ -56,7 +58,7 @@ V_TOURNAMENT3=V_TOURNAMENT3 %>%
 
 NO=V_TOURNAMENT3 %>% 
   filter(Categorie %in% c("ATP ","ATP 0","Challenger ","Challenger 0")) %>% 
-  filter(!tournament %in% c("Davis Cup","Next Gen ATP Finals","Atp Cup","United Cup","Olympics - Tokyo","Masters Cup Atp"))
+  filter(!tournament %in% c("Davis Cup","Next Gen ATP Finals","Atp Cup","United Cup","Olympics - Tokyo","Olympics - Paris","Masters Cup Atp"))
 
 
 V_TOURNAMENT3 %>% 
@@ -65,6 +67,8 @@ V_TOURNAMENT3 %>%
 #NO=NO %>% filter(is.na(N)) # Tournoi à supprimer de la base de reférence
 
 NO=NO %>% filter(!is.na(N))
+
+NO=NO %>% select(tournament,Date,Categorie) %>% unique()
 
 ##### Stats tournois ATP #####
 
@@ -92,7 +96,7 @@ table(ATP_1000$N)
 
 
 
-NO=NO %>% select(tournament,Date,Categorie) %>% unique()
+
 
 NO2=data.frame(tournament=c("Charleston Chall.","Playford Chall.","Calgary Challenger","Cologne","Cologne 2",
                       "Brasília Chall.","Buenos Aires 4 Chall.","Corrientes Chall.",
@@ -100,6 +104,12 @@ NO2=data.frame(tournament=c("Charleston Chall.","Playford Chall.","Calgary Chall
          Date=c("2022-09-26","2018-12-31","2020-02-24","2020-10-12","2020-10-19","2021-11-22","2022-04-25","2022-06-13","2022-06-20","2023-04-24")) 
 
 # Redressement spécial pour cologne car pas d'autres tournois
+
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT3.RData"))
+
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT3_2024.RData"))
+
+V_TOURNAMENT3_bis=V_TOURNAMENT3
 
 for (j in 1:nrow(NO)){
   
@@ -110,11 +120,11 @@ for (j in 1:nrow(NO)){
   Tournament_red=V_TOURNAMENT3 %>% filter((tournament==i & Date==Date_i)) %>% 
     select(tournament,Date)
   
-  Annee_filtre=ifelse(year(Date_i)==2012,year(Date_i)+1,year(Date_i)-1)
+  Annee_filtre=ifelse(year(Date_i)==2024,year(Date_i)-1,year(Date_i)-2)
   
   # Ajouter des conditions pour l'année de filtre
   #Si 2017 alors on prend +1 si 2023 on prend -1 sinon on prend -1
-  Red_values=V_TOURNAMENT3 %>% 
+  Red_values=V_TOURNAMENT3_bis %>% 
     select(tournament,Date,Categorie,Round,Ranking_points,Country_tournament,Surface_tournament,Week_tournament,Year,N) %>% 
     filter(tournament==i & Year==Annee_filtre) %>% 
     select(-Date)
@@ -176,6 +186,30 @@ for (j in 1:nrow(NO)){
   
 }
 
+# RED 2024 
+
+NO=NO %>% select(tournament,Date,Country_tournament,Surface_tournament,Week_tournament,Year) %>% 
+  unique() %>% 
+  left_join(V_TOURNAMENT3_bis %>% 
+              filter(Year==2023) %>% 
+              select(tournament,Categorie),by=c("tournament")) %>% 
+  unique() %>% 
+  mutate(Categorie=case_when(tournament %in% "Bonn Challenger"~"Challenger 75",
+                             TRUE~Categorie))
+
+test=V_TOURNAMENT3 %>% 
+  filter(Categorie %in% c("ATP 250","Challenger 125","Challenger 100","Challenger 75")) %>% 
+  filter(tournament!="Winston Salem") %>% 
+  select(Categorie,Round,Ranking_points) %>% unique()
+
+NO=NO %>% 
+  left_join(test,by="Categorie")
+
+NO=NO %>% select(tournament,Date,Categorie,Round,Ranking_points,Country_tournament,Surface_tournament,Week_tournament,Year)
+
+V_TOURNAMENT3=V_TOURNAMENT3 %>% 
+  filter(!(tournament %in% NO$tournament & Date %in% NO$Date)) %>% 
+  rbind(NO)
 
 V_TOURNAMENT3$Year=case_when(V_TOURNAMENT3$Week_tournament>=52 & month(V_TOURNAMENT3$Date)==1 ~year(V_TOURNAMENT3$Date),
                             V_TOURNAMENT3$Week_tournament>=52 & month(V_TOURNAMENT3$Date)==12 ~ year(V_TOURNAMENT3$Date)+1,
@@ -197,6 +231,12 @@ t=V_TOURNAMENT3 %>%
 
 t2=V_TOURNAMENT3 %>% 
   filter(is.na(N))
+
+V_TOURNAMENT3=V_TOURNAMENT3 %>% select(-c(10,11))
+
+V_TOURNAMENT3=V_TOURNAMENT3 %>% 
+  mutate(tournament=(case_when(tournament=="Canberra 2 Chall."~"Canberra Chall.",
+                               TRUE~tournament)))
 
 # Garder Charleston 2022 Cancel à cause de l'ouragan, matchs joués mais pb dans le scrap
 
@@ -266,7 +306,7 @@ t=V_TOURNAMENT4 %>%
   unique()
 
 
-save(V_TOURNAMENT4,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT4_2012_2016.RData"))
+save(V_TOURNAMENT4,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT4_2024.RData"))
 
 # Rajout de ces matchs à la base V_MATCH
 
@@ -429,12 +469,28 @@ V_TOURNAMENT4=rbind(V_TOURNAMENT4,tournament_red)
 
 # Pour le calcul de la race avec ATP Cup/United Cup on appliquera un calcul séparé
 
-save(V_TOURNAMENT4,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT4_2012_2016.RData"))
+save(V_TOURNAMENT4,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT4_2024.RData"))
 
 
 ##### Redressement des catégories avant ajout qualif #####
 
 table(V_TOURNAMENT4$Categorie)
+
+V_TOURNAMENT_RED=V_TOURNAMENT4 %>% filter(tournament=="Split Challenger")
+
+V_TOURNAMENT4=V_TOURNAMENT4 %>% filter(!tournament %in% "Split Challenger")
+
+V_TOURNAMENT_RED=V_TOURNAMENT_RED %>% mutate(Categorie="Challenger 75")
+
+V_TOURNAMENT_RED=V_TOURNAMENT_RED %>% select(-c(Round,Ranking_points))
+  
+V_TOURNAMENT_RED=V_TOURNAMENT_RED %>% 
+  left_join(test,by="Categorie") %>% 
+  unique()
+
+V_TOURNAMENT_RED=V_TOURNAMENT_RED %>% select(tournament,Date,Categorie,Round,Ranking_points,Country_tournament,Surface_tournament,Week_tournament,Year,N)
+
+V_TOURNAMENT4=rbind(V_TOURNAMENT4,V_TOURNAMENT_RED)
 
 V_TOURNAMENT4=V_TOURNAMENT4 %>% 
   group_by(tournament,Date,Week_tournament,Year) %>% 
@@ -456,6 +512,7 @@ V_TOURNAMENT4=V_TOURNAMENT4 %>%
     TRUE ~ Categorie            # Cas par défaut : utilise la valeur de f.Categorie
   ))
 
+
 V_TOURNAMENT4 = V_TOURNAMENT4 %>% 
   unique() %>% 
   group_by(tournament,Date,Week_tournament,Year) %>% 
@@ -472,7 +529,7 @@ V_TOURNAMENT4 = V_TOURNAMENT4 %>%
 #     filter(!(tournament=="Todi Challenger" & Year==2013 & Categorie=="Challenger 80"))
   
 
-save(V_TOURNAMENT4,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT4_2012_2016.RData"))
+save(V_TOURNAMENT4,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT4_2024.RData"))
 
 ###### AJOUT des Points de Qualifs ####
 
@@ -530,21 +587,21 @@ V_ATP=function(dt,vect_a,vect_b,m,categorie,rule){
 
 V_2000=V_ATP(V_TOURNAMENT4,
              vect_a=c("Q-1R","Q-2R","Q-3R","Q-QW"),
-             vect_b=c(0,8,16,25),
+             vect_b=c(0,8,16,30),
              m=128,
              "Grand Slam",
              rule="N<m")
 
 V_1000_P1=V_ATP(V_TOURNAMENT4,
                 vect_a=c("Q-1R","Q-R16","Q-R16W"),
-                vect_b=c(0,8,25),
+                vect_b=c(0,16,30),
                 m=56,
                 "ATP 1000",
                 rule="N<m")
 
 V_1000_P2=V_ATP(V_TOURNAMENT4,
                 vect_a=c("Q-1R","Q-2R","Q-2RW"),
-                vect_b=c(0,8,16),
+                vect_b=c(0,10,20),
                 m=95,
                 "ATP 1000",
                 rule="N>=m")
@@ -553,14 +610,14 @@ V_1000=rbind(V_1000_P1,V_1000_P2)
 
 V_500_P1=V_ATP(V_TOURNAMENT4,
                vect_a=c("Q-R16","Q-QF","Q-QW"),
-               vect_b=c(0,10,20),
+               vect_b=c(0,13,25),
                m=32,
                "ATP 500",
                rule="N<m")
 
 V_500_P2=V_ATP(V_TOURNAMENT4,
                vect_a=c("Q-R16","Q-QF","Q-QW"),
-               vect_b=c(0,4,10),
+               vect_b=c(0,8,16),
                m=47,
                "ATP 500",
                rule="N>=m")
@@ -569,14 +626,14 @@ V_500=rbind(V_500_P1,V_500_P2)
 
 V_250_P1=V_ATP(V_TOURNAMENT4,
                vect_a=c("Q-R16","Q-QF","Q-QW"),
-               vect_b=c(0,6,12),
+               vect_b=c(0,7,13),
                m=32,
                "ATP 250",
                rule="N<m")
 
 V_250_P2=V_ATP(V_TOURNAMENT4,
                vect_a=c("Q-R16","Q-QF","Q-QW"),
-               vect_b=c(0,3,5),
+               vect_b=c(0,4,8),
                m=47,
                "ATP 250",
                rule="N>=m")
@@ -584,21 +641,35 @@ V_250_P2=V_ATP(V_TOURNAMENT4,
 V_250=rbind(V_250_P1,V_250_P2)
 
 
-V_90_125=V_ATP(V_TOURNAMENT4,
+V_175=V_ATP(V_TOURNAMENT4,
+            vect_a=c("Q-R16","Q-QF","Q-QW"),
+            vect_b=c(0,3,6),
+            m=32,
+            "Challenger 175",
+            rule="N<=m")
+
+V_125=V_ATP(V_TOURNAMENT4,
+            vect_a=c("Q-R16","Q-QF","Q-QW"),
+            vect_b=c(0,3,5),
+            m=47,
+            "Challenger 125",
+            rule="N<=m")
+
+V_75_100=V_ATP(V_TOURNAMENT4,
                vect_a=c("Q-R16","Q-QF","Q-QW"),
-               vect_b=c(0,2,5),
+               vect_b=c(0,2,4),
                m=32,
-               c("Challenger 125","Challenger 110","Challenger 100","Challenger 90"),
+               c("Challenger 75","Challenger 100"),
                rule="N<m")
 
-V_80=V_ATP(V_TOURNAMENT4,
+V_50=V_ATP(V_TOURNAMENT4,
            vect_a=c("Q-R16","Q-QF","Q-QW"),
-           vect_b=c(0,2,4),
+           vect_b=c(0,1,3),
            m=32,
-           "Challenger 80",
+           "Challenger 50",
            rule="N<m")
 
-V_TOURNAMENT_F=rbind(V_80,V_90_125,V_250,V_500,V_1000,V_2000) %>% arrange(Date) %>% 
+V_TOURNAMENT_F=rbind(V_50,V_75_100,V_125,V_175,V_250,V_500,V_1000,V_2000) %>% arrange(Date) %>% 
   unique()
 
 V_TOURNAMENT_F=V_TOURNAMENT_F %>% 
@@ -610,6 +681,8 @@ V_TOURNAMENT_F=V_TOURNAMENT_F %>%
 
 V_TOURNAMENT_F=V_TOURNAMENT_F %>% 
   mutate(Ranking_points=as.numeric(Ranking_points))
+
+save(V_TOURNAMENT_F,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2024.RData"))
 
 save(V_TOURNAMENT_F,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2012_2016.RData"))
 

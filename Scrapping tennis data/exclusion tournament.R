@@ -236,7 +236,12 @@ exclusion=c("International Tennis Series",
             "Spain - Championship",
             "Punta del Este",
             "Slovenská extraliga",
-            "Riyadh - exhibition"
+            "Riyadh - exhibition",
+            "Riyadh - Exhibition",
+            "Las Vegas - exhibition",
+            "The Garden Cup",
+            "Charlotte Invitational",
+            "Macau Tennis Masters"
             
 )
 
