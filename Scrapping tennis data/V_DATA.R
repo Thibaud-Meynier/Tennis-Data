@@ -1,4 +1,5 @@
 library(tidyverse)
+library(data.table)
 
 V_RANK=data.frame()
 
@@ -41,7 +42,7 @@ save(V_MATCH,file = paste0(getwd(),"/Scrapping tennis data/Extraction/V_MATCH_20
 
 V_TOURNAMENT=data.frame()
 
-for (i in 2024:2024){
+for (i in 2002:2024){
   
   list=list_tournament(i)
   
@@ -63,10 +64,10 @@ for (i in 1:nrow(V_TOURNAMENT)){
   
   page_info=read_html(url)
   
-  country_tournament=page_info %>% 
-    html_nodes("#center > h1") %>% 
+  country_tournament=page_info %>%
+    html_nodes("#center > h1") %>%
     html_text()
-  
+
   info <- sub(".*\\(([^)]+)\\).*", "\\1", country_tournament)
   
   surface_tournament=page_info %>% 
@@ -74,23 +75,23 @@ for (i in 1:nrow(V_TOURNAMENT)){
     html_text()
   
   info2 <- extrait <- sub(".*\\, (\\w+)\\,.*", "\\1", surface_tournament)
-  
+
   ranking_points_tournament=
-    page_info %>% 
-    html_nodes("#center > div:nth-child(7) > div > div > table") %>% 
-    html_table() %>% 
+    page_info %>%
+    html_nodes("#center > div:nth-child(7) > div > div > table") %>%
+    html_table() %>%
     as.data.frame()
-  
+
   names(ranking_points_tournament)=ranking_points_tournament[1,]
   ranking_points_tournament=ranking_points_tournament[-1,]
-  
-   #ranking_points_tournament = ranking_points_tournament %>% select(`Ranking points`,Round)
+
+   ranking_points_tournament = ranking_points_tournament %>% select(`Ranking points`,Round)
   
   if(ncol(ranking_points_tournament)<=4 & ncol(ranking_points_tournament)>0){
-    
+
     ranking_points_tournament$tournament=V_TOURNAMENT$tournament[i]
-    
-    ranking_points_tournament=ranking_points_tournament %>% 
+
+    ranking_points_tournament=ranking_points_tournament %>%
       mutate(Round=case_when(Round=="1. round"~"1R",
                              Round=="2. round"~"2R",
                              Round=="3. round"~"3R",
@@ -100,17 +101,17 @@ for (i in 1:nrow(V_TOURNAMENT)){
                              Round=="final"~"F",
                              Round=="-"~"",
                              TRUE~"Winner"))
-    
+
     points=max(as.numeric(ranking_points_tournament$`Ranking points`))
-    
+
     V_TOURNAMENT$Country_tournament[i]=info
     V_TOURNAMENT$Surface_tournament[i]=info2
     V_TOURNAMENT$Points_tournament[i]=points
     
   }else{
     
-    points=0
-    
+   points=0
+
     V_TOURNAMENT$Country_tournament[i]=info
     V_TOURNAMENT$Surface_tournament[i]=info2
     V_TOURNAMENT$Points_tournament[i]=points
@@ -135,6 +136,9 @@ V_TOURNAMENT=V_TOURNAMENT %>%
   
 V_TOURNAMENT= V_TOURNAMENT %>%  
   mutate(tournament = gsub("chall", "Chall", tournament, ignore.case = TRUE))
+
+
+#save(V_TOURNAMENT,file=paste0(getwd(),"/Scrapping tennis data/Tournament/INFO_TOURNAMENT_2002_2024.RData"))
 
 V_TOURNAMENT2=data.frame()
 

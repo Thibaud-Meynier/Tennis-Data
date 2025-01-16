@@ -37,6 +37,8 @@ get_tournament=function(tournament,year,url_tournament) {
   matches$Set1=as.numeric(substr(matches$Set1, 1, 1))
   matches$Set2=as.numeric(substr(matches$Set2, 1, 1))
   matches$Set3=as.numeric(substr(matches$Set3, 1, 1))
+  matches$Set4=as.numeric(substr(matches$Set4, 1, 1))
+  matches$Set5=as.numeric(substr(matches$Set5, 1, 1))
   # On transforme la date
   matches$Date=dmy(paste(gsub("['^.^']", "-", substr(matches$Date,1,5)),sep="-",year))
   matches$Player=str_replace(matches$Player,'\\s+\\((.*$)',"")
@@ -104,6 +106,8 @@ get_tournament_qualif=function(tournament,year,url_tournament) {
   matches$Set1=as.numeric(substr(matches$Set1, 1, 1))
   matches$Set2=as.numeric(substr(matches$Set2, 1, 1))
   matches$Set3=as.numeric(substr(matches$Set3, 1, 1))
+  matches$Set4=as.numeric(substr(matches$Set4, 1, 1))
+  matches$Set5=as.numeric(substr(matches$Set5, 1, 1))
   # On transforme la date
   matches$Date=dmy(paste(gsub("['^.^']", "-", substr(matches$Date,1,5)),sep="-",year))
   matches$Player=str_replace(matches$Player,'\\s+\\((.*$)',"")
@@ -167,6 +171,8 @@ get_davis_cup=function(tournament,year,url_tournament) {
   matches$Set1=as.numeric(substr(matches$Set1, 1, 1))
   matches$Set2=as.numeric(substr(matches$Set2, 1, 1))
   matches$Set3=as.numeric(substr(matches$Set3, 1, 1))
+  matches$Set4=as.numeric(substr(matches$Set4, 1, 1))
+  matches$Set5=as.numeric(substr(matches$Set5, 1, 1))
   # On transforme la date
   matches$Date=dmy(paste(gsub("['^.^']", "-", substr(matches$Date,1,5)),sep="-",year))
   matches$Player=str_replace(matches$Player,'\\s+\\((.*$)',"")
