@@ -32,7 +32,7 @@ loser_url="https://www.tennisexplorer.com/player/murray/"
 
 h2h(winner_url,loser_url,
     surface=surface,Date_match = Date_match,tournoi=tournoi,
-    W="Djokovic",L="Murray",R="F")
+    W=W,L=L,R=R)
 
 h2h=function(winner_url,loser_url,surface,Date_match,tournoi,W,L,R){
   
@@ -98,6 +98,9 @@ h2h=function(winner_url,loser_url,surface,Date_match,tournoi,W,L,R){
   #Passage du nom du tournoi en maj
   data_set$Tournament=str_to_title(as.character(data_set$Tournament))
   
+  data_set=data_set %>% 
+  mutate(Tournament = gsub("Challenger", "Chall.", Tournament, ignore.case = TRUE))
+  
   # On veut récuperer la catégorie du tournoi et la surface
   data_set=data_set %>% 
     mutate(Round=case_when(Tournament=="Masters Cup Atp" & !Round %in% c("F","SF")~"RR",
@@ -108,38 +111,56 @@ h2h=function(winner_url,loser_url,surface,Date_match,tournoi,W,L,R){
     select(-tournament2) %>% 
     mutate(Week=isoweek(Date)) %>% 
     arrange(Year,Week,desc(Round)) %>% 
-    mutate(row=row_number())
+    mutate(row_i=row_number())
+  
+  data_set$row_i=as.numeric(data_set$row_i)
   
   if(tournoi!="Davis Cup"){
     
     ref=data_set %>% 
       filter(Tournament==tournoi & Year==Annee & Week<Semaine & Round==R) %>% 
-      pull(row) %>% 
+      pull(row_i) %>% 
       as.numeric()
+    
   }else{
     
     ref=data_set %>% 
       filter(Tournament==tournoi & Year==Annee & Round==R) %>% 
-      pull(row) %>% 
+      pull(row_i) %>% 
       as.numeric()
     
   }
   
   
-  if(surface=="all"){
+if(surface=="all"){ #nrow(data_set)>1
     
-    data_set=data_set %>% 
-      filter(row<ref) %>% 
-      select(-row)
+    # data_set=data_set %>% 
+    #   filter(row_i<ref) %>% 
+    #   select(-row_i)
+  
+  data_set=subset(data_set, row_i < ref)
     
-  }else{
-    
-    data_set=data_set %>% 
-      filter(row<ref) %>% 
-      select(-row) %>% 
-      filter(Surface_tournament==surface)
+}else {
+    # 
+    # data_set=data_set %>% 
+    #   filter(row_i<ref) %>% 
+    #   select(-row_i) %>% 
+    #   filter(Surface_tournament==surface)
+  
+  data_set=subset(data_set, row_i < ref & Surface_tournament==surface)
     
   }
+
+# Condition pour vérifier qu'il y a bien 1 duel avant sinon 0
+  
+if (nrow(data_set)>=1){
+  
+  data_set=data_set
+  
+}else{
+  
+  data_set=data_set[-1,]
+}  
   
   data_set$G_W=rowSums(data_set[, c("Set1_W", "Set2_W", "Set3_W", "Set4_W", "Set5_W")], na.rm = TRUE)
   
@@ -174,8 +195,10 @@ h2h=function(winner_url,loser_url,surface,Date_match,tournoi,W,L,R){
                    Number_Games_Won=N_G_W_L)
   
   return(list(W=winner_stat,L=loser_stat))
+
 }
 
+#prendre en compte le fait que y'ait eu 0 duels avant
 
 player_id="Djokovic Novak"
 
@@ -192,8 +215,8 @@ match_count=function(df,player_id,lag_week,surface,Date_match){
   if(surface=="all"){
     
  
-  df=table_stock %>% 
-    filter((P1==player_id|P2==player_id) & (Date<Date_match & Date>=Date_min))
+  df=df %>% 
+    filter((Winner_id==player_id|Loser_id==player_id) & (Date<Date_match & Date>=Date_min))
   
   # N_match
   
@@ -201,27 +224,27 @@ match_count=function(df,player_id,lag_week,surface,Date_match){
   
   # N_W
   
-  N_W=df %>% filter(P1==player_id) %>% count() %>% as.numeric()
+  N_W=df %>% filter(Winner_id==player_id) %>% count() %>% as.numeric()
   
   # N_L
   
-  N_L=df %>% filter(P2==player_id) %>% count() %>% as.numeric()
+  N_L=df %>% filter(Loser_id==player_id) %>% count() %>% as.numeric()
   
   #N_W_F_B
   
-  N_W_F_B=df %>% filter(P1==player_id & Odd_W<Odd_L) %>% count() %>% as.numeric()
+  N_W_F_B=df %>% filter(Winner_id==player_id & Odd_W<Odd_L) %>% count() %>% as.numeric()
   
   #N_W_O_B
   
-  N_W_O_B=df %>% filter(P1==player_id & Odd_W>=Odd_L) %>% count() %>% as.numeric()
+  N_W_O_B=df %>% filter(Winner_id==player_id & Odd_W>=Odd_L) %>% count() %>% as.numeric()
   
   #N_L_F_B
   
-  N_L_F_B=df %>% filter(P2==player_id & Odd_L<Odd_W) %>% count() %>% as.numeric()
+  N_L_F_B=df %>% filter(Loser_id==player_id & Odd_L<Odd_W) %>% count() %>% as.numeric()
   
   #N_L_O_B
   
-  N_L_O_B=df %>% filter(P2==player_id & Odd_L>=Odd_W) %>% count() %>% as.numeric()
+  N_L_O_B=df %>% filter(Loser_id==player_id & Odd_L>=Odd_W) %>% count() %>% as.numeric()
   
   stat_player=list(N_match=N_match,
                    N_Win=N_W,
@@ -233,8 +256,8 @@ match_count=function(df,player_id,lag_week,surface,Date_match){
   
   }else{
     
-    df=table_stock %>% 
-      filter((P1==player_id|P2==player_id) & (Date<Date_match & Date>=Date_min) & Surface==surface)
+    df=df %>% 
+      filter((Winner_id==player_id|Loser_id==player_id) & (Date<Date_match & Date>=Date_min) & Surface_tournament==surface)
     
     # N_match
     
@@ -242,27 +265,27 @@ match_count=function(df,player_id,lag_week,surface,Date_match){
     
     # N_W
     
-    N_W=df %>% filter(P1==player_id) %>% count() %>% as.numeric()
+    N_W=df %>% filter(Winner_id==player_id) %>% count() %>% as.numeric()
     
     # N_L
     
-    N_L=df %>% filter(P2==player_id) %>% count() %>% as.numeric()
+    N_L=df %>% filter(Loser_id==player_id) %>% count() %>% as.numeric()
     
     #N_W_F_B
     
-    N_W_F_B=df %>% filter(P1==player_id & Odd_W<Odd_L) %>% count() %>% as.numeric()
+    N_W_F_B=df %>% filter(Winner_id==player_id & Odd_W<Odd_L) %>% count() %>% as.numeric()
     
     #N_W_O_B
     
-    N_W_O_B=df %>% filter(P1==player_id & Odd_W>=Odd_L) %>% count() %>% as.numeric()
+    N_W_O_B=df %>% filter(Winner_id==player_id & Odd_W>=Odd_L) %>% count() %>% as.numeric()
     
     #N_L_F_B
     
-    N_L_F_B=df %>% filter(P2==player_id & Odd_L<Odd_W) %>% count() %>% as.numeric()
+    N_L_F_B=df %>% filter(Loser_id==player_id & Odd_L<Odd_W) %>% count() %>% as.numeric()
     
     #N_L_O_B
     
-    N_L_O_B=df %>% filter(P2==player_id & Odd_L>=Odd_W) %>% count() %>% as.numeric()
+    N_L_O_B=df %>% filter(Loser_id==player_id & Odd_L>=Odd_W) %>% count() %>% as.numeric()
     
     stat_player=list(N_match=N_match,
                      N_Win=N_W,

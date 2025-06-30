@@ -3,7 +3,7 @@
 library(tidyverse)
 library(lubridate)
 
-year=2009
+year=2025
 
 # Filtrer les lundis
 days_year <- seq.Date(as.Date(paste(year, "-01-01", sep = "")), 
@@ -14,6 +14,8 @@ mondays <- days_year[weekdays(days_year) == "lundi"] %>% as.data.frame()
 colnames(mondays)[1]="Date"
 
 mondays$week=week(mondays$Date)
+
+mondays=mondays %>% filter(Date<Sys.Date())
 
 rank=data.frame()
 

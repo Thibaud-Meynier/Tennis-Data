@@ -1,5 +1,5 @@
 
-year=2016
+year=2025
 
 source(paste0(getwd(),"/Scrapping tennis data/exclusion tournament.R"))
 
@@ -15,7 +15,7 @@ table_stock=data.frame()
 
 Start=Sys.time()
 
-  for (a in 40:nrow(list)){
+  for (a in 1:nrow(list)){
     
     tournament_name=list[a,1]
     

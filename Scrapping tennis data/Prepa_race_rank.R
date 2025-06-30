@@ -3,7 +3,7 @@ library(data.table)
 
 V_TOURNAMENT2=data.frame()
 
-for (i in seq(2017,2023,by=1)){
+for (i in 2025:2025){
   
   list=list_tournament(i)
   
@@ -24,17 +24,22 @@ for (i in seq(2017,2023,by=1)){
 }
 
 
-V_TOURNAMENT3=V_TOURNAMENT2 %>% 
-  left_join(V_TOURNAMENT %>% select(tournament,Country_tournament,Date,Surface_tournament,Week_tournament,Year),by=c("tournament","Date"))
+V_TOURNAMENT3=V_TOURNAMENT2 %>% mutate(tournament2=toupper(tournament)) %>% 
+  left_join(V_TOURNAMENT %>% mutate(tournament2=toupper(tournament)) %>% 
+              select(tournament,tournament2,Country_tournament,Date,Surface_tournament,Week_tournament,Year),by=c("tournament2","Date"))
 
-tournament_list=V_TOURNAMENT
+#tournament_list=V_TOURNAMENT
 
-calendar_info=info_tournament(tournament_list)
+#calendar_info=info_tournament(tournament_list)
 
+V_TOURNAMENT3=V_TOURNAMENT3 %>% rename(tournament=tournament.x) 
+V_TOURNAMENT3=V_TOURNAMENT3%>% select(1:5,8:11)
+
+V_TOURNAMENT3=V_TOURNAMENT3 %>% filter(Date<Sys.Date())
 
 #### DEBUT REDRESSEMENT #####
 V_MATCH=table_stock %>% 
-  mutate(Season=2024)
+  mutate(Season=2025)
 
 count=V_MATCH %>% 
   filter(Phase=="Main Draw") %>% 
@@ -63,6 +68,8 @@ NO=V_TOURNAMENT3 %>%
 
 V_TOURNAMENT3 %>% 
   filter(is.na(Round) & is.na(Categorie))
+
+V_TOURNAMENT3=V_TOURNAMENT3 %>% rename(Ranking_points="Ranking points")
 
 #NO=NO %>% filter(is.na(N)) # Tournoi à supprimer de la base de reférence
 
@@ -105,11 +112,13 @@ NO2=data.frame(tournament=c("Charleston Chall.","Playford Chall.","Calgary Chall
 
 # Redressement spécial pour cologne car pas d'autres tournois
 
+V_TOURNAMENT3_bis=V_TOURNAMENT3
+
 load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT3.RData"))
 
 load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT3_2024.RData"))
 
-V_TOURNAMENT3_bis=V_TOURNAMENT3
+
 
 for (j in 1:nrow(NO)){
   
@@ -304,6 +313,52 @@ t=V_TOURNAMENT4 %>%
   filter(!is.na(N)) %>% 
   select(tournament,Date) %>% 
   unique()
+
+# RED 2025
+
+V_TOURNAMENT4=V_TOURNAMENT3 %>% 
+  filter(!is.na(N))
+
+Tournament_red=V_TOURNAMENT3 %>% filter((tournament=="Canberra 2 chall." & Date=="2024-12-30")) %>% 
+  select(tournament,Date,Categorie,Country_tournament,Surface_tournament,Week_tournament,Year,N)
+
+Red_values=data.frame(Round=c("1R","R16","QF","SF","F","Winner"),
+                      Ranking_points=c(0,8,16,35,64,125),
+                      tournament=rep("Canberra 2 chall.",6))
+
+Tournament_red=Tournament_red %>% 
+  left_join(Red_values,by=c("tournament"),relationship = c("many-to-many")) %>% 
+  select("tournament","Date","Categorie","Round",           
+         "Ranking_points","Country_tournament","Surface_tournament","Week_tournament",   
+         "Year","N") %>% 
+  unique()
+
+V_TOURNAMENT4=V_TOURNAMENT4 %>% 
+  filter(!(tournament=="Canberra 2 chall." & Date=="2024-12-30")) %>% 
+  rbind(Tournament_red)
+
+
+
+Tournament_red=V_TOURNAMENT3 %>% filter((tournament=="New Delhi chall." & Date=="2025-02-10")) %>% 
+  select(tournament,Date,Categorie,Country_tournament,Surface_tournament,Week_tournament,Year,N)
+
+Red_values=data.frame(Round=c("1R","R16","QF","SF","F","Winner"),
+                      Ranking_points=c(0,6,12,22,44,75),
+                      tournament=rep("New Delhi chall.",6))
+
+Tournament_red=Tournament_red %>% 
+  left_join(Red_values,by=c("tournament"),relationship = c("many-to-many")) %>% 
+  select("tournament","Date","Categorie","Round",           
+         "Ranking_points","Country_tournament","Surface_tournament","Week_tournament",   
+         "Year","N") %>% 
+  unique()
+
+V_TOURNAMENT4=V_TOURNAMENT4 %>% 
+  filter(!(tournament=="New Delhi chall." & Date=="2025-02-10")) %>% 
+  rbind(Tournament_red)
+
+
+save(V_TOURNAMENT4,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT4_2025.RData"))
 
 
 save(V_TOURNAMENT4,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT4_2024.RData"))

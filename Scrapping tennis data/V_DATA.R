@@ -5,7 +5,7 @@ V_RANK=data.frame()
 
 #i=2016
 
-for (i in 2009:2024){
+for (i in 2009:2025){
 
 load(file = paste0(getwd(),"/Scrapping tennis data/Rank/RANK_ATP_",i,".RData"))
   
@@ -42,7 +42,7 @@ save(V_MATCH,file = paste0(getwd(),"/Scrapping tennis data/Extraction/V_MATCH_20
 
 V_TOURNAMENT=data.frame()
 
-for (i in 2002:2024){
+for (i in 2025){
   
   list=list_tournament(i)
   
@@ -56,7 +56,7 @@ V_TOURNAMENT$Country_tournament=NA
 V_TOURNAMENT$Surface_tournament=NA
 V_TOURNAMENT$Points_tournament=NA
 
-#i=15
+#i=5
 
 for (i in 1:nrow(V_TOURNAMENT)){
   
@@ -81,13 +81,17 @@ for (i in 1:nrow(V_TOURNAMENT)){
     html_nodes("#center > div:nth-child(7) > div > div > table") %>%
     html_table() %>%
     as.data.frame()
+  
+  if(ncol(ranking_points_tournament)<=4 & ncol(ranking_points_tournament)>0 & nrow(ranking_points_tournament)<=9){
+    
+
 
   names(ranking_points_tournament)=ranking_points_tournament[1,]
   ranking_points_tournament=ranking_points_tournament[-1,]
 
-   ranking_points_tournament = ranking_points_tournament %>% select(`Ranking points`,Round)
+  ranking_points_tournament = ranking_points_tournament[,c(1,3)]
   
-  if(ncol(ranking_points_tournament)<=4 & ncol(ranking_points_tournament)>0){
+ 
 
     ranking_points_tournament$tournament=V_TOURNAMENT$tournament[i]
 
@@ -187,6 +191,10 @@ save(V_TOURNAMENT3,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TO
 
 ##### V_PLAYERS #####
 
+load(paste0(getwd(),"/Scrapping tennis data/info_players/V_PLAYERS_RED.RData"))
+
+V_PLAYERS_OLD=V_PLAYERS
+
 V_PLAYERS=V_RANK %>% select(Player_name,Country,URL_players) %>% distinct()
 
 V_PLAYERS$Size=NA
@@ -194,6 +202,10 @@ V_PLAYERS$Weight=NA
 V_PLAYERS$Birth_date=NA
 V_PLAYERS$Hand=NA
 
+diff=setdiff(V_PLAYERS %>% select(Player_name),
+             V_PLAYERS_OLD %>% select(Player_name))
+
+V_PLAYERS=V_PLAYERS %>% filter(Player_name %in% diff$Player_name)
 
 for (i in 1:nrow(V_PLAYERS)){
   
@@ -217,14 +229,51 @@ for (i in 1:nrow(V_PLAYERS)){
 
 }
 
-V_PLAYERS=V_PLAYERS %>% select(-Best_Rank)
-
-
+#V_PLAYERS=V_PLAYERS %>% select(-Best_Rank)
 V_PLAYERS=V_PLAYERS %>% 
   left_join(V_RANK %>% 
               group_by(Player_name) %>% 
               summarise(Best_Rank=min(as.numeric(Rank),na.rm=T)),by="Player_name")
 
 
+METRIC_SIZE=V_PLAYERS_OLD %>% 
+  group_by(Country) %>% 
+  summarise(SD_Size=sd(Size,na.rm=T),
+            Min_Size=min(Size,na.rm=T),
+            Max_Size=max(Size,na.rm=T),
+            Mean_Size=mean(Size,na.rm = T),
+            Median_Size=median(Size,na.rm=T),
+            N=n_distinct(Player_name)
+  ) %>% 
+  na.omit() %>% 
+  filter(N>=10)
 
-save(V_PLAYERS,file = paste0(getwd(),"/Scrapping tennis data/Info_players/V_PLAYERS.RData"))
+
+METRIC_WEIGHT=V_PLAYERS_OLD %>% 
+  group_by(Country) %>% 
+  summarise(SD_Weight=sd(Weight,na.rm=T),
+            Min_Weight=min(Weight,na.rm=T),
+            Max_Weight=max(Weight,na.rm=T),
+            Mean_Weight=mean(Weight,na.rm = T),
+            Median_Weight=median(Weight,na.rm=T),
+            N=n_distinct(Player_name)
+  ) %>% 
+  na.omit() %>% 
+  filter(N>=10)
+
+
+# Imputation des valeurs manquantes 
+
+for (i in 1:nrow(V_PLAYERS)){
+  
+  V_PLAYERS$Size[i]=ifelse(is.na(V_PLAYERS$Size[i])==T,imput_size(V_PLAYERS$Country[i]),V_PLAYERS$Size[i])
+  
+  V_PLAYERS$Weight[i]=ifelse(is.na(V_PLAYERS$Weight[i])==T,imput_weight(V_PLAYERS$Country[i]),V_PLAYERS$Weight[i])
+  
+  print(i)
+  
+}
+
+V_PLAYERS=rbind(V_PLAYERS_OLD,V_PLAYERS)
+
+save(V_PLAYERS,file = paste0(getwd(),"/Scrapping tennis data/Info_players/V_PLAYERS_RED.RData"))
