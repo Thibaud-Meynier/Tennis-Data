@@ -14,25 +14,25 @@ V_TOURNAMENT=V_TOURNAMENT %>%
 
 source(paste0(getwd(),"/Scrapping tennis data/exclusion tournament.R"))
 
-tournoi="Masters Cup Atp"
-
-Date_match="2016-11-20"
-
-surface="all"
-
-W="Djokovic"
-
-L="Murray"
-
-R="F"
-
-winner_url="https://www.tennisexplorer.com/player/djokovic/"
-
-loser_url="https://www.tennisexplorer.com/player/murray/"
-
-h2h(winner_url,loser_url,
-    surface=surface,Date_match = Date_match,tournoi=tournoi,
-    W=W,L=L,R=R)
+# tournoi="Masters Cup Atp"
+# 
+# Date_match="2016-11-20"
+# 
+# surface="all"
+# 
+# W="Djokovic"
+# 
+# L="Murray"
+# 
+# R="F"
+# 
+# winner_url="https://www.tennisexplorer.com/player/djokovic/"
+# 
+# loser_url="https://www.tennisexplorer.com/player/murray/"
+# 
+# h2h(winner_url,loser_url,
+#     surface=surface,Date_match = Date_match,tournoi=tournoi,
+#     W=W,L=L,R=R)
 
 h2h=function(winner_url,loser_url,surface,Date_match,tournoi,W,L,R){
   
@@ -118,7 +118,7 @@ h2h=function(winner_url,loser_url,surface,Date_match,tournoi,W,L,R){
   if(tournoi!="Davis Cup"){
     
     ref=data_set %>% 
-      filter(Tournament==tournoi & Year==Annee & Week<Semaine & Round==R) %>% 
+      filter(Tournament==tournoi & Year==Annee & Week<=Semaine & Round==R) %>% 
       pull(row_i) %>% 
       as.numeric()
     
@@ -133,34 +133,34 @@ h2h=function(winner_url,loser_url,surface,Date_match,tournoi,W,L,R){
   
   
 if(surface=="all"){ #nrow(data_set)>1
-    
-    # data_set=data_set %>% 
-    #   filter(row_i<ref) %>% 
-    #   select(-row_i)
+
+    data_set=data_set %>%
+      filter(row_i<ref) %>%
+      select(-row_i)
   
-  data_set=subset(data_set, row_i < ref)
+  #data_set=subset(data_set, row_i < ref)
     
 }else {
-    # 
-    # data_set=data_set %>% 
-    #   filter(row_i<ref) %>% 
-    #   select(-row_i) %>% 
-    #   filter(Surface_tournament==surface)
+
+    data_set=data_set %>%
+      filter(row_i<ref) %>%
+      select(-row_i) %>%
+      filter(Surface_tournament==surface)
   
-  data_set=subset(data_set, row_i < ref & Surface_tournament==surface)
+  #data_set=subset(data_set, row_i < ref & Surface_tournament==surface)
     
   }
-
-# Condition pour vérifier qu'il y a bien 1 duel avant sinon 0
-  
-if (nrow(data_set)>=1){
-  
-  data_set=data_set
-  
-}else{
-  
-  data_set=data_set[-1,]
-}  
+# 
+# # Condition pour vérifier qu'il y a bien 1 duel avant sinon 0
+#   
+# if (nrow(data_set)>=1){
+#   
+#   data_set=data_set
+#   
+# }else{
+#   
+#   data_set=data_set[-1,]
+# }  
   
   data_set$G_W=rowSums(data_set[, c("Set1_W", "Set2_W", "Set3_W", "Set4_W", "Set5_W")], na.rm = TRUE)
   
@@ -199,14 +199,14 @@ if (nrow(data_set)>=1){
 }
 
 #prendre en compte le fait que y'ait eu 0 duels avant
-
-player_id="Djokovic Novak"
-
-Date_match=as.Date("2013-11-11")
-
-lag_week=12
-
-match_count(table_stock,player_id,lag_week=14,surface = "all",Date_match=Date_match)
+# 
+# player_id="Djokovic Novak"
+# 
+# Date_match=as.Date("2013-11-11")
+# 
+# lag_week=12
+# 
+# match_count(table_stock,player_id,lag_week=14,surface = "all",Date_match=Date_match)
 
 match_count=function(df,player_id,lag_week,surface,Date_match){
 
