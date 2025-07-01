@@ -2,9 +2,11 @@ library(sqldf)
 library(tidyverse)
 library(zoo)
 
-load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Extraction/ATP_2024_Extraction.RData")
+Season=2025
 
-load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2024.RData")
+load(paste0("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Extraction/ATP_",Season,"_Extraction.RData"))
+
+load(paste0("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Tournament/V_TOURNAMENT_F_",Season,".RData"))
 
 load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Info_players/V_PLAYERS_RED.RData")
 
@@ -15,21 +17,17 @@ V_MATCH=table_stock %>%
   rename("Winner_id"=P1,
          "Loser_id"=P2) %>% 
   mutate(Week=isoweek(Date),
-         Year=case_when(Week>=52 & month(Date)==1 ~year(Date),
-                          Week>=52 & month(Date)==12 ~ year(Date),
-                          Week==1 & month(Date)==12 ~ year(Date)+1,
-                          TRUE ~ year(Date)),
-         Month=month(Date),
-         Season=2024) %>% 
-  filter(tournament!="Riyadh - Exhibition")
+         Season=case_when(Week>=52 & month(Date)==1 ~year(Date),
+                   Week>=52 & month(Date)==12 ~ year(Date),
+                   Week==1 & month(Date)==12 ~ year(Date)+1,
+                   TRUE ~ year(Date)))
 
 V_PLAYERS=V_PLAYERS %>% group_by(Player_name,Birth_date) %>% 
   mutate(R_N=row_number()) %>% 
   mutate(R_R_N=row_number(desc(R_N)))
 
 V_RANK=V_RANK %>% 
-  mutate(Week=isoweek(Date),
-         Month=month(Date))
+  mutate(Week=isoweek(Date))
 
 
 V_TABLE_MATCH_TEST=sqldf("select distinct 
@@ -40,31 +38,29 @@ V_TABLE_MATCH_TEST=sqldf("select distinct
                         a.*
                         ,b.Rank as Rank_W
                         ,b.Points as Points_W
-                     --   ,d.Size as Size_W
-                      --  ,d.Weight as Weight_W
-                      --  ,d.Birth_date as Birth_date_W
-                       -- ,d.Hand as Hand_W
+                        ,d.Size as Size_W
+                        ,d.Weight as Weight_W
+                        ,d.Birth_date as Birth_date_W
+                        ,d.Hand as Hand_W
                         
 
                         ,c.Rank as Rank_L
                         ,c.Points as Points_L
-                        --,e.Size as Size_L
-                        --,e.Weight as Weight_L
-                        --,e.Birth_date as Birth_date_L
-                        --,e.Hand as Hand_L
+                        ,e.Size as Size_L
+                        ,e.Weight as Weight_L
+                        ,e.Birth_date as Birth_date_L
+                        ,e.Hand as Hand_L
        
                        from V_MATCH a
                        
                        left join V_RANK b on b.Player_name=a.Winner_id 
                         and b.Week=a.Week 
-                        and b.Year=a.Year
-                        and b.Month=a.Month
+                        and b.Year=a.Season
                        
                        left join V_RANK c on c.Player_name=a.Loser_id 
                         and c.Week=a.Week 
-                        and c.Year=a.Year
-                        and c.Month=a.Month
-                        
+                        and c.Year=a.Season
+                            
                        left join V_PLAYERS d on d.Player_name=a.Winner_id and d.R_R_N=1 
                        
                        left join V_PLAYERS e on e.Player_name=a.Loser_id and e.R_R_N=1
@@ -72,9 +68,10 @@ V_TABLE_MATCH_TEST=sqldf("select distinct
                       -- left join V_TOURNAMENT_F f on f.tournament=a.tournament 
 ")
 
-# V_RANK %>% filter(Player_name=="Purcell Max" & Week==1 & Year==2024 & Month==1)
-# 
-# V_MATCH %>% filter(Winner_id=="Rune Holger" & Week==1 & Season==2024)
+V_TABLE_MATCH_TEST %>% 
+  group_by(Date,tournament,Round,Winner_id,Loser_id) %>% 
+  count() %>% 
+  filter(n>1)
 
 ##### Calcul classement race ####
 
@@ -122,14 +119,14 @@ V_RACE_RANK_t=V_RACE_RANK %>%
                           Categorie=="ATP 1000" & Phase=="Qualification" & Round=="Q-2R" & Issue=="W"~"Q-QW",
                           Categorie=="ATP 1000" & Phase=="Qualification" & Round=="Q-2R" & Issue=="L"~"Q-2R",
 
-                         tournament %in% c("United Cup") & Season %in% c(2024) & N_match==1 & Issue=="W"~"Winner",
-                         tournament %in% c("United Cup") & Season %in% c(2024) & N_match==1 & Issue=="L"~"F",
-                         tournament %in% c("United Cup") & Season %in% c(2024) & N_match %in% c(2:3) & Issue=="W"~"SFW",
-                         tournament %in% c("United Cup") & Season %in% c(2024) & N_match %in% c(2:3) & Issue=="L"~"SF",
-                         tournament %in% c("United Cup") & Season %in% c(2024) & N_match %in% c(4:7) & Issue=="W"~"QFW",
-                         tournament %in% c("United Cup") & Season %in% c(2024) & N_match %in% c(4:7) & Issue=="L"~"QF",
-                         tournament %in% c("United Cup") & Season %in% c(2024) & N_match>=8 & Issue=="W"~"RRW",
-                         tournament %in% c("United Cup") & Season %in% c(2024) & N_match>=8 & Issue=="L"~"RR",
+                         tournament %in% c("United Cup") & Season %in% c(Season) & N_match==1 & Issue=="W"~"Winner",
+                         tournament %in% c("United Cup") & Season %in% c(Season) & N_match==1 & Issue=="L"~"F",
+                         tournament %in% c("United Cup") & Season %in% c(Season) & N_match %in% c(2:3) & Issue=="W"~"SFW",
+                         tournament %in% c("United Cup") & Season %in% c(Season) & N_match %in% c(2:3) & Issue=="L"~"SF",
+                         tournament %in% c("United Cup") & Season %in% c(Season) & N_match %in% c(4:7) & Issue=="W"~"QFW",
+                         tournament %in% c("United Cup") & Season %in% c(Season) & N_match %in% c(4:7) & Issue=="L"~"QF",
+                         tournament %in% c("United Cup") & Season %in% c(Season) & N_match>=8 & Issue=="W"~"RRW",
+                         tournament %in% c("United Cup") & Season %in% c(Season) & N_match>=8 & Issue=="L"~"RR",
 
                          
                          grepl("Olympics",tournament)==TRUE & Round=="-"~"BM",
@@ -157,39 +154,39 @@ V_RACE_RANK_t2=V_RACE_RANK_t2 %>%
          Rank_L=ifelse(is.na(Rank_L)==TRUE,1000,Rank_L))
 
 V_RACE_RANK_t2=V_RACE_RANK_t2 %>%
-  mutate(Ranking_points=case_when(tournament %in% c("United Cup") & Season %in% c(2024) & Round %in% c("RR","SF","QF","F")~0,
+  mutate(Ranking_points=case_when(tournament %in% c("United Cup") & Round %in% c("RR","SF","QF","F")~0,
                                   
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="RRW" & between(Rank_L,1,10)~55,
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="RRW" & between(Rank_L,11,20)~45,
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="RRW" & between(Rank_L,21,30)~40,
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="RRW" & between(Rank_L,31,50)~35,
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="RRW" & between(Rank_L,51,100)~25,
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="RRW" & between(Rank_L,101,250)~20,
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="RRW" & Rank_L>=251~15,
+                                  tournament %in% c("United Cup") & Round=="RRW" & between(Rank_L,1,10)~55,
+                                  tournament %in% c("United Cup") & Round=="RRW" & between(Rank_L,11,20)~45,
+                                  tournament %in% c("United Cup") & Round=="RRW" & between(Rank_L,21,30)~40,
+                                  tournament %in% c("United Cup") & Round=="RRW" & between(Rank_L,31,50)~35,
+                                  tournament %in% c("United Cup") & Round=="RRW" & between(Rank_L,51,100)~25,
+                                  tournament %in% c("United Cup") & Round=="RRW" & between(Rank_L,101,250)~20,
+                                  tournament %in% c("United Cup") & Round=="RRW" & Rank_L>=251~15,
                                   
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="QFW" & between(Rank_L,1,10)~80,
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="QFW" & between(Rank_L,11,20)~65,
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="QFW" & between(Rank_L,21,30)~55,
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="QFW" & between(Rank_L,31,50)~40,
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="QFW" & between(Rank_L,51,100)~35,
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="QFW" & between(Rank_L,101,250)~25,
+                                  tournament %in% c("United Cup") & Round=="QFW" & between(Rank_L,1,10)~80,
+                                  tournament %in% c("United Cup") & Round=="QFW" & between(Rank_L,11,20)~65,
+                                  tournament %in% c("United Cup") & Round=="QFW" & between(Rank_L,21,30)~55,
+                                  tournament %in% c("United Cup") & Round=="QFW" & between(Rank_L,31,50)~40,
+                                  tournament %in% c("United Cup") & Round=="QFW" & between(Rank_L,51,100)~35,
+                                  tournament %in% c("United Cup") & Round=="QFW" & between(Rank_L,101,250)~25,
                                   tournament %in% c("United Cup") & Season %in% c(2024) & Round=="QFW" & Rank_L>=251~20,
                                   
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="SFW" & between(Rank_L,1,10)~130,
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="SFW" & between(Rank_L,11,20)~105,
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="SFW" & between(Rank_L,21,30)~90,
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="SFW" & between(Rank_L,31,50)~60,
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="SFW" & between(Rank_L,51,100)~40,
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="SFW" & between(Rank_L,101,250)~35,
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="SFW" & Rank_L>=251~25,
+                                  tournament %in% c("United Cup") & Round=="SFW" & between(Rank_L,1,10)~130,
+                                  tournament %in% c("United Cup") & Round=="SFW" & between(Rank_L,11,20)~105,
+                                  tournament %in% c("United Cup") & Round=="SFW" & between(Rank_L,21,30)~90,
+                                  tournament %in% c("United Cup") & Round=="SFW" & between(Rank_L,31,50)~60,
+                                  tournament %in% c("United Cup") & Round=="SFW" & between(Rank_L,51,100)~40,
+                                  tournament %in% c("United Cup") & Round=="SFW" & between(Rank_L,101,250)~35,
+                                  tournament %in% c("United Cup") & Round=="SFW" & Rank_L>=251~25,
                                   
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="Winner" & between(Rank_L,1,10)~180,
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="Winner" & between(Rank_L,11,20)~140,
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="Winner" & between(Rank_L,21,30)~120,
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="Winner" & between(Rank_L,31,50)~90,
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="Winner" & between(Rank_L,51,100)~60,
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="Winner" & between(Rank_L,101,250)~40,
-                                  tournament %in% c("United Cup") & Season %in% c(2024) & Round=="Winner" & Rank_L>=251~35,
+                                  tournament %in% c("United Cup") & Round=="Winner" & between(Rank_L,1,10)~180,
+                                  tournament %in% c("United Cup") & Round=="Winner" & between(Rank_L,11,20)~140,
+                                  tournament %in% c("United Cup") & Round=="Winner" & between(Rank_L,21,30)~120,
+                                  tournament %in% c("United Cup") & Round=="Winner" & between(Rank_L,31,50)~90,
+                                  tournament %in% c("United Cup") & Round=="Winner" & between(Rank_L,51,100)~60,
+                                  tournament %in% c("United Cup") & Round=="Winner" & between(Rank_L,101,250)~40,
+                                  tournament %in% c("United Cup") & Round=="Winner" & Rank_L>=251~35,
                                   
                                   tournament=="Masters Cup Atp" & Round %in% c("RR","SF","F") ~0,
                                   tournament=="Masters Cup Atp" & Round=="RRW" ~200,

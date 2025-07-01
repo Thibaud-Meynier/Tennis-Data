@@ -582,9 +582,33 @@ V_TOURNAMENT4 = V_TOURNAMENT4 %>%
 #     filter(!(tournament=="Quimper Challenger" & Year==2013 & Categorie=="Challenger 80")) %>%
 #     filter(!(tournament=="Segovia Challenger" & Year==2013 & Categorie %in% c("Challenger 80","Challenger 100"))) %>%
 #     filter(!(tournament=="Todi Challenger" & Year==2013 & Categorie=="Challenger 80"))
-  
+
+
+
 
 save(V_TOURNAMENT4,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT4_2024.RData"))
+
+# 2025
+
+V_TOURNAMENT4=V_TOURNAMENT4 %>% 
+  mutate(Categorie=case_when(tournament=="Canberra 2 chall."~"Challenger 125",
+                             tournament=="New Delhi chall."~"Challenger 75",
+                             TRUE~Categorie))  
+
+
+V_TOURNAMENT4=V_TOURNAMENT4 %>% 
+  mutate(Categorie = case_when(
+    tournament %in% c('Australian Open', 'French Open', 'Wimbledon', 'Us Open') ~ 'Grand Slam',
+    grepl('Olympics', tournament) ~ 'Olympics',
+    tournament == 'Davis Cup' ~ 'Davis Cup',
+    tournament %in% c('United Cup', 'Atp Cup') ~ 'Team Cup',
+    tournament == 'Masters Cup Atp' ~ 'Masters Cup',
+    TRUE ~ Categorie            # Cas par défaut : utilise la valeur de f.Categorie
+  ))
+
+
+save(V_TOURNAMENT4,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT4_2025.RData"))
+
 
 ###### AJOUT des Points de Qualifs ####
 
@@ -736,6 +760,8 @@ V_TOURNAMENT_F=V_TOURNAMENT_F %>%
 
 V_TOURNAMENT_F=V_TOURNAMENT_F %>% 
   mutate(Ranking_points=as.numeric(Ranking_points))
+
+save(V_TOURNAMENT_F,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2025.RData"))
 
 save(V_TOURNAMENT_F,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2024.RData"))
 
