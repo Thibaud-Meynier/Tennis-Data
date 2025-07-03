@@ -6,55 +6,81 @@ load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Extraction/V_MATC
 
 load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2012_2016.RData")
 
-load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Info_players/V_PLAYERS.RData")
+load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Info_players/V_PLAYERS_RED.RData")
 
 load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/RANK/V_RANK.RData")
 
 
 
 # Début du calcul du classement RACE 
+# 
+# V_MATCH=V_MATCH %>% 
+#   rename("Winner_id"=P1,
+#          "Loser_id"=P2) 
+# 
+# V_MATCH=V_MATCH %>% 
+#   mutate(Week=isoweek(Date))
 
-V_MATCH=V_MATCH %>% 
+
+V_TABLE_MATCH=V_MATCH %>% 
   rename("Winner_id"=P1,
-         "Loser_id"=P2) 
+          "Loser_id"=P2) %>% 
+  mutate(Week=isoweek(Date),
+         Year=case_when(Week>=52 & month(Date)==1 ~year(Date),
+                        Week>=52 & month(Date)==12 ~ year(Date),
+                        Week==1 & month(Date)==12 ~ year(Date)+1,
+                        TRUE ~ year(Date)),
+         Month=month(Date))
 
-V_MATCH=V_MATCH %>% 
-  mutate(Week=isoweek(Date))
+V_PLAYERS=V_PLAYERS %>% group_by(Player_name,Birth_date) %>% 
+  mutate(R_N=row_number()) %>% 
+  mutate(R_R_N=row_number(desc(R_N)))
+
+V_RANK=V_RANK %>% 
+  mutate(Week=isoweek(Date),
+         Month=month(Date),
+         Year=case_when(Week>=52 & month(Date)==1 ~year(Date),
+                        Week>=52 & month(Date)==12 ~ year(Date),
+                        Week==1 & month(Date)==12 ~ year(Date)+1,
+                        TRUE ~ year(Date)))
+
 
 V_TABLE_MATCH_TEST=sqldf("select distinct 
-                         --f.Country_tournament
+                        -- f.Country_tournament
                         --,f.Categorie
                         --,f.Surface_tournament
-                        --,
+                       -- ,
                         a.*
                         ,b.Rank as Rank_W
                         ,b.Points as Points_W
-                        ,d.Size as Size_W
-                        ,d.Weight as Weight_W
-                        ,d.Birth_date as Birth_date_W
-                        ,d.Hand as Hand_W
+                     --   ,d.Size as Size_W
+                      --  ,d.Weight as Weight_W
+                      --  ,d.Birth_date as Birth_date_W
+                       -- ,d.Hand as Hand_W
                         
 
                         ,c.Rank as Rank_L
                         ,c.Points as Points_L
-                        ,e.Size as Size_L
-                        ,e.Weight as Weight_L
-                        ,e.Birth_date as Birth_date_L
-                        ,e.Hand as Hand_L
+                        --,e.Size as Size_L
+                        --,e.Weight as Weight_L
+                        --,e.Birth_date as Birth_date_L
+                        --,e.Hand as Hand_L
        
-                       from V_MATCH a
+                       from V_TABLE_MATCH a
                        
                        left join V_RANK b on b.Player_name=a.Winner_id 
                         and b.Week=a.Week 
-                        and b.Year=a.Season
+                        and b.Year=a.Year
+                        --and b.Month=a.Month
                        
                        left join V_RANK c on c.Player_name=a.Loser_id 
                         and c.Week=a.Week 
-                        and c.Year=a.Season
-                            
-                       left join V_PLAYERS d on d.Player_name=a.Winner_id   
+                        and c.Year=a.Year
+                        --and c.Month=a.Month
+                        
+                       left join V_PLAYERS d on d.Player_name=a.Winner_id and d.R_R_N=1 
                        
-                       left join V_PLAYERS e on e.Player_name=a.Loser_id
+                       left join V_PLAYERS e on e.Player_name=a.Loser_id and e.R_R_N=1
                          
                       -- left join V_TOURNAMENT_F f on f.tournament=a.tournament 
 ")
@@ -159,19 +185,23 @@ V_RACE_RANK_2=V_RACE_RANK_t2 %>% filter(Categorie %in% c("Masters Cup","Team Cup
 year <- c(2012:2016)
 
 # Fonction pour redresser les dates aux dimanches
+
 adjust_to_last_sunday <- function(dates) {
   sapply(dates, function(date) {
     if (is.na(date)) {
       return(NA) # Conserver les valeurs NA
     } else if (weekdays(date) == "dimanche") {
       return(date) # Si c'est un dimanche, on garde la date
-    } else if (weekdays(date) %in% c("mercredi","mardi")) {
-      return(date + as.difftime(7 - wday(date,week_start=1), units = "days")) # Ajuster au premier dimanche après
+    } else if (weekdays(date) == "samedi") {
+      return(date + 1) # Si c'est un samedi, on ajoute une journée
+    } else if (weekdays(date) %in% c("mercredi", "mardi")) {
+      return(date + as.difftime(7 - wday(date, week_start = 1), units = "days")) # Ajuster au premier dimanche après
     } else {
-      return(date - as.difftime(wday(date,week_start=1), units = "days")) # Ajuster au dernier dimanche
+      return(date - as.difftime(wday(date, week_start = 1), units = "days")) # Ajuster au dernier dimanche
     }
   })
 }
+
 
 # Fonction pour calculer le classement
 calculate_race_points <- function(player_id) {
@@ -185,6 +215,7 @@ calculate_race_points <- function(player_id) {
       V_RACE_RANK %>% filter(Player_ID==player_id & Season==i) %>% 
         arrange(Date,Week) %>% 
         mutate(Week2=Week+1),by=c("Week"="Week2")) %>% 
+    rename(Week_orig="Week.y") %>% 
     mutate(Race_points=ifelse(is.na(Race_points)==TRUE,0,Race_points)) %>% 
     mutate(Cum_Race_points=cumsum(Race_points)) %>% 
     mutate(Player_ID=na.locf(Player_ID, na.rm = FALSE)) %>% 
@@ -192,17 +223,21 @@ calculate_race_points <- function(player_id) {
     mutate(Season=na.locf(Season, na.rm = FALSE)) %>% 
     mutate(Season=ifelse(is.na(Season)==TRUE,na.omit(Season),Season)) %>% 
     mutate(Date=as.Date(adjust_to_last_sunday(Date))) %>% 
-    mutate(Ordre_l=row_number()) %>% 
-    mutate(Week=ifelse(is.na(Date)==T,Ordre_l,isoweek(Date)+1)) %>% 
+    mutate(Week=isoweek(Date)+1) %>% 
     select(1,2,4,5,6,7,8) %>% 
+    mutate(Ordre_l=row_number()) %>% 
     mutate(Test=ifelse(is.na(tournament)==T,0,1)) %>% 
     group_by(Player_ID,Season,Week) %>% 
     mutate(Test2=max(Test),
            N_l=row_number(),
            N_l2=max(row_number())
     ) %>% 
+    #mutate(Week=ifelse(Test==Test2 & N_l==N_l2,Ordre_l,Week)) %>% 
+    #group_by(Player_ID,Season,Week) %>% 
+    # mutate(N_l=row_number(),
+    #        N_l2=max(row_number())) %>% 
     filter(Test==Test2 & N_l==N_l2) %>% 
-    select(-c(Test,Test2,N_l,N_l2))
+    select(-c(Test,Test2,N_l,N_l2,Ordre_l))
   
   Race_player_y=Race_player_y %>% 
     left_join(Race_player,by=c("Week","Season")) %>% 
@@ -214,8 +249,6 @@ calculate_race_points <- function(player_id) {
   return(Race_player_y)
   
 }
-
-#calculate_race_points("Djokovic Novak")
 
 V_RACE_RANK_F=data.frame()
 
@@ -269,6 +302,8 @@ for (i in year){
   
   print(End)
   print(i)
+  
+  browser()
   
 }
 
