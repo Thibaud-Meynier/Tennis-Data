@@ -4,47 +4,69 @@ library(zoo)
 
 load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Extraction/V_TABLE_MATCH.RData")
 
-load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Tournament/V_TOURNAMENT_F.RData")
+load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2017_2023.RData")
 
-load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Info_players/V_PLAYERS.RData")
+load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Info_players/V_PLAYERS_RED.RData")
 
 load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/RANK/V_RANK.RData")
 
 
+V_TABLE_MATCH=V_TABLE_MATCH %>% 
+  mutate(Week=isoweek(Date),
+         Year=case_when(Week>=52 & month(Date)==1 ~year(Date),
+                        Week>=52 & month(Date)==12 ~ year(Date),
+                        Week==1 & month(Date)==12 ~ year(Date)+1,
+                        TRUE ~ year(Date)),
+         Month=month(Date))
+
+V_PLAYERS=V_PLAYERS %>% group_by(Player_name,Birth_date) %>% 
+  mutate(R_N=row_number()) %>% 
+  mutate(R_R_N=row_number(desc(R_N)))
+
+V_RANK=V_RANK %>% 
+  mutate(Week=isoweek(Date),
+         Month=month(Date),
+         Year=case_when(Week>=52 & month(Date)==1 ~year(Date),
+                        Week>=52 & month(Date)==12 ~ year(Date),
+                        Week==1 & month(Date)==12 ~ year(Date)+1,
+                        TRUE ~ year(Date)))
+
 V_TABLE_MATCH_TEST=sqldf("select distinct 
-                         --f.Country_tournament
+                        -- f.Country_tournament
                         --,f.Categorie
                         --,f.Surface_tournament
-                        --,
+                       -- ,
                         a.*
                         ,b.Rank as Rank_W
                         ,b.Points as Points_W
-                        ,d.Size as Size_W
-                        ,d.Weight as Weight_W
-                        ,d.Birth_date as Birth_date_W
-                        ,d.Hand as Hand_W
+                     --   ,d.Size as Size_W
+                      --  ,d.Weight as Weight_W
+                      --  ,d.Birth_date as Birth_date_W
+                       -- ,d.Hand as Hand_W
                         
 
                         ,c.Rank as Rank_L
                         ,c.Points as Points_L
-                        ,e.Size as Size_L
-                        ,e.Weight as Weight_L
-                        ,e.Birth_date as Birth_date_L
-                        ,e.Hand as Hand_L
+                        --,e.Size as Size_L
+                        --,e.Weight as Weight_L
+                        --,e.Birth_date as Birth_date_L
+                        --,e.Hand as Hand_L
        
                        from V_TABLE_MATCH a
                        
                        left join V_RANK b on b.Player_name=a.Winner_id 
                         and b.Week=a.Week 
-                        and b.Year=a.Season
+                        and b.Year=a.Year
+                        --and b.Month=a.Month
                        
                        left join V_RANK c on c.Player_name=a.Loser_id 
                         and c.Week=a.Week 
-                        and c.Year=a.Season
-                            
-                       left join V_PLAYERS d on d.Player_name=a.Winner_id   
+                        and c.Year=a.Year
+                        --and c.Month=a.Month
+                        
+                       left join V_PLAYERS d on d.Player_name=a.Winner_id and d.R_R_N=1 
                        
-                       left join V_PLAYERS e on e.Player_name=a.Loser_id
+                       left join V_PLAYERS e on e.Player_name=a.Loser_id and e.R_R_N=1
                          
                       -- left join V_TOURNAMENT_F f on f.tournament=a.tournament 
 ")
@@ -257,7 +279,7 @@ calculate_race_points <- function(player_id) {
     mutate(Season=ifelse(is.na(Season)==TRUE,na.omit(Season),Season)) %>% 
     mutate(Date=as.Date(adjust_to_last_sunday(Date))) %>% 
     mutate(Ordre_l=row_number()) %>% 
-    mutate(Week=ifelse(is.na(Date)==T,Ordre_l,isoweek(Date)+1)) %>% 
+    #mutate(Week=ifelse(is.na(Date)==T,Ordre_l,isoweek(Date)+1)) %>% 
     select(1,2,4,5,6,7,8) %>% 
     mutate(Test=ifelse(is.na(tournament)==T,0,1)) %>% 
     group_by(Player_ID,Season,Week) %>% 
@@ -299,7 +321,10 @@ for (i in year){
   V_RACE_RANK_p1=V_RACE_RANK_1 %>% 
     #filter(Season==i) %>% 
     group_by(tournament,Season) %>% 
-    mutate(Week=max(Week),Date=max(Date)) %>% 
+    mutate(Date=max(Date)
+           #Week=max(Week)
+    ) %>% 
+    mutate(Week=isoweek(Date)) %>%
     group_by(tournament,Week,Date,Season,Player_ID,Phase) %>% 
     summarise(Race_points=max(Ranking_points))
   
@@ -313,7 +338,10 @@ for (i in year){
   V_RACE_RANK_p2=V_RACE_RANK_2 %>% 
     #filter(Season==year) %>% 
     group_by(tournament,Season) %>% 
-    mutate(Week=max(Week),Date=max(Date)) %>% 
+    mutate(Date=max(Date)
+           #,Week=max(Week)
+    ) %>% 
+    mutate(Week=isoweek(Date)) %>%
     group_by(tournament,Week,Date,Season,Player_ID) %>% 
     summarise(Race_points=sum(Ranking_points,na.rm=T))
   
@@ -334,6 +362,7 @@ for (i in year){
   print(End)
   print(i)
   
+  #browser()
 }
 
 save(V_RACE_RANK_F,file = paste0(getwd(),"/Scrapping tennis data/Rank/V_RACE_RANK_2017_2023.RData"))

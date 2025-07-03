@@ -27,9 +27,14 @@ V_PLAYERS=V_PLAYERS %>% group_by(Player_name,Birth_date) %>%
   mutate(R_N=row_number()) %>% 
   mutate(R_R_N=row_number(desc(R_N)))
 
+
 V_RANK=V_RANK %>% 
   mutate(Week=isoweek(Date),
-         Month=month(Date))
+         Month=month(Date),
+         Year=case_when(Week>=52 & month(Date)==1 ~year(Date),
+                        Week>=52 & month(Date)==12 ~ year(Date),
+                        Week==1 & month(Date)==12 ~ year(Date)+1,
+                        TRUE ~ year(Date)))
 
 
 V_TABLE_MATCH_TEST=sqldf("select distinct 
@@ -58,12 +63,12 @@ V_TABLE_MATCH_TEST=sqldf("select distinct
                        left join V_RANK b on b.Player_name=a.Winner_id 
                         and b.Week=a.Week 
                         and b.Year=a.Year
-                        and b.Month=a.Month
+                       -- and b.Month=a.Month
                        
                        left join V_RANK c on c.Player_name=a.Loser_id 
                         and c.Week=a.Week 
                         and c.Year=a.Year
-                        and c.Month=a.Month
+                       -- and c.Month=a.Month
                         
                        left join V_PLAYERS d on d.Player_name=a.Winner_id and d.R_R_N=1 
                        
@@ -293,7 +298,10 @@ for (i in year){
   V_RACE_RANK_p1=V_RACE_RANK_1 %>% 
     #filter(Season==i) %>% 
     group_by(tournament,Season) %>% 
-    mutate(Week=max(Week),Date=max(Date)) %>% 
+    mutate(Date=max(Date)
+           #Week=max(Week)
+           ) %>% 
+    mutate(Week=isoweek(Date)) %>%
     group_by(tournament,Week,Date,Season,Player_ID,Phase) %>% 
     summarise(Race_points=max(Ranking_points))
   
@@ -307,7 +315,10 @@ for (i in year){
   V_RACE_RANK_p2=V_RACE_RANK_2 %>% 
     #filter(Season==year) %>% 
     group_by(tournament,Season) %>% 
-    mutate(Week=max(Week),Date=max(Date)) %>% 
+    mutate(Date=max(Date)
+           #,Week=max(Week)
+           ) %>% 
+    mutate(Week=isoweek(Date)) %>%
     group_by(tournament,Week,Date,Season,Player_ID) %>% 
     summarise(Race_points=sum(Ranking_points,na.rm=T))
   
