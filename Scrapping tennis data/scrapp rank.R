@@ -3,7 +3,7 @@
 library(tidyverse)
 library(lubridate)
 
-year=2025
+year=2002
 
 # Filtrer les lundis
 days_year <- seq.Date(as.Date(paste(year, "-01-01", sep = "")), 

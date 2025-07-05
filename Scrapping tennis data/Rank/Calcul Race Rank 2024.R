@@ -222,16 +222,19 @@ V_RACE_RANK_2=V_RACE_RANK_t2 %>% filter(Categorie %in% c("Masters Cup","Team Cup
 year <- c(2024)
 
 # Fonction pour redresser les dates aux dimanches
+
 adjust_to_last_sunday <- function(dates) {
   sapply(dates, function(date) {
     if (is.na(date)) {
       return(NA) # Conserver les valeurs NA
     } else if (weekdays(date) == "dimanche") {
       return(date) # Si c'est un dimanche, on garde la date
-    } else if (weekdays(date) %in% c("mercredi","mardi")) {
-      return(date + as.difftime(7 - wday(date,week_start=1), units = "days")) # Ajuster au premier dimanche après
+    } else if (weekdays(date) == "samedi") {
+      return(date + 1) # Si c'est un samedi, on ajoute une journée
+    } else if (weekdays(date) %in% c("mercredi", "mardi")) {
+      return(date + as.difftime(7 - wday(date, week_start = 1), units = "days")) # Ajuster au premier dimanche après
     } else {
-      return(date - as.difftime(wday(date,week_start=1), units = "days")) # Ajuster au dernier dimanche
+      return(date - as.difftime(wday(date, week_start = 1), units = "days")) # Ajuster au dernier dimanche
     }
   })
 }
@@ -248,6 +251,7 @@ calculate_race_points <- function(player_id) {
       V_RACE_RANK %>% filter(Player_ID==player_id & Season==i) %>% 
         arrange(Date,Week) %>% 
         mutate(Week2=Week+1),by=c("Week"="Week2")) %>% 
+    rename(Week_orig="Week.y") %>% 
     mutate(Race_points=ifelse(is.na(Race_points)==TRUE,0,Race_points)) %>% 
     mutate(Cum_Race_points=cumsum(Race_points)) %>% 
     mutate(Player_ID=na.locf(Player_ID, na.rm = FALSE)) %>% 
@@ -255,17 +259,22 @@ calculate_race_points <- function(player_id) {
     mutate(Season=na.locf(Season, na.rm = FALSE)) %>% 
     mutate(Season=ifelse(is.na(Season)==TRUE,na.omit(Season),Season)) %>% 
     mutate(Date=as.Date(adjust_to_last_sunday(Date))) %>% 
-    mutate(Ordre_l=row_number()) %>% 
-    mutate(Week=ifelse(is.na(Date)==T,Ordre_l,isoweek(Date)+1)) %>% 
+    mutate(Week=isoweek(Date)+1) %>% 
     select(1,2,4,5,6,7,8) %>% 
+    mutate(Ordre_l=row_number()) %>% 
     mutate(Test=ifelse(is.na(tournament)==T,0,1)) %>% 
     group_by(Player_ID,Season,Week) %>% 
     mutate(Test2=max(Test),
            N_l=row_number(),
            N_l2=max(row_number())
     ) %>% 
+    #mutate(Week=ifelse(Test==Test2 & N_l==N_l2,Ordre_l,Week)) %>% 
+    #group_by(Player_ID,Season,Week) %>% 
+    # mutate(N_l=row_number(),
+    #        N_l2=max(row_number())) %>% 
     filter(Test==Test2 & N_l==N_l2) %>% 
-    select(-c(Test,Test2,N_l,N_l2))
+    select(-c(Test,Test2,N_l,N_l2,Ordre_l))
+  
   
   Race_player_y=Race_player_y %>% 
     left_join(Race_player,by=c("Week","Season")) %>% 
@@ -278,9 +287,11 @@ calculate_race_points <- function(player_id) {
   
 }
 
-#calculate_race_points("Djokovic Novak")
+#calculate_race_points("Sinner Jannik")
 
 V_RACE_RANK_F=data.frame()
+
+# i=2024
 
 for (i in year){
   
