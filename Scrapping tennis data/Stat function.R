@@ -34,9 +34,15 @@ source(paste0(getwd(),"/Scrapping tennis data/exclusion tournament.R"))
 #     surface=surface,Date_match = Date_match,tournoi=tournoi,
 #     W=W,L=L,R=R)
 
-h2h=function(winner_url,loser_url,surface,Date_match,tournoi,W,L,R){
+data_set_cn=c("Year","Tournament","Winner","Loser",             
+"Score_W","Score_L","Set1_W","Set1_L",            
+"Set2_W","Set2_L","Set3_W" ,"Set3_L" ,           
+"Set4_W","Set4_L","Set5_W","Set5_L"  ,          
+"Round","Date","Surface_tournament", "Week","row_i")  
+
+h2h=function(winner_url,loser_url,surface,Date_match,Season,tournoi,W,L,R){
   
-  Annee=year(Date_match)
+  Annee=Season
   
   Semaine=isoweek(Date_match)
   
@@ -56,6 +62,8 @@ h2h=function(winner_url,loser_url,surface,Date_match,tournoi,W,L,R){
   
   h2h = h2h[[2]] %>% as.data.frame()
   
+  if (ncol(h2h)>=11){
+    
   h2h=h2h %>% filter(!Tournament %in% exclusion)
   
   # rennomer toutes les colonnes
@@ -101,36 +109,66 @@ h2h=function(winner_url,loser_url,surface,Date_match,tournoi,W,L,R){
   data_set=data_set %>% 
   mutate(Tournament = gsub("Challenger", "Chall.", Tournament, ignore.case = TRUE))
   
+  data_set$Round=ifelse(data_set$Round==FALSE,"F",data_set$Round)
+  
   # On veut récuperer la catégorie du tournoi et la surface
   data_set=data_set %>% 
     mutate(Round=case_when(Tournament=="Masters Cup Atp" & !Round %in% c("F","SF")~"RR",
+                           # Round=="FALSE"~"F",
+                           is.na(Round)==T~"",
                            TRUE~Round)) %>% 
     mutate(tournament2=toupper(Tournament)) %>% 
-    left_join(V_TOURNAMENT %>% mutate(tournament2=toupper(tournament)) %>% 
+    left_join(V_TOURNAMENT %>% mutate(tournament2=toupper(Tournament)) %>% 
                 select(tournament2,Year,Date,Surface_tournament),by=c("tournament2","Year")) %>% 
-    select(-tournament2) %>% 
+    select(-c(tournament2)) %>% 
     mutate(Week=isoweek(Date)) %>% 
     arrange(Year,Week,desc(Round)) %>% 
     mutate(row_i=row_number())
   
   data_set$row_i=as.numeric(data_set$row_i)
   
-  if(tournoi!="Davis Cup"){
-    
-    ref=data_set %>% 
-      filter(Tournament==tournoi & Year==Annee & Week<=Semaine & Round==R) %>% 
-      pull(row_i) %>% 
-      as.numeric()
-    
   }else{
+   data_set=data.frame(matrix(ncol = 37,nrow = 0))  
+   
+    colnames(data_set)=data_set_cn
+  }
+  
+  
+  if (nrow(data_set) == 0) {
+    # Retourner un data_set vide ou effectuer une autre action appropriée
+    data_set <- data_set
+    
+    # Winner stat
+    
+    N_W_W=0
+    
+    N_S_W_W=0
+    
+    N_G_W_W=0
+    
+    winner_stat=list(Number_Win=N_W_W,
+                     Number_Set_Won=N_S_W_W,
+                     Number_Games_Won=N_G_W_W)
+    
+    # Loser stat
+    
+    N_W_L=0
+    
+    N_S_W_L=0
+    
+    N_G_W_L=0
+    
+    loser_stat=list(Number_Win=N_W_L,
+                    Number_Set_Won=N_S_W_L,
+                    Number_Games_Won=N_G_W_L)
+    
+  } else {
     
     ref=data_set %>% 
       filter(Tournament==tournoi & Year==Annee & Round==R) %>% 
+      #filter(Tournament==tournoi & Year==Annee & Week<=Semaine & Round==R) %>% 
       pull(row_i) %>% 
       as.numeric()
-    
-  }
-  
   
 if(surface=="all"){ #nrow(data_set)>1
 
@@ -138,8 +176,6 @@ if(surface=="all"){ #nrow(data_set)>1
       filter(row_i<ref) %>%
       select(-row_i)
   
-  #data_set=subset(data_set, row_i < ref)
-    
 }else {
 
     data_set=data_set %>%
@@ -147,52 +183,39 @@ if(surface=="all"){ #nrow(data_set)>1
       select(-row_i) %>%
       filter(Surface_tournament==surface)
   
-  #data_set=subset(data_set, row_i < ref & Surface_tournament==surface)
+}
+    data_set$G_W=rowSums(data_set[, c("Set1_W", "Set2_W", "Set3_W", "Set4_W", "Set5_W")], na.rm = TRUE)
     
+    data_set$G_L=rowSums(data_set[, c("Set1_L", "Set2_L", "Set3_L", "Set4_L", "Set5_L")], na.rm = TRUE)
+    
+    # Winner stat
+    
+    N_W_W=data_set %>% filter(Winner==W) %>% count() %>% as.numeric()
+    
+    N_S_W_W=data_set %>% filter(Winner==W) %>% summarise(N_S_W=sum(Score_W,na.rm=T)) %>% pull(N_S_W)  +
+      data_set %>% filter(Loser==W) %>% summarise(N_S_W=sum(Score_L,na.rm=T)) %>% pull(N_S_W)
+    
+    N_G_W_W=data_set %>% filter(Winner==W) %>% summarise(N_G_W=sum(G_W,na.rm=T)) %>% pull(N_G_W) +
+      data_set %>% filter(Loser==W) %>% summarise(N_G_W=sum(G_L,na.rm=T)) %>% pull(N_G_W)
+    
+    winner_stat=list(Number_Win=N_W_W,
+                     Number_Set_Won=N_S_W_W,
+                     Number_Games_Won=N_G_W_W)
+    
+    # Loser stat
+    
+    N_W_L=data_set %>% filter(Winner==L) %>% count() %>% as.numeric()
+    
+    N_S_W_L=data_set %>% filter(Winner==L) %>% summarise(N_S_W=sum(Score_W,na.rm=T)) %>% pull(N_S_W) +
+      data_set %>% filter(Loser==L) %>% summarise(N_S_W=sum(Score_L,na.rm=T)) %>% pull(N_S_W)
+    
+    N_G_W_L=data_set %>% filter(Winner==L) %>% summarise(N_G_W=sum(G_W,na.rm=T)) %>% pull(N_G_W)+
+      data_set %>% filter(Loser==L) %>% summarise(N_G_W=sum(G_L,na.rm=T))%>% pull(N_G_W)
+    
+    loser_stat=list(Number_Win=N_W_L,
+                    Number_Set_Won=N_S_W_L,
+                    Number_Games_Won=N_G_W_L)
   }
-# 
-# # Condition pour vérifier qu'il y a bien 1 duel avant sinon 0
-#   
-# if (nrow(data_set)>=1){
-#   
-#   data_set=data_set
-#   
-# }else{
-#   
-#   data_set=data_set[-1,]
-# }  
-  
-  data_set$G_W=rowSums(data_set[, c("Set1_W", "Set2_W", "Set3_W", "Set4_W", "Set5_W")], na.rm = TRUE)
-  
-  data_set$G_L=rowSums(data_set[, c("Set1_L", "Set2_L", "Set3_L", "Set4_L", "Set5_L")], na.rm = TRUE)
-  
-  # Winner stat
-  
-  N_W_W=data_set %>% filter(Winner==W) %>% count() %>% as.numeric()
-  
-  N_S_W_W=data_set %>% filter(Winner==W) %>% summarise(N_S_W=sum(Score_W,na.rm=T)) %>% pull(N_S_W)  +
-    data_set %>% filter(Loser==W) %>% summarise(N_S_W=sum(Score_L,na.rm=T)) %>% pull(N_S_W)
-  
-  N_G_W_W=data_set %>% filter(Winner==W) %>% summarise(N_G_W=sum(G_W,na.rm=T)) %>% pull(N_G_W) +
-    data_set %>% filter(Loser==W) %>% summarise(N_G_W=sum(G_L,na.rm=T)) %>% pull(N_G_W)
-  
-  winner_stat=list(Number_Win=N_W_W,
-                   Number_Set_Won=N_S_W_W,
-                   Number_Games_Won=N_G_W_W)
-  
-  # Loser stat
-  
-  N_W_L=data_set %>% filter(Winner==L) %>% count() %>% as.numeric()
-
-  N_S_W_L=data_set %>% filter(Winner==L) %>% summarise(N_S_W=sum(Score_W,na.rm=T)) %>% pull(N_S_W) +
-    data_set %>% filter(Loser==L) %>% summarise(N_S_W=sum(Score_L,na.rm=T)) %>% pull(N_S_W)
-
-  N_G_W_L=data_set %>% filter(Winner==L) %>% summarise(N_G_W=sum(G_W,na.rm=T)) %>% pull(N_G_W)+
-    data_set %>% filter(Loser==L) %>% summarise(N_G_W=sum(G_L,na.rm=T))%>% pull(N_G_W)
-  
-  loser_stat=list(Number_Win=N_W_L,
-                   Number_Set_Won=N_S_W_L,
-                   Number_Games_Won=N_G_W_L)
   
   return(list(W=winner_stat,L=loser_stat))
 
