@@ -173,5 +173,3 @@ for (i in 1:nrow(V_PLAYERS)){
 
 
 save(V_PLAYERS,file=paste0(getwd(),"/Scrapping tennis data/info_players/V_PLAYERS_RED.RData"))
-
-

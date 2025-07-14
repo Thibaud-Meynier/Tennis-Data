@@ -433,44 +433,36 @@ get_tournament_red=function(tournament,year,url_tournament) {
   return(data_set)
 }
 
+tournament=get_tournament_red("Rabat Challenger",2010,"https://www.tennisexplorer.com/rabat-challenger/2010/atp-men/?phase=main")
+
+tournament_player=get_players_name("Rabat Challenger",2010,"https://www.tennisexplorer.com/rabat-challenger/2010/atp-men/?phase=main")
+
+tournament=tournament %>% 
+  mutate(Round=case_when(Round=="-"~"F",
+                         TRUE~Round))
+
+tournament=tournament %>% 
+  mutate(N_match=row_number(desc(N_match)))
+
+tournament=tournament %>% 
+  left_join(tournament_player,by=c("N_match"))
+
 tournament$Phase="Main Draw"
 
 tournament=tournament %>% 
   #rename("Winner_id"=P1,"Loser_id"=P2) %>% 
   mutate(Week=isoweek(Date),
-         Season=2022) %>% 
+         Season=2010) %>% 
   left_join(V_PLAYERS %>% select(Player_name,Country),by=c("Winner_id"="Player_name")) %>% 
   left_join(V_PLAYERS %>% select(Player_name,Country),by=c("Loser_id"="Player_name")) %>% 
   rename("Country_W"=Country.x,
          "Country_L"=Country.y)
 
-tournament=tournament %>%
-  select(tournament,
-         Date,
-         Week,
-         Season,
-         N_match,
-         Round,
-         Phase,
-         info,
-         Winner_id,
-         Loser_id,
-         Country_W,
-         Country_L,
-         Score_W,
-         Score_L,
-         Set1_W,
-         Set1_L,
-         Set2_W,
-         Set2_L,
-         Set3_W,
-         Set3_L,
-         Set4_W,
-         Set4_L,
-         Set5_W,
-         Set5_L,
-         Odd_W,
-         Odd_L)
+setdiff(colnames(tournament),colnames(table_stock))
+
+table_stock=rbind(table_stock,tournament)
+
+save(table_stock,file=paste0(getwd(),"/Scrapping tennis data/Extraction/ATP_2010_Extraction.RData"))
 
 # Ajout des round et points pour Masters CUP et ATP_CUP/United_CUP
 

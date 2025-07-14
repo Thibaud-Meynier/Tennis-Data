@@ -1,10 +1,11 @@
 library(sqldf)
 library(tidyverse)
 library(zoo)
+library(lubridate)
 
-load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Extraction/ATP_2024_Extraction.RData")
+load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Extraction/ATP_2011_Extraction.RData")
 
-load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2024.RData")
+load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2011.RData")
 
 load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Info_players/V_PLAYERS_RED.RData")
 
@@ -20,7 +21,7 @@ V_MATCH=table_stock %>%
                           Week==1 & month(Date)==12 ~ year(Date)+1,
                           TRUE ~ year(Date)),
          Month=month(Date),
-         Season=2024) %>% 
+         Season=2011) %>% 
   filter(tournament!="Riyadh - Exhibition")
 
 V_PLAYERS=V_PLAYERS %>% group_by(Player_name,Birth_date) %>% 
@@ -219,7 +220,7 @@ V_RACE_RANK_1=V_RACE_RANK_t2 %>% filter(!Categorie %in% c("Masters Cup","Team Cu
 
 V_RACE_RANK_2=V_RACE_RANK_t2 %>% filter(Categorie %in% c("Masters Cup","Team Cup"))
 
-year <- c(2024)
+year <- c(2011)
 
 # Fonction pour redresser les dates aux dimanches
 
@@ -232,12 +233,13 @@ adjust_to_last_sunday <- function(dates) {
     } else if (weekdays(date) == "samedi") {
       return(date + 1) # Si c'est un samedi, on ajoute une journée
     } else if (weekdays(date) %in% c("mercredi", "mardi")) {
-      return(date + as.difftime(7 - wday(date, week_start = 1), units = "days")) # Ajuster au premier dimanche après
+      return(date + as.difftime(7 - lubridate::wday(date, week_start = 1), units = "days")) # Ajuster au premier dimanche après
     } else {
-      return(date - as.difftime(wday(date, week_start = 1), units = "days")) # Ajuster au dernier dimanche
+      return(date - as.difftime(lubridate::wday(date, week_start = 1), units = "days")) # Ajuster au dernier dimanche
     }
   })
 }
+
 
 # Fonction pour calculer le classement
 calculate_race_points <- function(player_id) {
@@ -351,5 +353,7 @@ for (i in year){
   print(i)
   
 }
+
+calculate_race_points("Djokovic Novak")
 
 save(V_RACE_RANK_F,file = paste0(getwd(),"/Scrapping tennis data/Rank/V_RACE_RANK_2024.RData"))
