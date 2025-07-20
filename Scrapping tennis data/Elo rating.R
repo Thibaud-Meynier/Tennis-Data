@@ -8,25 +8,45 @@
 
 # l'issue du match
 
-i=6162
+i=2890
 
-tournament=table_stock
+tournament=V_MATCH_t %>% 
+  arrange(Date,tournament,desc(N_match),Season)
 
-for (i in 1:nrow(tournament)){
+tournament$Elo_W=NA
+
+tournament$Elo_L=NA
+
+tournament$Elo_W_NEW=NA
+
+tournament$Elo_L_NEW=NA
+
+for (i in 10001:13544){
   
   # on récup pour 1 match donné les infos de chaque joueur et du match
+  
   row=tournament[i,]
   
-  p1=row$P1
+  p1=row$Winner_id
   
-  p2=row$P2
+  p2=row$Loser_id
   
   date_match=row$Date
   
   n_match=row$N_match
   
+  Round=row$Round
+  
   # on regarde l'historique du joueur p1
-  hist_p1=tournament %>% filter((P1==p1|P2==p1) & (Date<=date_match & N_match!=n_match))
+  hist_p1=tournament %>% filter((Winner_id==p1|Loser_id==p1) & (Date<=date_match))
+  
+  lim=which(hist_p1$tournament==row$tournament & 
+              hist_p1$Date==date_match & 
+              hist_p1$N_match==n_match & 
+              hist_p1$Round==Round)
+  
+  hist_p1=hist_p1 %>% 
+    slice(1:(lim-1))
   
   last_match=tail(hist_p1,1)
   
@@ -37,11 +57,19 @@ for (i in 1:nrow(tournament)){
   dday_p1=as.numeric(date_match-last_match$Date)
   
   # on prend le dernier elo_rank du joueur
-  last_elo_p1=ifelse(is_empty(ifelse(p1==hist_p1$P1,hist_p1$Elo_W,hist_p1$Elo_L))==TRUE,NA,
-                     ifelse(p1==hist_p1$P1,hist_p1$Elo_W,hist_p1$Elo_L))
+  last_elo_p1=ifelse(is_empty(ifelse(p1==last_match$Winner_id,last_match$Elo_W_NEW,last_match$Elo_L_NEW))==TRUE,NA,
+                     ifelse(p1==last_match$Winner_id,last_match$Elo_W_NEW,last_match$Elo_L_NEW))
   
   # on regarde l'historique du joueur p2
-  hist_p2=tournament %>% filter((P1==p2|P2==p2)&(Date<=date_match & N_match!=n_match))
+  hist_p2=tournament %>% filter((Winner_id==p2|Loser_id==p2)&(Date<=date_match))
+  
+  lim=which(hist_p2$tournament==row$tournament & 
+              hist_p2$Date==date_match & 
+              hist_p2$N_match==n_match & 
+              hist_p2$Round==Round)
+  
+  hist_p2=hist_p2 %>% 
+    slice(1:(lim-1))
   
   last_match=tail(hist_p2,1)
   
@@ -52,14 +80,14 @@ for (i in 1:nrow(tournament)){
   dday_p2=as.numeric(date_match-last_match$Date)
   
   # on prend le dernier elo_rank du joueur
-  last_elo_p2=ifelse(is_empty(ifelse(p2==hist_p2$P1,hist_p2$Elo_W,hist_p2$Loser))==TRUE,NA,
-                     ifelse(p2==hist_p2$P1,hist_p2$Elo_W,hist_p2$Loser))
+  last_elo_p2=ifelse(is_empty(ifelse(p2==last_match$Winner_id,last_match$Elo_W_NEW,last_match$Elo_L_NEW))==TRUE,NA,
+                     ifelse(p2==last_match$Winner_id,last_match$Elo_W_NEW,last_match$Elo_L_NEW))
   
   # on recherche si le joueur 1 a déjà disputé un match ou non
   
-  count_match_p1=nrow(tournament %>% filter((P1==p1|P2==p1) & (Date<=date_match & N_match!=n_match)))
+  count_match_p1=nrow(tournament %>% filter((Winner_id==p1|Loser_id==p1) & (Date<=date_match & N_match!=n_match)))
   
-  count_match_p2=nrow(tournament %>% filter((P1==p2|P2==p2) & (Date<=date_match & N_match!=n_match)))
+  count_match_p2=nrow(tournament %>% filter((Winner_id==p2|Loser_id==p2) & (Date<=date_match & N_match!=n_match)))
   
   # calcul dummy sur penalité absence joueur 
   
@@ -75,9 +103,9 @@ for (i in 1:nrow(tournament)){
   
   # on reprend le dernier elo (1500 si pas d'historique)
   
-  elo_p1=ifelse(is.na(last_elo_p1),1500,last_elo_p1+(penalty_p1*100)) # Si pas de elo on met 1500
+  elo_p1=ifelse(is.na(last_elo_p1)==T,1500,last_elo_p1-(penalty_p1*100)) # Si pas de elo on met 1500
   
-  elo_p2=ifelse(is.na(last_elo_p2),1500,last_elo_p2+(penalty_p2*100))
+  elo_p2=ifelse(is.na(last_elo_p2)==T,1500,last_elo_p2-(penalty_p2*100))
   
   proba_p1 <- 1 / (1 + 10 ^ ((elo_p2 - elo_p1)/400)) # calcul des probas données par le Elo
   proba_p2 <- 1 / (1 + 10 ^ ((elo_p1 - elo_p2)/400)) 
@@ -91,7 +119,7 @@ for (i in 1:nrow(tournament)){
   
   # Prime de GC
   
-  level=ifelse(tournament$Categorie=="Grand Slam",1.1,1)
+  level=ifelse(row$Categorie=="Grand Slam",1.1,1)
   
   elo_p1_new=elo_p1+(k_p1*level)*(s_p1-proba_p1)
   
@@ -99,9 +127,15 @@ for (i in 1:nrow(tournament)){
   
   # tournament$Elo_W_prec[i]=round(elo_p1,2)
   # tournament$Elo_L_prec[i]=round(elo_p2,2)
-  tournament$Elo_W[i]=round(elo_p1_new,1)
+ 
   
-  tournament$Elo_L[i]=round(elo_p2_new,1)
+  tournament$Elo_W[i]=round(elo_p1,1)
+  
+  tournament$Elo_L[i]=round(elo_p2,1)
+  
+  tournament$Elo_W_NEW[i]=round(elo_p1_new,1)
+  
+  tournament$Elo_L_NEW[i]=round(elo_p2_new,1)
   
   print(i)
 }

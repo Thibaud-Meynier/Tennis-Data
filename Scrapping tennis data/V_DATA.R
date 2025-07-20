@@ -29,7 +29,7 @@ V_MATCH=data.frame()
 
 #i=2016
 
-for (i in 2012:2016){
+for (i in 2017:2024){
   
   load(file = paste0(getwd(),"/Scrapping tennis data/Extraction/ATP_",i,"_Extraction.RData"))
   
@@ -41,7 +41,7 @@ for (i in 2012:2016){
   
 }
 
-save(V_MATCH,file = paste0(getwd(),"/Scrapping tennis data/Extraction/V_MATCH_2012_2016.RData"))
+save(V_MATCH,file = paste0(getwd(),"/Scrapping tennis data/Extraction/V_MATCH_2017_2023.RData"))
 
 V_TOURNAMENT=data.frame()
 
