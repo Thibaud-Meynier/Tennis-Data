@@ -324,3 +324,73 @@ match_count=function(df,player_id,lag_week,surface,Date_match){
 }
 
 
+match_count=function(df,player_id,lag_week,surface,Date_match){
+
+  Date_min=Date_match-lag_week*7
+  
+  if(surface=="all"){    
+ 
+  df=df %>% 
+    filter((Winner_id==player_id|Loser_id==player_id) & (Date<Date_match & Date>=Date_min))
+	
+  }else{
+    
+   df=df %>% 
+      filter((Winner_id==player_id|Loser_id==player_id) & (Date<Date_match & Date>=Date_min) & Surface_tournament==surface)
+	  
+	  }
+	  
+  # N_match
+  
+  N_match=df %>% count() %>% as.numeric()
+  
+  # N_W
+  
+  N_W=df %>% filter(Winner_id==player_id) %>% count() %>% as.numeric()
+  
+  # N_L
+  
+  N_L=df %>% filter(Loser_id==player_id) %>% count() %>% as.numeric()
+  
+  #N_W_F_B
+  
+  N_W_F_B=df %>% filter(Winner_id==player_id & Odd_W<Odd_L) %>% count() %>% as.numeric()
+  
+  #N_W_O_B
+  
+  N_W_O_B=df %>% filter(Winner_id==player_id & Odd_W>=Odd_L) %>% count() %>% as.numeric()
+  
+  #N_W_F_R
+  
+  N_W_F_R=df %>% filter(Winner_id==player_id & Rank_W<Rank_L) %>% count() %>% as.numeric()
+	
+  #N_W_O_R
+ 
+  N_W_O_R=df %>% filter(Winner_id==player_id & Rank_W>Rank_L) %>% count() %>% as.numeric()
+  
+  #N_L_F_B
+  
+  N_L_F_B=df %>% filter(Loser_id==player_id & Odd_L<Odd_W) %>% count() %>% as.numeric()
+  
+  #N_L_O_B
+  
+  N_L_O_B=df %>% filter(Loser_id==player_id & Odd_L>=Odd_W) %>% count() %>% as.numeric()
+  
+  #N_L_F_R
+  
+  N_L_F_R=df %>% filter(Loser_id==player_id & Rank_W<Rank_L) %>% count() %>% as.numeric()
+	
+  #N_L_O_R
+  
+  N_L_O_R=df %>% filter(Loser_id==player_id & Rank_W>Rank_L) %>% count() %>% as.numeric()
+	
+  stat_player=list(N_match=N_match,
+                   N_Win=N_W,
+                   N_Loss=N_L,
+                   N_Win_Fav_Book=N_W_F_B,
+                   N_Win_Out_Book=N_W_O_B,
+                   N_Loss_Fav_Book=N_L_F_B,
+                   N_Loss_Out_Book=N_L_O_B)    
+    
+  return(stat_player)
+}
