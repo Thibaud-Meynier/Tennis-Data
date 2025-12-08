@@ -241,7 +241,8 @@ exclusion=c("International Tennis Series",
             "Las Vegas - exhibition",
             "The Garden Cup",
             "Charlotte Invitational",
-            "Macau Tennis Masters"
+            "Macau Tennis Masters",
+            "Asian Hopman Cup"
             
 )
 
