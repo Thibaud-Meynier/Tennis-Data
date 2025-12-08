@@ -1,48 +1,9 @@
-
-##### PREPA DATA #####
-
-V_MATCH=data.frame()
-
-for (i in 2024:2024){
-  
-  load(file = paste0(getwd(),"/Scrapping tennis data/Extraction/ATP_",i,"_Extraction.RData"))
-  
-  table_stock$Season=i
-  
-  V_MATCH=rbind(V_MATCH,table_stock)
-  
-  print(i)  
-  
-}
-
-V_MATCH_2003_2016=V_MATCH
-
-V_MATCH_2003_2016=V_MATCH_2003_2016 %>% 
-  rename("Winner_id"="P1",
-         "Loser_id"="P2")
-
-V_MATCH_2017_2023=V_MATCH
-
-V_MATCH_2024=V_MATCH
-
-V_MATCH_2024=V_MATCH_2024 %>% 
-  rename("Winner_id"="P1",
-         "Loser_id"="P2")
-
-V_MATCH_2017_2023=V_MATCH_2017_2023 %>% select(colnames(V_MATCH_2003_2016))
-
-V_MATCH_t=rbind(V_MATCH_2003_2016,V_MATCH_2017_2023,V_MATCH_2024)
-
-
-
-
-
 ##### PREPA #####
 
 library(data.table)
 library(tidyverse)
 
-load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Extraction/V_MATCH_2003_2008.RData")
+load(paste0(getwd(),"/Scrapping tennis data/Extraction/V_MATCH_2003_2008.RData"))
 
 V_MATCH_2003_2008=V_MATCH
 
@@ -50,7 +11,7 @@ V_MATCH_2003_2008=V_MATCH_2003_2008 %>%
   rename(Winner_id=P1,
          Loser_id=P2)
 
-load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Extraction/V_MATCH_2009_2016.RData")
+load(paste0(getwd(),"/Scrapping tennis data/Extraction/V_MATCH_2009_2016.RData"))
 
 V_MATCH_2009_2016=V_MATCH
 
@@ -60,12 +21,12 @@ V_MATCH_2009_2016=V_MATCH_2009_2016 %>%
 
 colnames(V_MATCH_2009_2016)
 
-load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Extraction/V_MATCH_2017_2023.RData")
+load(paste0(getwd(),"/Scrapping tennis data/Extraction/V_MATCH_2017_2023.RData"))
 
 V_MATCH_2017_2023=V_MATCH %>% 
   select(colnames(V_MATCH_2009_2016))
 
-load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Extraction/ATP_2024_Extraction.RData")
+load(paste0(getwd(),"/Scrapping tennis data/Extraction/ATP_2024_Extraction.RData"))
 
 V_MATCH_2024=table_stock
 
@@ -76,7 +37,7 @@ V_MATCH_2024= V_MATCH_2024 %>%
 
 V_MATCH=rbind(V_MATCH_2003_2008,V_MATCH_2009_2016,V_MATCH_2017_2023,V_MATCH_2024)
 
-load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Tournament/V_TOURNAMENT4_2002_2008.RData")
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT4_2002_2008.RData"))
 
 V_TOURNAMENT_2003_2008=V_TOURNAMENT_4
 
@@ -84,27 +45,27 @@ V_TOURNAMENT_2003_2008=V_TOURNAMENT_2003_2008 %>%
   select(-Categorie) %>% 
   rename(Categorie=Categorie_new)
 
-load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2009.RData")
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2009.RData"))
 
 V_TOURNAMENT_2009=V_TOURNAMENT_F
 
-load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2010.RData")
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2010.RData"))
 
 V_TOURNAMENT_2010=V_TOURNAMENT_F
 
-load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2011.RData")
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2011.RData"))
 
 V_TOURNAMENT_2011=V_TOURNAMENT_F
 
-load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2012_2016.RData")
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2012_2016.RData"))
 
 V_TOURNAMENT_2012_2016=V_TOURNAMENT_F
 
-load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2017_2023.RData")
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2017_2023.RData"))
 
 V_TOURNAMENT_2017_2023=V_TOURNAMENT_F
 
-load("C:/Users/Thiti/Desktop/Tennis-Data/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2024.RData")
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2024.RData"))
 
 V_TOURNAMENT_2024=V_TOURNAMENT_F
 
@@ -131,10 +92,10 @@ V_MATCH_t=V_MATCH %>%
                              TRUE~Categorie))
 
 
-
 source(paste0(getwd(),"/Scrapping tennis data/Elo rating.R"))
 
-##### EXEMPLE #####
+
+##### VERIF #####
 
 Elo_player=function(player_name){
   
@@ -164,7 +125,7 @@ elo_andy=Elo_player(player_name="Murray Andy") %>%
   filter(Season<=2024) %>% 
   arrange(Date)
 
-plot(elo_roger$Date,elo_roger$Elo_player,type='l',col='green',ylim=c(1500,2700),xlim = c(as.Date('2003-01-01'),as.Date('2024-12-31')))
+plot(elo_roger$Date,elo_roger$Elo_player,type='l',col='green',ylim=c(1300,2600),xlim = c(as.Date('2003-01-01'),as.Date('2024-12-31')))
 lines(elo_rafa$Date,elo_rafa$Elo_player,type='l',col="brown")
 lines(elo_novak$Date,elo_novak$Elo_player,type='l',col="steelblue")
 lines(elo_andy$Date,elo_andy$Elo_player,type='l',col="orange")
