@@ -22,7 +22,7 @@ tournament$Elo_W_NEW=NA
 
 tournament$Elo_L_NEW=NA
 
-for (i in 110001:nrow(tournament)){
+for (i in 1:nrow(tournament)){
   
   # on récup pour 1 match donné les infos de chaque joueur et du match
   
@@ -139,15 +139,17 @@ for (i in 110001:nrow(tournament)){
   
   # Prime de GC
   
-  level=ifelse(row$Categorie=="Grand Slam",1,
-               ifelse(row$Categorie %in% c("Olympics","Masters"),0.95,
-                    ifelse(row$Categorie=="ATP 1000",0.9,
-                      ifelse(row$Categorie %in% c("ATP 500","Team"),0.8,
-                             ifelse(row$Categorie=="ATP 250",0.7,0.65)
+  level=ifelse(is.na(row$Categorie) | grepl("Challenger", row$Categorie, ignore.case = TRUE), 0.65,
+               ifelse(row$Categorie == "Grand Slam", 1,
+                      ifelse(row$Categorie %in% c("Olympics", "Masters"), 0.95,
+                             ifelse(row$Categorie == "ATP 1000", 0.9,
+                                    ifelse(row$Categorie %in% c("ATP 500", "Team"), 0.8,
+                                           ifelse(row$Categorie == "ATP 250", 0.7, 0.65)
+                                    )
                              )
                       )
-                    )
                )
+  )
   
   # k_p1=250/((count_match_p1+5)^0.4)*level*Round_adjust*Walkover*rating(elo_p1) # calcul du facteur k pour chaque joueur
   # k_p2=250/((count_match_p2+5)^0.4)*level*Round_adjust*Walkover*rating(elo_p2)
