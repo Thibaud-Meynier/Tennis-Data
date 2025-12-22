@@ -126,7 +126,7 @@ for (i in 1:nrow(tournament)){
   
   penalty_p2=penalty(dday_p2)*covid
   
-  if (length(surface) != 1|length(surface) == 1 & surface!="all"){
+  if (length(surface) != 1|(length(surface) == 1 && surface!="all")){
     
     penalty_p1=0
     
