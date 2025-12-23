@@ -1,5 +1,12 @@
 library(tidyverse)
 library(zoo)
+library(progress)
+
+load(paste0(getwd(),"/Tennis-Data/Scrapping tennis data/Rank/ELO_RATING_CLAY.RData"))
+load(paste0(getwd(),"/Tennis-Data/Scrapping tennis data/Rank/ELO_RATING_GRASS.RData"))
+load(paste0(getwd(),"/Tennis-Data/Scrapping tennis data/Rank/ELO_RATING_HARD.RData"))
+load(paste0(getwd(),"/Tennis-Data/Scrapping tennis data/Rank/ELO_RATING.RData"))
+
 
 ELO_RATING_G=ELO_RATING %>% 
   left_join(ELO_RATING_HARD %>% 
@@ -20,32 +27,35 @@ ELO_RATING_G=ELO_RATING %>%
   select(-ordre)
 
 
-adjust_to_last_sunday <- function(dates,Round) {
+#### ALL PLAYERS ####
+
+all_players=ELO_RATING %>% 
+  select(Winner_id) %>% 
+  rename(Player_id=Winner_id) %>% 
+  bind_rows(ELO_RATING %>% 
+              select(Loser_id) %>% 
+              rename(Player_id=Loser_id)) %>% 
+  unique() %>% 
+  pull(Player_id)
+
+adjust_to_last_sunday <- function(dates) {
   sapply(dates, function(date) {
     if (is.na(date)) {
       return(NA) # Conserver les valeurs NA
-    } else if (weekdays(date) == "Sunday") {
+    } else if (weekdays(date) == "dimanche") {
       return(date) # Si c'est un dimanche, on garde la date
-    } else if (weekdays(date) == "Saturday") {
+    } else if (weekdays(date) == "samedi") {
       return(date + 1) # Si c'est un samedi, on ajoute une journée
-    } else if (weekdays(date) %in% c("Wednesday", "Tuesday")) {
+    } else if (weekdays(date) %in% c("mercredi", "mardi")) {
       return(date + as.difftime(7 - lubridate::wday(date, week_start = 1), units = "days")) # Ajuster au premier dimanche après
-    } else if {
+    } else {
       return(date + as.difftime(7 - lubridate::wday(date, week_start = 1), units = "days")) # Ajuster au dernier dimanche
     }
   })
 }
 
-weekdays(as.Date("2010-10-16"))=="Saturday"
 
-as.Date(adjust_to_last_sunday(as.Date("2004-11-11")))
-
-player_name="Djokovic Novak"
-
-# Creer un calendrier depuis 2003 avec les semaines pour avoir un historique complet de tous les elo,
-# se calcul à la suite, pas d'une année sur l'autre comme la race
-
-calculate_elo_points <- function(player_id) {
+calculate_elo_points <- function(player_name) {
   
   period=ELO_RATING_G %>%
     filter(Winner_id==player_name|Loser_id==player_name) %>%
@@ -86,7 +96,8 @@ calculate_elo_points <- function(player_id) {
                 select(-ORDRE_DESC_ELO) %>% 
                 arrange(Date,Season,Week_tournament) %>% 
                 ungroup() %>% 
-                mutate(Date=as.Date(adjust_to_last_sunday(Date))) %>% 
+                mutate(Date=as.Date(ifelse(Round=="F" & weekdays(Date)=="Monday",(Date-1),
+                                           adjust_to_last_sunday(Date)))) %>% 
                 mutate(Week_tournament=isoweek(Date)) %>% 
                 mutate(Week2=(Week_tournament+1)) %>% 
                 mutate(
@@ -98,7 +109,7 @@ calculate_elo_points <- function(player_id) {
                 mutate(across(starts_with("Elo_player"), ~na.locf(., na.rm = FALSE))),
               by=c("Week"="Week2","Season"="Season")) %>% 
     mutate(
-      Player_name = ifelse(row_number() == 1 & is.na(Player_name), 1500, Player_name),
+      Player_name = ifelse(row_number() == 1 & is.na(Player_name), Player_name, Player_name),
       Elo_player = ifelse(row_number() == 1 & is.na(Elo_player), 1500, Elo_player),
       Elo_player_hard = ifelse(row_number() == 1 & is.na(Elo_player_hard), 1500, Elo_player_hard),
       Elo_player_clay = ifelse(row_number() == 1 & is.na(Elo_player_clay), 1500, Elo_player_clay),
@@ -107,10 +118,34 @@ calculate_elo_points <- function(player_id) {
     mutate(across(starts_with("Elo_player"), ~na.locf(., na.rm = FALSE))) %>% 
     mutate(Player_name=na.locf(Player_name, na.rm = FALSE))
   
-  
-  Elo_player %>% 
-    group_by(Season,Week) %>% 
-    filter(row_number()>1)
+  return(Elo_player)
 }
+
+pb <- progress_bar$new(
+  format = "[:bar] :current/:total (:percent) ETA: :eta",
+  total = length(all_players),
+  clear = FALSE,
+  width = 60
+)
+
+Start=Sys.time()
+
+Players_elo_rank=data.frame()
+
+for (i in all_players){
+  
+  Elo_player_i=calculate_elo_points(i)
+  
+  Players_elo_rank=rbind(Players_elo_rank,Elo_player_i)
+  
+  print(i)
+  
+  pb$tick()
+  
+}
+
+End=Sys.time()-Start
+
+End
 
 
