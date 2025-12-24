@@ -109,7 +109,7 @@ calculate_elo_points <- function(player_name) {
                 mutate(across(starts_with("Elo_player"), ~na.locf(., na.rm = FALSE))),
               by=c("Week"="Week2","Season"="Season")) %>% 
     mutate(
-      Player_name = ifelse(row_number() == 1 & is.na(Player_name), Player_name, Player_name),
+      Player_name = ifelse(row_number() == 1 & is.na(Player_name), na.locf(Player_name, na.rm = FALSE), Player_name),
       Elo_player = ifelse(row_number() == 1 & is.na(Elo_player), 1500, Elo_player),
       Elo_player_hard = ifelse(row_number() == 1 & is.na(Elo_player_hard), 1500, Elo_player_hard),
       Elo_player_clay = ifelse(row_number() == 1 & is.na(Elo_player_clay), 1500, Elo_player_clay),
@@ -148,4 +148,40 @@ End=Sys.time()-Start
 
 End
 
+lead()
 
+Players_elo_rank=Players_elo_rank %>% 
+  mutate(Player_name=ifelse(Week==1 & is.na(Player_name),lead(Player_name,1),Player_name))
+
+
+Players_elo_rank=Players_elo_rank %>% 
+  group_by(Season,Week) %>% 
+  mutate(Elo_Rank=dense_rank(desc(Elo_player)),
+         Elo_Rank_hard=dense_rank(desc(Elo_player_hard)),
+         Elo_Rank_clay=dense_rank(desc(Elo_player_clay)),
+         Elo_Rank_grass=dense_rank(desc(Elo_player_grass)))
+
+for (i in c(2003:2024)){
+  
+  # Créer le nom de l'objet avec la variable
+  name <- paste0("Players_elo_rank_", i)
+  
+  # Filtrer les données
+  Players_elo_rank_filtered <- Players_elo_rank %>%
+    filter(Season == i)
+  
+  # Assigner les données à l'objet avec le nom variabilisé
+  assign(name, Players_elo_rank_filtered)
+  
+  save(list=name,file=paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RANK_PLAYERS_",i,".RData"))
+  
+  print(i)
+  
+}
+
+
+Players_elo_rank %>% 
+  filter(Season==2024 & Week==45 & between(Elo_Rank,1,10)) %>% 
+  select(Player_name,Elo_Rank,Elo_Rank_hard,Elo_Rank_clay,Elo_Rank_grass,
+         Elo_player,Elo_player_hard,Elo_player_clay,Elo_player_grass) %>% 
+  arrange(Elo_Rank)
