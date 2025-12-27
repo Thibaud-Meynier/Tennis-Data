@@ -9,6 +9,13 @@ V_TOURNAMENT=V_TOURNAMENT %>%
                                       tournament=="Houston" & Year %in% c(2002)~"clay",
                                       tournament=="Davis Cup" & Year>=2019~"indoors",
                                       tournament=="Davis Cup" & Year<=2019~"various",
+                                      TRUE~Surface_tournament)) %>% 
+  mutate(tournament = gsub("Challenger", "Chall.", tournament, ignore.case = TRUE)) %>% 
+  mutate(Surface_tournament=case_when(Surface_tournament=="clay"~"Clay",
+                                      Surface_tournament=="hard"~"Hard",
+                                      Surface_tournament=="grass"~"Grass",
+                                      Surface_tournament=="indoors"~"Indoors",
+                                      Surface_tournament=="various"~"Various",
                                       TRUE~Surface_tournament))
 
 
@@ -37,10 +44,10 @@ source(paste0(getwd(),"/Scrapping tennis data/exclusion tournament.R"))
 #     W=W,L=L,R=R)
 
 data_set_cn=c("Year","Tournament","Winner","Loser",             
-"Score_W","Score_L","Set1_W","Set1_L",            
-"Set2_W","Set2_L","Set3_W" ,"Set3_L" ,           
-"Set4_W","Set4_L","Set5_W","Set5_L"  ,          
-"Round","Date","Surface_tournament", "Week","row_i")  
+              "Score_W","Score_L","Set1_W","Set1_L",            
+              "Set2_W","Set2_L","Set3_W" ,"Set3_L" ,           
+              "Set4_W","Set4_L","Set5_W","Set5_L"  ,          
+              "Round","Date","Surface_tournament", "Week","row_i")  
 
 
 get_h2h=function(winner_url,loser_url){
@@ -517,21 +524,21 @@ get_stat_h2h=function(data_set,surface,Season,tournoi,W,L,R){
 # 
 
 match_count=function(df,player_id,lag_week,surface,Date_match){
-
+  
   Date_min=Date_match-lag_week*7
   
   if(surface=="all"){    
- 
-  df=df %>% 
-    filter((Winner_id==player_id|Loser_id==player_id) & (Date<Date_match & Date>=Date_min))
-	
+    
+    df=df %>% 
+      filter((Winner_id==player_id|Loser_id==player_id) & (Date<Date_match & Date>=Date_min))
+    
   }else{
     
-   df=df %>% 
+    df=df %>% 
       filter((Winner_id==player_id|Loser_id==player_id) & (Date<Date_match & Date>=Date_min) & Surface_tournament==surface)
-	  
-	  }
-	  
+    
+  }
+  
   # N_match
   
   N_match=df %>% count() %>% as.numeric()
@@ -555,9 +562,9 @@ match_count=function(df,player_id,lag_week,surface,Date_match){
   #N_W_F_R
   
   N_W_F_R=df %>% filter(Winner_id==player_id & Rank_W<Rank_L) %>% count() %>% as.numeric()
-	
+  
   #N_W_O_R
- 
+  
   N_W_O_R=df %>% filter(Winner_id==player_id & Rank_W>Rank_L) %>% count() %>% as.numeric()
   
   #N_L_F_B
@@ -571,11 +578,11 @@ match_count=function(df,player_id,lag_week,surface,Date_match){
   #N_L_F_R
   
   N_L_F_R=df %>% filter(Loser_id==player_id & Rank_W<Rank_L) %>% count() %>% as.numeric()
-	
+  
   #N_L_O_R
   
   N_L_O_R=df %>% filter(Loser_id==player_id & Rank_W>Rank_L) %>% count() %>% as.numeric()
-	
+  
   stat_player=list(N_match=N_match,
                    N_Win=N_W,
                    N_Loss=N_L,
@@ -583,6 +590,6 @@ match_count=function(df,player_id,lag_week,surface,Date_match){
                    N_Win_Out_Book=N_W_O_B,
                    N_Loss_Fav_Book=N_L_F_B,
                    N_Loss_Out_Book=N_L_O_B)    
-    
+  
   return(stat_player)
 }
