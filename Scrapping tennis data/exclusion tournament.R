@@ -242,7 +242,11 @@ exclusion=c("International Tennis Series",
             "The Garden Cup",
             "Charlotte Invitational",
             "Macau Tennis Masters",
-            "Asian Hopman Cup"
+            "Asian Hopman Cup",
+            "Six Kings Slam",
+            "Atlanta - exhibition",
+            "A Racquet at The Rock",
+            "Miami Invitational"
             
 )
 
