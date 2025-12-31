@@ -103,9 +103,9 @@ V_MATCH_t=V_MATCH %>%
                                       TRUE~Surface_tournament))
 
 
-surface=c("Grass")
+#surface=c("Grass")
 
-source(paste0(getwd(),"/Tennis-Data/Scrapping tennis data/Elo rating surface.R"))
+source(paste0(getwd(),"/Tennis-Data/Scrapping tennis data/Elo rating.R"))
 
 
 ##### VERIF #####
@@ -154,6 +154,8 @@ elo_andy %>% slice(which.max(elo_andy$Elo_player)) %>% pull(Elo_player,Date)
 
 ### SAVE ELO RATING ###
 
-ELO_RATING_GRASS=tournament %>% select(colnames(ELO_RATING))
+ELO_RATING=tournament %>%
+  select(Categorie,Season,Week_tournament,tournament,Round,Date,N_match,Winner_id,Loser_id,Surface_tournament,info,Elo_W_NEW,Elo_L_NEW)
 
-save(ELO_RATING_GRASS,file=paste0(here(),"/Tennis-Data/Scrapping tennis data/Rank/ELO_RATING_GRASS.RData"))
+save(ELO_RATING,file=paste0(here(),"/Scrapping tennis data/Rank/ELO_RATING.RData"),
+     compress = "xz")
