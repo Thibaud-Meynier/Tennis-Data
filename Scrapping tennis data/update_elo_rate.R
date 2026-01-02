@@ -233,3 +233,7 @@ for (i in first_row:nrow(tournament)){
   print(i)
 }
 
+ELO_RATING=tournament %>% select(-ETAT)
+
+save(ELO_RATING,file=paste0(here(),"/Scrapping tennis data/Rank/ELO_RATING.RData"),
+     compress = "xz")
