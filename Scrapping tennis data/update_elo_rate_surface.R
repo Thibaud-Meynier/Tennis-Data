@@ -2,7 +2,7 @@ library(data.table)
 library(tidyverse)
 library(here)
 
-surface=c("Clay")
+surface=c("Hard")
 
 load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING_",toupper(surface),".RData"))
 
@@ -51,6 +51,8 @@ V_MATCH_2025=V_MATCH_2025 %>%
                                       Surface_tournament=="grass"~"Grass",
                                       Surface_tournament=="indoors"~"Indoors",
                                       TRUE~Surface_tournament))
+
+surface=c("Hard","Indoors","Various")
 
 tournament=V_MATCH_2025 %>% 
   filter(Phase=="Main Draw") %>% 
@@ -243,6 +245,10 @@ for (i in first_row:nrow(tournament)){
   
   print(i)
 }
+
+tournament=tournament %>% select(-ETAT)
+
+surface=c("Hard")
 
 assign(paste0("ELO_RATING_",toupper(surface)),tournament)
 
