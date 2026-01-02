@@ -50,7 +50,8 @@ V_MATCH_2025=V_MATCH_2025 %>%
 
 
 tournament=V_MATCH_2025 %>% 
-  filter(Phase=="Main Draw")
+  filter(Phase=="Main Draw") %>% 
+  arrange(Date,tournament,desc(N_match),Season)
 
 #tournament$Elo_W=NA
 
