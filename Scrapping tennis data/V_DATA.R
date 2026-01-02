@@ -2,7 +2,7 @@ library(tidyverse)
 library(data.table)
 
 
-source(paste0(getwd(),"/Scrapping tennis data/exclusion tournament.r"))
+source(paste0(getwd(),"/Scrapping tennis data/exclusion tournament.R"))
 
 V_RANK=data.frame()
 
@@ -24,6 +24,7 @@ V_RANK=V_RANK %>%
 
 save(V_RANK,file = paste0(getwd(),"/Scrapping tennis data/Rank/V_RANK.RData"))
 
+##### V_MATCH #####
 
 V_MATCH=data.frame()
 
@@ -42,6 +43,8 @@ for (i in 2017:2024){
 }
 
 save(V_MATCH,file = paste0(getwd(),"/Scrapping tennis data/Extraction/V_MATCH_2017_2023.RData"))
+
+##### V_TOURNAMENT #####
 
 V_TOURNAMENT=data.frame()
 
@@ -194,7 +197,7 @@ save(V_TOURNAMENT3,file = paste0(getwd(),"/Scrapping tennis data/Tournament/V_TO
 
 ##### V_PLAYERS #####
 
-load(paste0(getwd(),"/Scrapping tennis data/info_players/V_PLAYERS_RED.RData"))
+load(paste0(getwd(),"/Scrapping tennis data/Info_players/V_PLAYERS_RED.RData"))
 
 V_PLAYERS_OLD=V_PLAYERS
 
@@ -209,6 +212,8 @@ diff=setdiff(V_PLAYERS %>% select(Player_name),
              V_PLAYERS_OLD %>% select(Player_name))
 
 V_PLAYERS=V_PLAYERS %>% filter(Player_name %in% diff$Player_name)
+
+source(paste0(getwd(),"/Scrapping tennis data/info player scrapping.R"))
 
 for (i in 1:nrow(V_PLAYERS)){
   
@@ -241,11 +246,11 @@ V_PLAYERS=V_PLAYERS %>%
 
 METRIC_SIZE=V_PLAYERS_OLD %>% 
   group_by(Country) %>% 
-  summarise(SD_Size=sd(Size,na.rm=T),
-            Min_Size=min(Size,na.rm=T),
-            Max_Size=max(Size,na.rm=T),
-            Mean_Size=mean(Size,na.rm = T),
-            Median_Size=median(Size,na.rm=T),
+  summarise(SD_Size=sd(as.numeric(Size),na.rm=T),
+            Min_Size=min(as.numeric(Size),na.rm=T),
+            Max_Size=max(as.numeric(Size),na.rm=T),
+            Mean_Size=mean(as.numeric(Size),na.rm = T),
+            Median_Size=median(as.numeric(Size),na.rm=T),
             N=n_distinct(Player_name)
   ) %>% 
   na.omit() %>% 
@@ -254,11 +259,11 @@ METRIC_SIZE=V_PLAYERS_OLD %>%
 
 METRIC_WEIGHT=V_PLAYERS_OLD %>% 
   group_by(Country) %>% 
-  summarise(SD_Weight=sd(Weight,na.rm=T),
-            Min_Weight=min(Weight,na.rm=T),
-            Max_Weight=max(Weight,na.rm=T),
-            Mean_Weight=mean(Weight,na.rm = T),
-            Median_Weight=median(Weight,na.rm=T),
+  summarise(SD_Weight=sd(as.numeric(Weight),na.rm=T),
+            Min_Weight=min(as.numeric(Weight),na.rm=T),
+            Max_Weight=max(as.numeric(Weight),na.rm=T),
+            Mean_Weight=mean(as.numeric(Weight),na.rm = T),
+            Median_Weight=median(as.numeric(Weight),na.rm=T),
             N=n_distinct(Player_name)
   ) %>% 
   na.omit() %>% 
