@@ -56,7 +56,8 @@ surface=c("Hard","Indoors","Various")
 
 tournament=V_MATCH_2025 %>% 
   filter(Phase=="Main Draw") %>% 
-  filter(if(length(surface) == 1 && surface == "all") TRUE else Surface_tournament %in% surface)
+  filter(if(length(surface) == 1 && surface == "all") TRUE else Surface_tournament %in% surface) %>% 
+  arrange(Date,tournament,desc(N_match),Season)
 
 #tournament$Elo_W=NA
 
