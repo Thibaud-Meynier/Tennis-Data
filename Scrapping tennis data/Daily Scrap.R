@@ -15,18 +15,18 @@ list$Week=isoweek(list$Date)
 week_tournament=list %>% filter(year(Date)==year_enc & isoweek(Date)==week_enc)
 
 
-url="https://www.tennisexplorer.com/shanghai/2024/atp-men/"
+url=week_tournament$URL
 
 page_info=read_html(url)
 
 page_info %>%
-  html_nodes("#tournamentTabs-1-data > table") %>% 
+  html_nodes("#center > div:nth-child(5) > div > div > table") %>% 
   html_table() %>% 
   as.data.frame() %>% 
   select(2,3,5,6,7)
 
 table_match=page_info %>%
-html_nodes("#tournamentTabs-1-data > table") %>% 
+html_nodes("#center > div:nth-child(5) > div > div > table") %>% 
 html_table() %>% 
   as.data.frame() %>% 
   select(2,3,5,6,7)
@@ -42,7 +42,7 @@ match_ref=data.frame()
 for (i in 1:nrow(table_match)){
   
 href=page_info %>%
-  html_nodes(paste0("#tournamentTabs-1-data > table > tbody > tr:nth-child(",i,") > td.t-name > a")) %>% 
+  html_nodes(paste0("#center > div:nth-child(5) > div > div > table > tbody > tr:nth-child(",i,") > td.t-name > a")) %>% 
   html_attr("href")
 
 
