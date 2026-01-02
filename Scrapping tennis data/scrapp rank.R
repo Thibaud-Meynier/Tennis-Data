@@ -3,13 +3,13 @@
 library(tidyverse)
 library(lubridate)
 
-year=2002
+year=2025
 
 # Filtrer les lundis
 days_year <- seq.Date(as.Date(paste(year, "-01-01", sep = "")), 
                       as.Date(paste(year, "-12-31", sep = "")), by = "day")
 
-mondays <- days_year[weekdays(days_year) == "lundi"] %>% as.data.frame()
+mondays <- days_year[weekdays(days_year) == "Monday"] %>% as.data.frame()
 
 colnames(mondays)[1]="Date"
 
