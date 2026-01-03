@@ -1,0 +1,222 @@
+library(ggplot2)
+library(glue)
+
+load(paste0(getwd(),"/Scrapping tennis data/Extraction/V_MATCH_2009_2016.RData"))
+
+V_MATCH_2009_2016=V_MATCH
+
+V_MATCH_2009_2016=V_MATCH_2009_2016 %>% 
+  rename(Winner_id=P1,
+         Loser_id=P2)
+
+colnames=colnames(V_MATCH_2009_2016)
+
+rm(V_MATCH)
+rm(V_MATCH_2009_2016)
+
+V_MATCH=data.frame()
+
+#i=2016
+
+for (i in 2017:2025){
+  
+  load(file = paste0(getwd(),"/Scrapping tennis data/Extraction/ATP_",i,"_Extraction.RData"))
+  
+  table_stock$Season=i
+  
+  if ("P1" %in% names(table_stock)==T){
+    
+    table_stock=table_stock %>% 
+      rename(Winner_id=P1,
+             Loser_id=P2)
+  }else{
+    
+    table_stock=table_stock=table_stock %>% select(colnames)
+  }
+  
+  V_MATCH=rbind(V_MATCH,table_stock)
+  
+  print(i)  
+  
+}
+
+rm(table_stock)
+
+
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2017_2023.RData"))
+
+V_TOURNAMENT_2017_2023=V_TOURNAMENT_F
+
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2024.RData"))
+
+V_TOURNAMENT_2024=V_TOURNAMENT_F
+
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2025.RData"))
+
+V_TOURNAMENT_2025=V_TOURNAMENT_F
+
+V_TOURNAMENT_F=rbind(V_TOURNAMENT_2017_2023,V_TOURNAMENT_2024,V_TOURNAMENT_2025)
+
+rm(V_TOURNAMENT_2017_2023,V_TOURNAMENT_2024,V_TOURNAMENT_2025)
+
+
+V_TOURNAMENT_INFO=V_TOURNAMENT_F %>% 
+  select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) %>% 
+  unique() %>% 
+  mutate(Categorie=case_when(Categorie=="ATP 2000"~"Grand Slam",
+                             TRUE~Categorie)) %>% 
+  mutate(CLE_TOURNAMENT=toupper(tournament))
+
+rm(V_TOURNAMENT_F)
+
+
+V_MATCH_t=V_MATCH %>% 
+  mutate(CLE_TOURNAMENT=toupper(tournament)) %>% 
+  left_join(V_TOURNAMENT_INFO %>% select(-tournament),by=c("CLE_TOURNAMENT","Season"="Year")) %>% 
+  select(-CLE_TOURNAMENT) %>% 
+  filter(!tournament %in% c("Riyadh - Exhibition","Next Gen Atp Finals")) %>% 
+  mutate(Categorie=case_when(tournament %in% c("United Cup","Atp Cup","Davis Cup")~"Team",
+                             tournament=="Masters Cup Atp"~"Masters",
+                             tournament %like% "Olympics"~"Olympics",
+                             tournament=="Reunion Challenger" & Season==2011~"Challenger 80",
+                             TRUE~Categorie)) %>% 
+  mutate(Surface_tournament=case_when(is.na(Surface_tournament)~Surface,
+                                      Categorie=="Masters" & Season %in% c(2005,2006,2007,2008)~"Indoors",
+                                      tournament=="Madrid" & Season %in% c(2003:2008)~"Indoors",
+                                      tournament=="Bangkok" & Season %in% c(2003:2004)~"Indoors",
+                                      TRUE~Surface_tournament)) %>% 
+  mutate(Surface_tournament=case_when(Surface_tournament=="clay"~"Clay",
+                                      Surface_tournament=="hard"~"Hard",
+                                      Surface_tournament=="grass"~"Grass",
+                                      Surface_tournament=="indoors"~"Indoors",
+                                      TRUE~Surface_tournament)) %>% 
+  mutate(Week_tournament=isoweek(Date),
+         Country_tournament=case_when(tournament=="Olympics - Paris"~"France",
+                                      tournament=="Olympics - Tokyo"~"Japan",
+                                      tournament=="Masters Cup Atp"~"Italy",
+                                      TRUE~Country_tournament)) 
+
+V_MATCH_t=V_MATCH_t %>% 
+  group_by(tournament,Season,Phase,Round,Date,Week_tournament,Winner_id,Loser_id) %>% 
+  mutate(CLE_LIGNE=row_number()) %>% 
+  filter(CLE_LIGNE==1) %>% 
+  select(-CLE_LIGNE)
+
+#V_MATCH_t %>% group_by(Categorie) %>% count()
+
+V_MATCH_t=V_MATCH_t %>% 
+  filter(Phase=="Main Draw" & 
+           (Categorie %in% c("Grand Slam","Olympics","Masters",
+                             "ATP 1000","ATP 500",'ATP 250',
+                             "Challenger 125","Challenger 175",
+                             "Challenger 110","Challenger 100",
+                             "Challenger 90","Challenger 80",
+                             "Challenger 75","Challenger 50")|tournament %in% c("Atp Cup","United Cup")))
+
+V_MATCH_t=V_MATCH_t %>% ungroup() %>% 
+  select(tournament,Season,Date,Week_tournament,Categorie,Surface_tournament,Round,Winner_id,Loser_id,Odd_W,Odd_L,info)
+
+
+V_RANK=data.frame()
+
+for (i in 2017:2025){
+  
+  load(file = paste0(getwd(),"/Scrapping tennis data/Rank/RANK_ATP_",i,".RData"))
+  
+  V_RANK=rbind(V_RANK,rank)
+  
+  print(i)  
+  
+}
+
+V_RANK=V_RANK %>% 
+  select(-Move) %>% 
+  rename("Player_name"="Player name") 
+
+
+rm(rank)
+rm(V_TOURNAMENT_INFO)
+rm(V_MATCH)
+
+
+V_MATCH_t=V_MATCH_t %>% 
+  left_join(V_RANK %>% select(Rank,Player_name,Points,Week,Year) %>% 
+               rename(Rank_W=Rank,Points_W=Points) %>% 
+              mutate(Rank_W=as.numeric(Rank_W),
+                     Points_W=as.numeric(Points_W)),
+             by=c("Winner_id"="Player_name","Week_tournament"="Week","Season"="Year")) %>% 
+left_join(V_RANK %>% select(Rank,Player_name,Points,Week,Year) %>% 
+             rename(Rank_L=Rank,Points_L=Points) %>% 
+            mutate(Rank_L=as.numeric(Rank_L),
+                   Points_L=as.numeric(Points_L)),
+           by=c("Loser_id"="Player_name","Week_tournament"="Week","Season"="Year")) %>% 
+  mutate(Rank_W=case_when(is.na(Rank_W)~1000,TRUE~Rank_W),
+         Points_W=case_when(is.na(Points_W)~10,TRUE~Points_W),
+         Rank_L=case_when(is.na(Rank_W)~1000,TRUE~Rank_L),
+         Points_L=case_when(is.na(Points_W)~10,TRUE~Points_L))
+
+rm(V_RANK)
+
+##### TEST BET STRAT #####
+
+BET_STRAT=V_MATCH_t %>% filter(abs(Rank_W-Rank_L)<=5 & info=="Completed" & !is.na(Odd_W)) 
+
+s=4
+
+BET_STRAT=BET_STRAT %>% 
+  mutate(
+    # Trouver la meilleure cote (la plus haute)
+    best_odd = case_when(
+      Odd_W > Odd_L ~ Odd_W,           # Winner a la meilleure cote
+      Odd_L > Odd_W ~ Odd_L,           # Loser a la meilleure cote
+      Rank_W > Rank_L ~ Odd_W,         # Égalité: prendre le moins bien classé (rang plus élevé = moins bien classé)
+      TRUE ~ Odd_L
+    ),
+    
+    # Identifier quel joueur a la meilleure cote
+    player_played = case_when(
+      Odd_W > Odd_L ~ Winner_id,
+      Odd_L > Odd_W ~ Loser_id,
+      Rank_W > Rank_L ~ Winner_id,     # Rang plus élevé = moins bien classé
+      TRUE ~ Loser_id
+    ),
+    
+    # Ajouter une raison (optionnel)
+    reason = case_when(
+      Odd_W > Odd_L ~ "Winner meilleure cote",
+      Odd_L > Odd_W ~ "Loser meilleure cote",
+      Odd_W == Odd_L ~ "Égalité - moins bien classé choisi"
+    )
+  ) %>% 
+  filter(best_odd<=s) %>% 
+  mutate(OUTCOME=case_when(Winner_id==player_played~1,TRUE~0)) %>% 
+  mutate(Cash=case_when(OUTCOME==1~10*best_odd-10,TRUE~-10))
+
+
+BET_STRAT=BET_STRAT %>% 
+  arrange(Date)
+
+BET_STRAT <- BET_STRAT %>%
+  filter(Categorie %in% c("Masters","ATP 250","Challenger 125")) %>%
+  mutate(
+    obs_number = row_number(),
+    cumul_cash = cumsum(Cash)
+  ) %>%
+  ungroup()
+
+ggplot(BET_STRAT, aes(x = obs_number, y = cumul_cash)) +
+  geom_line(color = "steelblue", linewidth = 0.5)+
+  theme_minimal()+
+  ggtitle(glue("Stratégie 50-50 avec cote max <= {s}"))
+
+ggplot(BET_STRAT, aes(x = obs_number, y = cumul_cash)) +
+  geom_line(color = "steelblue", linewidth = 0.5) +
+  facet_wrap(~ Categorie, scales = "free") +  # ou scales = "fixed"
+  labs(x = "Nombre de paris", y = "Gain cumulé") +
+  theme_minimal()+
+  ggtitle(glue("Stratégie 50-50 avec cote max <= {s}"))
+
+
+
+
+
