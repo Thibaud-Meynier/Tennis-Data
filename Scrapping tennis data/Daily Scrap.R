@@ -1,3 +1,6 @@
+library(data.table)
+library(tidyverse)
+
 source(paste0(getwd(),"/Scrapping tennis data/exclusion tournament.R"))
 
 source(paste0(getwd(),"/Scrapping tennis data/scrapping tennis tournament.R"))
@@ -11,6 +14,10 @@ rank_week=rank_scrap(Sys.Date())
 list=list_tournament(year_enc)
 
 list$Week=isoweek(list$Date)
+
+list=list %>% filter(Categorie %like% "ATP")
+
+MATCH_TO_PLAY=data.frame()
 
 for (i in 1:nrow(list)){
   
@@ -81,107 +88,114 @@ for (i in 1:nrow(list)){
   
 }
 
-week_tournament=list %>% filter(year(Date)==year_enc & isoweek(Date)==week_enc)
-
-url=week_tournament$URL
-
-page_info=read_html(url)
-
-# page_info %>%
-#   html_nodes("#center > div:nth-child(5) > div > div > table") %>% 
-#   html_table() %>% 
-#   as.data.frame() %>% 
-#   select(2,3,5,6,7)
-
-table_match=page_info %>%
-html_nodes("#center > div:nth-child(5) > div > div > table") %>% 
-html_table() %>% 
-  as.data.frame() %>% 
-  select(2,3,5,6,7)
-
-names(table_match)=table_match[1,]
-
-table_match=table_match[-1,]
-
-colnames(table_match)=c("Round","Match","H2H","H", "A")
-
-table_match$tournament=week_tournament$tournament
-
-table_match$Country_tournament=week_tournament$Country_tournament
-
-table_match$Surface_tournament=week_tournament$Surface_tournament
-
-match_ref=data.frame()
-
-for (i in 1:nrow(table_match)){
+for (i in 1:nrow(list)){
   
-href=page_info %>%
-  html_nodes(paste0("#center > div:nth-child(5) > div > div > table > tbody > tr:nth-child(",i,") > td.t-name > a")) %>% 
-  html_attr("href")
-
-
-href=paste0("https://www.tennisexplorer.com",href)
-
-match_ref=rbind(match_ref,href)
-
-print(href)
+  url=list$URL[i]
+  
+  page_info=read_html(url)
+  
+  table_match=page_info %>%
+    html_nodes("table.result") %>% 
+    html_table()
+  
+  
+  table_match=table_match[[1]] %>% 
+    as.data.frame() %>% 
+    select(2,3,5,6,7)
+  
+  names(table_match)=table_match[1,]
+  
+  table_match=table_match[-1,]
+  
+  colnames(table_match)=c("Round","Match","H2H","H", "A")
+  
+  table_match$tournament=list$tournament[i]
+  
+  table_match$Country_tournament=list$Country_tournament[i]
+  
+  table_match$Surface_tournament=list$Surface_tournament[i]
+  
+  match_ref=data.frame()
+  
+  for (i in 1:nrow(table_match)){
+    
+    href=page_info %>%
+      html_node(paste0("table.result>tbody>tr:nth-child(",i,")>td.t-name>a")) %>% 
+      #html_nodes(paste0("#tournamentTabs-1-data > table > tbody > tr:nth-child(",i,") > td.t-name > a")) %>% 
+      html_attr("href") 
+    
+    
+    href=paste0("https://www.tennisexplorer.com",href)
+    
+    match_ref=rbind(match_ref,href)
+    
+    print(href)
+  }
+  
+  colnames(match_ref)="url"
+  
+  table_match$url=match_ref$url
+  
+  players_id=data.frame("P1"=NA,"P2"=NA,"N_match"=NA)
+  
+  for (i in 1:nrow(table_match)){
+    
+    match_id=table_match$url[i]
+    
+    page_match <- read_html(match_id)
+    
+    players=page_match %>% html_nodes("th.plName") %>% html_text() 
+    
+    players_id[i,1]=players[1]
+    players_id[i,2]=players[2]
+    players_id[i,3]=i
+    
+    print(i)
+  }
+  
+  table_match$P1=players_id$P1
+  table_match$P2=players_id$P2
+  
+  
+  table_match= table_match %>% 
+    left_join(rank_week %>% select(`Player name`,Points,Rank,Country),by=c("P1"="Player name")) %>% 
+    left_join(rank_week %>% select(`Player name`,Points,Rank,Country),by=c("P2"="Player name")) %>% 
+    rename("Points P1"="Points.x",
+           "Points P2"="Points.y",
+           "Rank P1"="Rank.x",
+           "Rank P2"="Rank.y",
+           "Country P1"="Country.x",
+           "Country P2"="Country.y")
+  
+  
+  table_match=table_match %>% select(tournament,Country_tournament,Surface_tournament,Round,P1,P2,H2H,H,A,
+                                     `Points P1`,`Rank P1`,`Country P1`,
+                                     `Rank P2`,`Points P2` ,`Country P2`)
+  
+  table_match=table_match %>% 
+    mutate(Surface_tournament=str_to_title(Surface_tournament))
+  
+  MATCH_TO_PLAY=rbind(MATCH_TO_PLAY,table_match)
+  
+  print(i)
+  
+  
 }
 
-colnames(match_ref)="url"
 
-table_match$url=match_ref$url
-
-players_id=data.frame("P1"=NA,"P2"=NA,"N_match"=NA)
-
-for (i in 1:nrow(table_match)){
-  
-match_id=table_match$url[i]
-
-page_match <- read_html(match_id)
-
-players=page_match %>% html_nodes("th.plName") %>% html_text() 
-
-players_id[i,1]=players[1]
-players_id[i,2]=players[2]
-players_id[i,3]=i
-
-print(i)
-}
-
-table_match$P1=players_id$P1
-table_match$P2=players_id$P2
-
-
-table_match= table_match %>% 
-  left_join(rank_week %>% select(`Player name`,Points,Rank,Country),by=c("P1"="Player name")) %>% 
-  left_join(rank_week %>% select(`Player name`,Points,Rank,Country),by=c("P2"="Player name")) %>% 
-  rename("Points P1"="Points.x",
-         "Points P2"="Points.y",
-         "Rank P1"="Rank.x",
-         "Rank P2"="Rank.y",
-         "Country P1"="Country.x",
-         "Country P2"="Country.y")
-  
-
-table_match=table_match %>% select(tournament,Country_tournament,Surface_tournament,Round,P1,P2,H2H,H,A,
-                                   `Points P1`,`Rank P1`,`Country P1`,
-                                   `Rank P2`,`Points P2` ,`Country P2`)
-                                   
-table_match=table_match %>% 
-  mutate(Surface_tournament=str_to_title(Surface_tournament))
 
 ##### AJOUT DU ELO #####
 
 load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING_PLAYERS.RData"))
 
-table_match$Elo_P1=NA
-table_match$Elo_P2=NA
-table_match$Elo_P1_surface=NA
-table_match$Elo_P2_surface=NA
-table_match$Proba_p1=NA
-table_match$Proba_p2=NA
-table_match$Proba_p1_surface=NA
-table_match$Proba_p2_surface=NA
+MATCH_TO_PLAY$Elo_P1=NA
+MATCH_TO_PLAY$Elo_P2=NA
+MATCH_TO_PLAY$Elo_P1_surface=NA
+MATCH_TO_PLAY$Elo_P2_surface=NA
+MATCH_TO_PLAY$Proba_p1=NA
+MATCH_TO_PLAY$Proba_p2=NA
+MATCH_TO_PLAY$Proba_p1_surface=NA
+MATCH_TO_PLAY$Proba_p2_surface=NA
 
 #i=1
 
@@ -194,13 +208,68 @@ penalty=function(diff_date){
   return(penalty)
 }
 
-for (i in 1:nrow(table_match)){
+
+last_elo=function(elo_player,player_name,surface="all",Date_match){
   
-  P1=table_match$P1[i]
+  if (surface=="all"){
+    
+    
+    elo_player=elo_player %>% 
+      filter(Player_name==player_name & Date<Date_match) %>% 
+      mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>% 
+      arrange(desc(Date),desc(Round)) %>% 
+      mutate(ORDRE_ELO=row_number()) %>% 
+      filter(ORDRE_ELO==1) %>% 
+      select(Player_name,tournament,Date,Elo_player)
+    
+    return(elo_player)
+    
+  }else if (surface=="Grass"){
+    
+    elo_player=elo_player %>% 
+      filter(Player_name==player_name & !is.na(Elo_player_grass) & Date<Date_match) %>% 
+      mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>% 
+      arrange(desc(Date),desc(Round)) %>% 
+      mutate(ORDRE_ELO=row_number()) %>% 
+      filter(ORDRE_ELO==1) %>% 
+      select(Player_name,tournament,Date,Elo_player_grass)
+    
+    return(elo_player)
+    
+  }else if (surface=="Clay"){
+    
+    elo_player=elo_player %>% 
+      filter(Player_name==player_name & !is.na(Elo_player_clay) & Date<Date_match) %>% 
+      mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>% 
+      arrange(desc(Date),desc(Round)) %>% 
+      mutate(ORDRE_ELO=row_number()) %>% 
+      filter(ORDRE_ELO==1) %>% 
+      select(Player_name,tournament,Date,Elo_player_clay)
+    
+    return(elo_player)
+    
+  }else{
+    
+    elo_player=elo_player %>% 
+      filter(Player_name==player_name & !is.na(Elo_player_hard) & Date<Date_match) %>% 
+      mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>% 
+      arrange(desc(Date),desc(Round)) %>% 
+      mutate(ORDRE_ELO=row_number()) %>% 
+      filter(ORDRE_ELO==1) %>% 
+      select(Player_name,tournament,Date,Elo_player_hard)
+    
+    return(elo_player)
+    
+  }
+}
+
+for (i in 1:nrow(MATCH_TO_PLAY)){
   
-  P2=table_match$P2[i]
+  P1=MATCH_TO_PLAY$P1[i]
   
-  surface=table_match$Surface_tournament[i]
+  P2=MATCH_TO_PLAY$P2[i]
+  
+  surface=MATCH_TO_PLAY$Surface_tournament[i]
   
   Date_match=as.Date(Sys.time())
   
@@ -242,23 +311,35 @@ for (i in 1:nrow(table_match)){
   
   ##### assigniation
   
-  table_match$Elo_P1[i]=elo_p1
-  table_match$Elo_P2[i]=elo_p2
-  table_match$Elo_P1_surface[i]=elo_p1_surface
-  table_match$Elo_P2_surface[i]=elo_p2_surface
-  table_match$Proba_p1[i]=proba_p1
-  table_match$Proba_p2[i]=proba_p2
-  table_match$Proba_p1_surface[i]=proba_p1_surface
-  table_match$Proba_p2_surface[i]=proba_p2_surface
+  MATCH_TO_PLAY$Elo_P1[i]=elo_p1
+  MATCH_TO_PLAY$Elo_P2[i]=elo_p2
+  MATCH_TO_PLAY$Elo_P1_surface[i]=elo_p1_surface
+  MATCH_TO_PLAY$Elo_P2_surface[i]=elo_p2_surface
+  MATCH_TO_PLAY$Proba_p1[i]=proba_p1
+  MATCH_TO_PLAY$Proba_p2[i]=proba_p2
+  MATCH_TO_PLAY$Proba_p1_surface[i]=proba_p1_surface
+  MATCH_TO_PLAY$Proba_p2_surface[i]=proba_p2_surface
   
   print(i)
 }
 
-table_match=table_match %>% 
+MATCH_TO_PLAY=MATCH_TO_PLAY %>% 
   mutate(across(starts_with("Proba_"), ~ round(., 3))) %>% 
   mutate(Proba_P1_G=round(((Proba_p1+Proba_p1_surface)/2),2),
          Proba_P2_G=round(((Proba_p2+Proba_p2_surface)/2),2)) %>% 
-  mutate(Odd_P1=round((100/(Proba_P1_G*100)),2),
-         Odd_P2=round((100/(Proba_P2_G*100)),2))
+  mutate(Odd_P1_ELO=round((100/(Proba_P1_G*100)),2),
+         Odd_P2_ELO=round((100/(Proba_P2_G*100)),2))
 
-table_match %>% select(tournament,P1,P2,H,A,Odd_P1,Odd_P2,Elo_P1,Elo_P2)
+MATCH_TO_PLAY %>% select(tournament,P1,P2,H,A,Odd_P1_ELO,Odd_P2_ELO) %>% 
+  rename(Odd_P1=H,
+         Odd_P2=A) %>% 
+  mutate(Odd_P1=as.numeric(Odd_P1),
+         Odd_P2=as.numeric(Odd_P2)) %>% 
+  mutate(value_bet=(Odd_P1>Odd_P1_ELO|Odd_P2>Odd_P2_ELO)&
+           ((Odd_P1/Odd_P1_ELO)>=1.05|(Odd_P2/Odd_P2_ELO)>=1.05)) %>% 
+  filter(value_bet==TRUE) %>% 
+  mutate(Odd_to_play=case_when(Odd_P1>Odd_P1_ELO~Odd_P1,TRUE~Odd_P2)) %>% 
+  filter(between(Odd_to_play,1.35,6)) %>% 
+  select(-value_bet)
+
+
