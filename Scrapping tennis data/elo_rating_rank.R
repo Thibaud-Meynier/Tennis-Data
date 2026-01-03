@@ -120,13 +120,14 @@ save(ELO_RATING_PLAYERS,file=paste0(here(),"/Scrapping tennis data/Rank/ELO_RATI
      compress = "xz")
 
 
-last_elo=function(base,player_name,surface="all",Date_match){
+
+last_elo=function(base,player_name,surface="all",Date_match,tournoi){
   
   if (surface=="all"){
     
     
     elo_player=base %>% 
-      filter(Player_name==player_name & Date<Date_match) %>% 
+      filter(Player_name==player_name & Date<Date_match & tournament!=tournoi) %>% 
       mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>% 
       arrange(desc(Date),desc(Round)) %>% 
       mutate(ORDRE_ELO=row_number()) %>% 
@@ -138,7 +139,7 @@ last_elo=function(base,player_name,surface="all",Date_match){
   }else if (surface=="Grass"){
     
     elo_player=base %>% 
-      filter(Player_name==player_name & !is.na(Elo_player_grass) & Date<Date_match) %>% 
+      filter(Player_name==player_name & !is.na(Elo_player_grass) & Date<Date_match & tournament!=tournoi) %>% 
       mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>% 
       arrange(desc(Date),desc(Round)) %>% 
       mutate(ORDRE_ELO=row_number()) %>% 
@@ -150,7 +151,7 @@ last_elo=function(base,player_name,surface="all",Date_match){
   }else if (surface=="Clay"){
     
     elo_player=base %>% 
-      filter(Player_name==player_name & !is.na(Elo_player_clay) & Date<Date_match) %>% 
+      filter(Player_name==player_name & !is.na(Elo_player_clay) & Date<Date_match & tournament!=tournoi) %>% 
       mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>% 
       arrange(desc(Date),desc(Round)) %>% 
       mutate(ORDRE_ELO=row_number()) %>% 
@@ -162,7 +163,7 @@ last_elo=function(base,player_name,surface="all",Date_match){
   }else{
     
     elo_player=base %>% 
-      filter(Player_name==player_name & !is.na(Elo_player_hard) & Date<Date_match) %>% 
+      filter(Player_name==player_name & !is.na(Elo_player_hard) & Date<Date_match & tournament!=tournoi) %>% 
       mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>% 
       arrange(desc(Date),desc(Round)) %>% 
       mutate(ORDRE_ELO=row_number()) %>% 
