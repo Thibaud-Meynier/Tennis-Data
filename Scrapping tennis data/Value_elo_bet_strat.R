@@ -298,132 +298,23 @@ pb$tick()
 }
 
 proba_calcul=function(elo_p1,elo_p2){
+  
   proba=1 / (1 + 10 ^ ((elo_p2 - elo_p1)/400))
   
   return(proba)
 }
 
 
-p=0.55
+##### CALCUL ACCURACY PRED #####
 
-V_MATCH_t=V_MATCH_t %>% 
-  mutate(Proba_P1=proba_calcul(Elo_P1,Elo_P2),
-         Proba_P1_surface=proba_calcul(Elo_P1_surface,Elo_P2_surface)) %>% 
-  mutate(Proba_P2=(1-Proba_P1),
-         Proba_P2_surface=(1-Proba_P1_surface)) %>% 
-  mutate(Proba_P1=round(Proba_P1,2),
-         Proba_P2=round(Proba_P2,2),
-         Proba_P1_surface=round(Proba_P1_surface,2),
-         Proba_P2_surface=round(Proba_P2_surface,2)) %>% 
-  mutate(Proba_P1_W=(p*Proba_P1+(1-p)*Proba_P1_surface)*100,
-         Proba_P2_W=(p*Proba_P2+(1-p)*Proba_P2_surface)*100) %>% 
-  select(-c(Proba_P1,Proba_P2,Proba_P1_surface,Proba_P2_surface)) %>% 
-  mutate(Favori=ifelse(Rank_W<Rank_L,Winner_id,Loser_id),
-         Outcome=ifelse(Rank_W<Rank_L,"Fav_W","Out_W")) %>% 
-  mutate(Predicted_Winner=ifelse(Proba_P1_W>Proba_P2_W,Winner_id,Loser_id)) %>% 
-  mutate(Type_Predicted_elo=ifelse(Predicted_Winner==Favori,"Fav_W","Out_W")) %>% 
-  select(-c(Predicted_Winner)) %>% 
-  select(-c(Predicted_Winner_Odd))
+accuracy=data.frame()
 
-V_MATCH_value=V_MATCH_t %>% 
-  select(tournament,Categorie,Date,Round,Winner_id,Loser_id,Favori,Rank_W,Rank_L,Points_W,Points_L,
-         Outcome,Odd_W,Odd_L,Proba_P1_W,Proba_P2_W,Type_Predicted_elo) %>% 
-  mutate(Odd_P1=round(100/Proba_P1_W,2),
-         Odd_P2=round(100/Proba_P2_W,2)) %>% 
-  select(-c(Proba_P1_W,Proba_P2_W))
-
-MISE=5
-
-V_MATCH_value <- V_MATCH_t %>% 
-  select(tournament, Categorie,Date, Round, Winner_id, Loser_id, Favori, Rank_W, Rank_L, 
-         Points_W, Points_L, Outcome, Odd_W, Odd_L, Proba_P1_W, Proba_P2_W, 
-         Type_Predicted_elo) %>% 
-  mutate(
-    # Identifier l'outsider
-    Outsider = ifelse(Favori == Winner_id, Loser_id, Winner_id),
-    
-    # Calculer les cotes ELO pour P1 et P2
-    Odd_P1_elo = round(100/Proba_P1_W, 2),
-    Odd_P2_elo = round(100/Proba_P2_W, 2),
-    
-    # COTES MARCHÉ : Transformer en Favori/Outsider
-    Odd_F_market = ifelse(Rank_W < Rank_L, Odd_W, Odd_L),
-    Odd_O_market = ifelse(Rank_W < Rank_L, Odd_L, Odd_W),
-    
-    # COTES ELO : Transformer en Favori/Outsider
-    # Si Winner est le favori : Odd_P1_elo = Favori, Odd_P2_elo = Outsider
-    # Si Loser est le favori : Odd_P2_elo = Favori, Odd_P1_elo = Outsider
-    Odd_F_elo = ifelse(Rank_W < Rank_L, Odd_P1_elo, Odd_P2_elo),
-    Odd_O_elo = ifelse(Rank_W < Rank_L, Odd_P2_elo, Odd_P1_elo)
-    
-  ) %>% 
-  select(tournament,Categorie, Date, Round, 
-         Winner_id, Loser_id, 
-         Favori, Outsider,
-         Rank_W, Rank_L, 
-         Points_W, Points_L,
-         Outcome,
-         # Cotes marché
-         Odd_F_market, Odd_O_market,
-         # Cotes ELO
-         Odd_F_elo, Odd_O_elo,
-         Type_Predicted_elo) %>% 
-  mutate(VALUE=case_when(Odd_F_market>Odd_F_elo~"Value Fav",
-                         Odd_O_market>Odd_O_elo~"Value Out",
-                         TRUE~"No value")) %>% 
-  mutate(ODD_VALUE=case_when(Odd_F_market>Odd_F_elo~Odd_F_market,
-                         Odd_O_market>Odd_O_elo~Odd_O_market,
-                         TRUE~NA)) %>% 
-  mutate(RATIO_VALUE=case_when(VALUE=="Value Fav"~round(Odd_F_market/Odd_F_elo,2),
-                               VALUE=="Value Out"~round(Odd_O_market/Odd_O_elo,2),
-                               TRUE~NA)) %>% 
-  mutate(Strategy_Win=case_when(VALUE=="Value Fav" & Winner_id==Favori~1,
-                                    VALUE=="Value Out" & Winner_id==Outsider~1,
-                                    VALUE=="No value"~NA,
-                                    TRUE~0)) %>% 
-  mutate(Cash=case_when(Strategy_Win==1~(ODD_VALUE-1)*MISE,
-                        Strategy_Win==0~-MISE,
-                        TRUE~0)) %>% 
-  filter(RATIO_VALUE>=1.05 & RATIO_VALUE<=1.25 & between(ODD_VALUE,1.35,4.5))
+for (i in seq(0, 1, by = 0.01)){
   
-
-# Créer des tranches de ratio
-performance_par_ratio <- V_MATCH_value %>%
-  filter(VALUE != "No value") %>%
-  mutate(
-    Tranche_ratio = cut(RATIO_VALUE,
-                        breaks = c(1, 1.05, 1.10, 1.15, 1.20, 1.30, Inf),
-                        labels = c("1.00-1.05", "1.05-1.10", "1.10-1.15", 
-                                   "1.15-1.20", "1.20-1.30", "1.30+"),
-                        include.lowest = TRUE)
-  ) %>%
-  group_by(Tranche_ratio,VALUE) %>%
-  summarise(
-    N_paris = n(),
-    Taux_reussite = mean(Strategy_Win, na.rm = TRUE) * 100,
-    N_gagnants = sum(Strategy_Win, na.rm = TRUE),
-    Profit_net = sum(Cash),
-    ROI = (sum(Cash) / n()) * 100,
-    Cote_moyenne = mean(ODD_VALUE, na.rm = TRUE)
-  ) %>%
-  arrange(Tranche_ratio)
-
-cat("\n=== PERFORMANCE PAR TRANCHE DE RATIO ===\n")
-print(performance_par_ratio)
-
-
-ggplot(V_MATCH_value %>% 
-         filter(ODD_VALUE>2) %>% 
-         group_by(Categorie) %>% 
-         mutate(Obs=row_number(),
-                cumul_cash=cumsum(Cash)) %>% 
-         arrange(Date),aes(x=Obs,y=cumul_cash))+
-  geom_line()+
-  facet_wrap(~Categorie,scales="free")
-
-# Fonction pour calculer l'accuracy
-calculer_accuracy <- function(data, p) {
-  data %>%
+  p=i
+  
+  res=V_MATCH_t %>% 
+    group_by(Categorie,Surface_tournament) %>% 
     mutate(
       Proba_P1 = proba_calcul(Elo_P1, Elo_P2),
       Proba_P1_surface = proba_calcul(Elo_P1_surface, Elo_P2_surface),
@@ -434,44 +325,172 @@ calculer_accuracy <- function(data, p) {
       Predicted_Winner = ifelse(Proba_P1_W > Proba_P2_W, Winner_id, Loser_id),
       Result = ifelse(Predicted_Winner == Winner_id, 1, 0)
     ) %>%
-    summarise(accuracy = mean(Result) * 100) %>%
-    pull(accuracy)
+    summarise(accuracy = mean(Result) * 100,
+              N=n()) %>% 
+    mutate(P=p)
+  
+  accuracy=rbind(accuracy,res)
+  
+  print(i)
+  
 }
 
-# Tester différents seuils
-seuils_p <- seq(0, 1, by = 0.01)
+p_optimaux <- accuracy %>%
+  group_by(Categorie, Surface_tournament) %>%
+  filter(accuracy == max(accuracy, na.rm = TRUE)) %>%
+  slice(1) %>%  # Si plusieurs p donnent le même max, prendre le premier
+  rename(P_optimal = P, accuracy_max = accuracy) %>%
+  ungroup()
 
-resultats <- data.frame(
-  p = seuils_p,
-  accuracy = sapply(seuils_p, calculer_accuracy, data = V_MATCH_t)
-)
 
-# Meilleur p
-meilleur_p <- resultats[which.max(resultats$accuracy), ]
+ggplot(accuracy,aes(x=P,y=accuracy,group=Surface_tournament,color=Surface_tournament))+
+  geom_line()+
+  # Ajouter les points optimaux
+  geom_point(data = p_optimaux,
+             aes(x = P_optimal, y = accuracy_max),
+             size = 3, shape = 21, fill = "white", stroke = 1.5) +
+  # Ajouter des lignes verticales aux optimaux
+  geom_vline(data = p_optimaux,
+             aes(xintercept = P_optimal, color = Surface_tournament),
+             linetype = "dashed", alpha = 0.5) +
+  facet_wrap(~Categorie,scales="free")+
+  theme_classic()
 
-# Visualiser
-ggplot(resultats, aes(x = p, y = accuracy)) +
-  geom_line(color = "steelblue", linewidth = 1) +
-  geom_point(data = meilleur_p, 
-             aes(x = p, y = accuracy), 
-             color = "red", size = 4) +
-  geom_vline(xintercept = meilleur_p$p, 
-             linetype = "dashed", color = "red", alpha = 0.5) +
-  geom_hline(yintercept = meilleur_p$accuracy,
-             linetype = "dashed", color = "red", alpha = 0.5) +
-  annotate("text", 
-           x = meilleur_p$p, 
-           y = meilleur_p$accuracy + 1,
-           label = paste0("p = ", meilleur_p$p, "\n", 
-                          round(meilleur_p$accuracy, 2), "%"),
-           color = "red", fontface = "bold") +
-  labs(
-    title = "Optimisation du seuil p",
-    subtitle = paste0("Meilleur p = ", meilleur_p$p, 
-                      " (Accuracy = ", round(meilleur_p$accuracy, 2), "%)"),
-    x = "Seuil p (poids ELO général)",
-    y = "Accuracy (%)"
-  ) +
-  theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+V_MATCH_t=V_MATCH_t %>% 
+  left_join(p_optimaux %>% 
+              select(Categorie,Surface_tournament,P_optimal),
+            by=c("Categorie","Surface_tournament")) 
 
+V_MATCH_t=V_MATCH_t %>% 
+  mutate(
+    Proba_P1 = proba_calcul(Elo_P1, Elo_P2),
+    Proba_P1_surface = proba_calcul(Elo_P1_surface, Elo_P2_surface),
+    Proba_P2 = 1 - Proba_P1,
+    Proba_P2_surface = 1 - Proba_P1_surface,
+    Proba_P1_W = (P_optimal * Proba_P1 + (1-P_optimal) * Proba_P1_surface) * 100,
+    Proba_P2_W = (P_optimal * Proba_P2 + (1-P_optimal) * Proba_P2_surface) * 100,
+    Predicted_Winner_elo = ifelse(Proba_P1_W > Proba_P2_W, Winner_id, Loser_id),
+    Result = ifelse(Predicted_Winner_elo == Winner_id, 1, 0)
+  ) 
+
+V_MATCH_t=V_MATCH_t %>% select(-c(P_optimal,Proba_P1,Proba_P1_surface,Proba_P2,Proba_P2_surface))  
+
+V_MATCH_t=V_MATCH_t %>% 
+  mutate(Proba_P1_W=round(Proba_P1_W,2),
+         Proba_P2_W=round(Proba_P2_W,2))
+
+# Global accuracy 
+
+V_MATCH_t %>%
+  group_by(Result,Categorie) %>% 
+  count() %>% 
+  arrange(Categorie) %>% 
+  ungroup() %>% 
+  group_by(Categorie) %>% 
+  mutate(Total=sum(n)) %>% 
+  ungroup() %>% 
+  mutate(prct=n/Total*100) %>% 
+  filter(Result==1) %>% 
+  select(-Result)
+
+
+
+##### VALUE BET DETECTION #####
+
+V_MATCH_value=V_MATCH_t %>% 
+  mutate(Favori=ifelse(Rank_W<Rank_L,Winner_id,Loser_id),
+         Outsider = ifelse(Favori == Winner_id, Loser_id, Winner_id),
+         Outcome=ifelse(Rank_W<Rank_L,"Fav_W","Out_W")) %>% 
+  rename(Predicted_Winner_elo=Predicted_Winner) %>% 
+  mutate(Odd_F_market = ifelse(Rank_W < Rank_L, Odd_W, Odd_L),
+         Odd_O_market = ifelse(Rank_W < Rank_L, Odd_L, Odd_W),
+         Odd_P1=round(100/Proba_P1_W,2),
+         Odd_P2=round(100/Proba_P2_W,2),
+         Odd_F_elo = ifelse(Rank_W < Rank_L, Odd_P1, Odd_P2),
+         Odd_O_elo = ifelse(Rank_W < Rank_L, Odd_P2, Odd_P1),
+         Predicted_Winner_market=case_when(Odd_F_market<Odd_O_market~Favori,
+                                           Odd_O_market<Odd_F_market~Outsider)) %>% 
+  select(tournament,Categorie,Date,Round,Rank_W,Rank_L,Winner_id,Loser_id,Favori,Outsider,Predicted_Winner_elo,
+         Predicted_Winner_market,
+         Outcome,Odd_W,Odd_L,Odd_F_market,Odd_O_market,Odd_F_elo,Odd_O_elo)
+
+### DETECT VALUE #####
+
+M=10
+
+V_MATCH_value=V_MATCH_value %>% 
+  mutate(
+# CRITÈRE 1 : Accord entre ELO et Marché
+Accord_Elo_Market = (Predicted_Winner_elo == Predicted_Winner_market),
+
+# CRITÈRE 2 & 3 : Value sur le FAVORI
+Value_F = (Odd_F_market > Odd_F_elo) & 
+  ((Odd_F_market / Odd_F_elo) >= 1.05) & Odd_F_market>=1.35,
+
+Ratio_Value_F = ifelse(Value_F, Odd_F_market / Odd_F_elo, NA),
+
+# CRITÈRE 2 & 3 : Value sur l'OUTSIDER
+Value_O = (Odd_O_market > Odd_O_elo) & 
+  ((Odd_O_market / Odd_O_elo) >= 1.05) & Odd_O_market>=1.35,
+
+Ratio_Value_O = ifelse(Value_O, Odd_O_market / Odd_O_elo, NA),
+
+# DÉTECTION FINALE DE VALUE BET
+Has_Value_Bet = Accord_Elo_Market & (Value_F | Value_O),
+
+# QUEL JOUEUR JOUER ?
+Value_Bet_On = case_when(
+  !Has_Value_Bet ~ "Aucun",
+  Value_F & !Value_O ~ "Favori",
+  !Value_F & Value_O ~ "Outsider",
+  Value_F & Value_O & Ratio_Value_F > Ratio_Value_O ~ "Favori",
+  Value_F & Value_O & Ratio_Value_F <= Ratio_Value_O ~ "Outsider",
+  TRUE ~ "Aucun"
+),
+
+# RATIO DE VALUE RETENU
+Ratio_Value_Bet = case_when(
+  Value_Bet_On == "Favori" ~ Ratio_Value_F,
+  Value_Bet_On == "Outsider" ~ Ratio_Value_O,
+  TRUE ~ NA_real_
+),
+
+# COTE JOUÉE
+Cote_Jouee = case_when(
+  Value_Bet_On == "Favori" ~ Odd_F_market,
+  Value_Bet_On == "Outsider" ~ Odd_O_market,
+  TRUE ~ NA_real_
+),
+
+# RÉSULTAT DU PARI
+Pari_Gagnant = case_when(
+  Value_Bet_On == "Aucun" ~ NA,
+  Value_Bet_On == "Favori" & Winner_id == Favori ~ TRUE,
+  Value_Bet_On == "Outsider" & Winner_id == Outsider ~ TRUE,
+  TRUE ~ FALSE
+),
+
+# GAIN/PERTE (mise de 1)
+Cash = case_when(
+  is.na(Pari_Gagnant) ~ 0,
+  Pari_Gagnant ~ M*Cote_Jouee - M,
+  !Pari_Gagnant ~ -M
+),
+
+  Tranche_Cote = cut(Cote_Jouee,
+                     breaks = c(1.35, 1.5, 1.75, 2, 2.5, 3, 4, 5, Inf),
+                     labels = c("1.35-1.50", "1.50-1.75", 
+                                "1.75-2.00", "2.00-2.50", "2.50-3.00", 
+                                "3.00-4.00", "4.00-5.00", "5.00+"),
+                     include.lowest = TRUE,
+                     right = FALSE),
+
+
+Tranche_ratio = cut(Ratio_Value_Bet,
+                   breaks = c(1.05,1.1,1.15,1.2,1.25,Inf),
+                   labels = c("1.05-1.1", "1.1-1.15", 
+                              "1.15-1.2", "1.2-1.25", "1.25+"),
+                   include.lowest = TRUE,
+                   right = FALSE)
+
+) %>% select(-c(Value_F,Value_O,Ratio_Value_F,Ratio_Value_O,Has_Value_Bet))
