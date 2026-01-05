@@ -369,15 +369,32 @@ V_MATCH_t=V_MATCH_t %>%
     Proba_P2_surface = 1 - Proba_P1_surface,
     Proba_P1_W = (P_optimal * Proba_P1 + (1-P_optimal) * Proba_P1_surface) * 100,
     Proba_P2_W = (P_optimal * Proba_P2 + (1-P_optimal) * Proba_P2_surface) * 100,
-    Predicted_Winner_elo = ifelse(Proba_P1_W > Proba_P2_W, Winner_id, Loser_id),
-    Result = ifelse(Predicted_Winner_elo == Winner_id, 1, 0)
-  ) 
+    
+    Favori=ifelse(Rank_W<Rank_L,Winner_id,Loser_id),
+    Outsider = ifelse(Favori == Winner_id, Loser_id, Winner_id),
+    Outcome=ifelse(Rank_W<Rank_L,"Fav_W","Out_W"),
+    
+    Odd_P1=round(100/Proba_P1_W,2),
+    Odd_P2=round(100/Proba_P2_W,2),
+    
+    Odd_F_elo = ifelse(Rank_W < Rank_L, Odd_P1, Odd_P2),
+    Odd_O_elo = ifelse(Rank_W < Rank_L, Odd_P2, Odd_P1),
+    
+    Odd_F_market = ifelse(Rank_W < Rank_L, Odd_W, Odd_L),
+    Odd_O_market = ifelse(Rank_W < Rank_L, Odd_L, Odd_W),
+           
+           
+   Predicted_Winner_market=case_when(Odd_F_market<Odd_O_market~Favori,
+                                     Odd_O_market<=Odd_F_market~Outsider),
+    
+   Predicted_Winner_elo = ifelse(Odd_F_elo < Odd_O_elo, Favori, Outsider),
+   
+   Outcome_elo = ifelse(Predicted_Winner_elo==Favori,"Fav_W","Out_W"),
+   
+   Outcome_market = ifelse(Predicted_Winner_market==Favori,"Fav_W","Out_W"),
+  ) %>% select(-c(P_optimal,Proba_P1,Proba_P1_surface,Proba_P2,Proba_P2_surface,Proba_P1_W,Proba_P2_W,Odd_P1,Odd_P2))  
 
-V_MATCH_t=V_MATCH_t %>% select(-c(P_optimal,Proba_P1,Proba_P1_surface,Proba_P2,Proba_P2_surface))  
 
-V_MATCH_t=V_MATCH_t %>% 
-  mutate(Proba_P1_W=round(Proba_P1_W,2),
-         Proba_P2_W=round(Proba_P2_W,2))
 
 # Global accuracy 
 
@@ -397,100 +414,117 @@ V_MATCH_t %>%
 
 ##### VALUE BET DETECTION #####
 
-V_MATCH_value=V_MATCH_t %>% 
-  mutate(Favori=ifelse(Rank_W<Rank_L,Winner_id,Loser_id),
-         Outsider = ifelse(Favori == Winner_id, Loser_id, Winner_id),
-         Outcome=ifelse(Rank_W<Rank_L,"Fav_W","Out_W")) %>% 
-  rename(Predicted_Winner_elo=Predicted_Winner) %>% 
-  mutate(Odd_F_market = ifelse(Rank_W < Rank_L, Odd_W, Odd_L),
-         Odd_O_market = ifelse(Rank_W < Rank_L, Odd_L, Odd_W),
-         Odd_P1=round(100/Proba_P1_W,2),
-         Odd_P2=round(100/Proba_P2_W,2),
-         Odd_F_elo = ifelse(Rank_W < Rank_L, Odd_P1, Odd_P2),
-         Odd_O_elo = ifelse(Rank_W < Rank_L, Odd_P2, Odd_P1),
-         Predicted_Winner_market=case_when(Odd_F_market<Odd_O_market~Favori,
-                                           Odd_O_market<Odd_F_market~Outsider)) %>% 
-  select(tournament,Categorie,Date,Round,Rank_W,Rank_L,Winner_id,Loser_id,Favori,Outsider,Predicted_Winner_elo,
-         Predicted_Winner_market,
-         Outcome,Odd_W,Odd_L,Odd_F_market,Odd_O_market,Odd_F_elo,Odd_O_elo)
+V_MATCH_value=V_MATCH_t %>% select(-c(Elo_P1,Elo_P2,Elo_P1_surface,Elo_P2_surface))
 
-### DETECT VALUE #####
+V_MATCH_value %>% group_by(Outcome,Outcome_elo) %>% count()
+
+V_MATCH_value %>% filter(!is.na(Outcome_market)) %>% group_by(Outcome,Outcome_market) %>% count()
+
+library(caret)
+
+predictions_elo <- factor(V_MATCH_value$Outcome_elo)
+
+predictions_market <- factor(V_MATCH_value$Outcome_market)
+
+realite <- factor(V_MATCH_value$Outcome)
+                  
+cm_elo <- confusionMatrix(predictions_elo, realite)
+
+print(cm_elo)
+
+cm_market <- confusionMatrix(predictions_market, realite)
+
+print(cm_market)
+
+V_MATCH_value %>% 
+  filter(!is.na(Outcome_market)) %>% 
+  group_by(Outcome_elo,Outcome_market,Outcome) %>% 
+  count() %>% 
+  arrange(Outcome)
+
+V_MATCH_value=V_MATCH_value %>% 
+  mutate(Odd_S=ifelse(Odd_F_market>=1.9,1,0))
+
+
+V_MATCH_value %>% group_by(Odd_S) %>% count()
 
 M=10
 
-V_MATCH_value=V_MATCH_value %>% 
-  mutate(
-# CRITÈRE 1 : Accord entre ELO et Marché
-Accord_Elo_Market = (Predicted_Winner_elo == Predicted_Winner_market),
-
-# CRITÈRE 2 & 3 : Value sur le FAVORI
-Value_F = (Odd_F_market > Odd_F_elo) & 
-  ((Odd_F_market / Odd_F_elo) >= 1.05) & Odd_F_market>=1.35,
-
-Ratio_Value_F = ifelse(Value_F, Odd_F_market / Odd_F_elo, NA),
-
-# CRITÈRE 2 & 3 : Value sur l'OUTSIDER
-Value_O = (Odd_O_market > Odd_O_elo) & 
-  ((Odd_O_market / Odd_O_elo) >= 1.05) & Odd_O_market>=1.35,
-
-Ratio_Value_O = ifelse(Value_O, Odd_O_market / Odd_O_elo, NA),
-
-# DÉTECTION FINALE DE VALUE BET
-Has_Value_Bet = Accord_Elo_Market & (Value_F | Value_O),
-
-# QUEL JOUEUR JOUER ?
-Value_Bet_On = case_when(
-  !Has_Value_Bet ~ "Aucun",
-  Value_F & !Value_O ~ "Favori",
-  !Value_F & Value_O ~ "Outsider",
-  Value_F & Value_O & Ratio_Value_F > Ratio_Value_O ~ "Favori",
-  Value_F & Value_O & Ratio_Value_F <= Ratio_Value_O ~ "Outsider",
-  TRUE ~ "Aucun"
-),
-
-# RATIO DE VALUE RETENU
-Ratio_Value_Bet = case_when(
-  Value_Bet_On == "Favori" ~ Ratio_Value_F,
-  Value_Bet_On == "Outsider" ~ Ratio_Value_O,
-  TRUE ~ NA_real_
-),
-
-# COTE JOUÉE
-Cote_Jouee = case_when(
-  Value_Bet_On == "Favori" ~ Odd_F_market,
-  Value_Bet_On == "Outsider" ~ Odd_O_market,
-  TRUE ~ NA_real_
-),
-
-# RÉSULTAT DU PARI
-Pari_Gagnant = case_when(
-  Value_Bet_On == "Aucun" ~ NA,
-  Value_Bet_On == "Favori" & Winner_id == Favori ~ TRUE,
-  Value_Bet_On == "Outsider" & Winner_id == Outsider ~ TRUE,
-  TRUE ~ FALSE
-),
-
-# GAIN/PERTE (mise de 1)
-Cash = case_when(
-  is.na(Pari_Gagnant) ~ 0,
-  Pari_Gagnant ~ M*Cote_Jouee - M,
-  !Pari_Gagnant ~ -M
-),
-
-  Tranche_Cote = cut(Cote_Jouee,
-                     breaks = c(1.35, 1.5, 1.75, 2, 2.5, 3, 4, 5, Inf),
-                     labels = c("1.35-1.50", "1.50-1.75", 
+FAV_VALUE=V_MATCH_value %>% 
+  mutate(VALUE=case_when(Predicted_Winner_market==Predicted_Winner_elo 
+                         & Outcome_elo=="Fav_W" & Outcome_market=="Fav_W" & Odd_S==0 
+                         & Odd_F_market>Odd_F_elo & Odd_F_market/Odd_F_elo>=1.05
+                         & Odd_F_market>=1.3~"VALUE_FAV",
+                         Predicted_Winner_market==Predicted_Winner_elo 
+                         & Outcome_elo=="Fav_W" & Outcome_market=="Fav_W"
+                         & Odd_O_market>Odd_O_elo & Odd_O_market/Odd_O_elo>=1.05~"VALUE_OUT",
+                         TRUE~"NO_VALUE"
+  ),
+      Odd_Played=case_when(VALUE=="VALUE_FAV"~Odd_F_market,
+                           VALUE=="VALUE_OUT"~Odd_O_market,
+                           TRUE~NA),
+  
+  
+  Odd_Cut= cut(Odd_Played,
+                     breaks = c(1,1.35, 1.5, 1.75, 2, 2.5, 3, 4, 5, Inf),
+                     labels = c("1.35-","1.35-1.5", "1.50-1.75", 
                                 "1.75-2.00", "2.00-2.50", "2.50-3.00", 
                                 "3.00-4.00", "4.00-5.00", "5.00+"),
                      include.lowest = TRUE,
                      right = FALSE),
+  
+  Outcome_Bet=case_when(VALUE=="VALUE_FAV"&Outcome=="Fav_W"~1,
+                        VALUE=="VALUE_OUT"&Outcome=="Out_W"~1,
+                        VALUE=="NO_VALUE"~NA,
+                        TRUE~0),
+  
+  Cash=case_when(Outcome_Bet==1~M*Odd_Played-M,
+                 Outcome_Bet==0~-M,
+                 TRUE~NA),
+  
+  Ratio=case_when(VALUE=="VALUE_FAV"~Odd_F_market/Odd_F_elo,
+                  VALUE=="VALUE_OUT"~Odd_O_market/Odd_O_elo,
+                  TRUE~NA),
+  
+  Ratio_Cut= cut(Ratio,
+               breaks = c(1.05, 1.1, 1.15, 1.2, 1.25,  Inf),
+               labels = c("1.05-1.1","1.1-1.15", "1.15-1.2", 
+                          "1.2-1.25", "1.25+"),
+               include.lowest = TRUE,
+               right = FALSE))
+
+FAV_VALUE %>% group_by(VALUE) %>% count()
+
+FAV_VALUE %>% filter(VALUE=="VALUE_FAV") %>% 
+  filter(Ratio<1.25 & Odd_Played<5) %>% 
+  group_by(Odd_Cut,Ratio_Cut) %>% 
+  summarise(N=n(),
+         Accuracy=mean(Outcome_Bet),
+         Cash=sum(Cash))
 
 
-Tranche_ratio = cut(Ratio_Value_Bet,
-                   breaks = c(1.05,1.1,1.15,1.2,1.25,Inf),
-                   labels = c("1.05-1.1", "1.1-1.15", 
-                              "1.15-1.2", "1.2-1.25", "1.25+"),
-                   include.lowest = TRUE,
-                   right = FALSE)
+FAV_VALUE %>% filter(VALUE=="VALUE_FAV") %>% 
+  filter(Ratio<1.25 & Odd_Played<5) %>% 
+  group_by(Odd_Cut,Surface_tournament) %>% 
+  summarise(N=n(),
+            Accuracy=mean(Outcome_Bet),
+            Cash=sum(Cash)) %>% 
+  arrange(Surface_tournament) %>% 
+  print(n=24)
 
-) %>% select(-c(Value_F,Value_O,Ratio_Value_F,Ratio_Value_O,Has_Value_Bet))
+FAV_VALUE %>% filter(VALUE=="VALUE_OUT") %>% 
+  filter(Ratio<1.25 & Odd_Played<5) %>% 
+  group_by(Odd_Cut,Ratio_Cut) %>% 
+  summarise(N=n(),
+            Accuracy=mean(Outcome_Bet),
+            Cash=sum(Cash)) %>% 
+  print(n=24)
+
+FAV_VALUE %>% filter(VALUE=="VALUE_OUT") %>% 
+  filter(Ratio<1.25 & Odd_Played<5) %>% 
+  group_by(Odd_Cut,Surface_tournament) %>% 
+  summarise(N=n(),
+            Accuracy=mean(Outcome_Bet),
+            Cash=sum(Cash)) %>% 
+  arrange(Surface_tournament) %>% 
+  print(n=28)
