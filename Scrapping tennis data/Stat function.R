@@ -146,7 +146,8 @@ get_h2h=function(winner_url,loser_url){
   return(data_set)
 }
 
-get_stat_h2h=function(data_set,surface,Season,tournoi,W,L,R){
+
+get_stat_h2h=function(data_set,surface,Season,tournoi,W,L,R,YB=NULL){
   
   Annee=Season
   
@@ -200,6 +201,14 @@ get_stat_h2h=function(data_set,surface,Season,tournoi,W,L,R){
         filter(Surface_tournament==surface)
       
     }
+    
+    ## arguement YB
+    
+    if(!is.null(YB)) {
+      data_set <- data_set %>%
+        filter(Year >= (Annee - YB))
+    }
+    
     data_set$G_W=rowSums(data_set[, c("Set1_W", "Set2_W", "Set3_W", "Set4_W", "Set5_W")], na.rm = TRUE)
     
     data_set$G_L=rowSums(data_set[, c("Set1_L", "Set2_L", "Set3_L", "Set4_L", "Set5_L")], na.rm = TRUE)
