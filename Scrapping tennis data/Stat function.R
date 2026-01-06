@@ -535,65 +535,77 @@ get_stat_h2h=function(data_set,surface,Season,tournoi,W,L,R,YB=NULL){
 # 
 
 
-match_count=function(df,player_id,lag_week,surface,Date_match){
+
+match_count <- function(df, player_id, lag_week, surface, Date_match) {
   
-  Date_min=Date_match-lag_week*7
+  Date_min <- Date_match - lag_week * 7
   
-  if(surface=="all"){    
+  if(surface == "all") {
     
-    df=df %>% 
-      filter((Winner_id==player_id|Loser_id==player_id) & (Date<Date_match & Date>=Date_min))
+    df_filtered <- df[(Winner_id == player_id | Loser_id == player_id) & 
+                        Date < Date_match & 
+                        Date >= Date_min]
+  } else {
+    df_filtered <- df[(Winner_id == player_id | Loser_id == player_id) & 
+                        Date < Date_match & 
+                        Date >= Date_min & 
+                        Surface_tournament == surface]
+  }
+  
+  if(nrow(df_filtered) == 0) {
     
-  }else{
+    stat_player=list(N_match = 0, N_Win = 0, N_Loss = 0,
+                N_Win_Fav_Book = 0, N_Win_Out_Book = 0,
+                N_Loss_Fav_Book = 0, N_Loss_Out_Book = 0,
+                N_Win_Fav_Rank = 0, N_Win_Out_Rank = 0,
+                N_Loss_Fav_Rank = 0, N_Loss_Out_Rank = 0)
     
-    df=df %>% 
-      filter((Winner_id==player_id|Loser_id==player_id) & (Date<Date_match & Date>=Date_min) & Surface_tournament==surface)
-    
+    return(stat_player)
   }
   
   # N_match
   
-  N_match=df %>% count() %>% as.numeric()
+  N_match=df_filtered %>% nrow()
   
   # N_W
   
-  N_W=df %>% filter(Winner_id==player_id) %>% count() %>% as.numeric()
+  N_W=df_filtered %>% filter(Winner_id==player_id) %>% nrow()
   
   # N_L
   
-  N_L=df %>% filter(Loser_id==player_id) %>% count() %>% as.numeric()
+  N_L=df_filtered %>% filter(Loser_id==player_id) %>% nrow()
   
   #N_W_F_B
   
-  N_W_F_B=df %>% filter(Winner_id==player_id & Odd_W<Odd_L) %>% count() %>% as.numeric()
+  N_W_F_B=df_filtered %>% filter(Winner_id==player_id & Odd_W<Odd_L) %>% nrow()
   
   #N_W_O_B
   
-  N_W_O_B=df %>% filter(Winner_id==player_id & Odd_W>=Odd_L) %>% count() %>% as.numeric()
+  N_W_O_B=df_filtered %>% filter(Winner_id==player_id & Odd_W>=Odd_L) %>% nrow()
   
   #N_W_F_R
   
-  N_W_F_R=df %>% filter(Winner_id==player_id & Rank_W<Rank_L) %>% count() %>% as.numeric()
+  N_W_F_R=df_filtered %>% filter(Winner_id==player_id & Rank_W<Rank_L) %>% nrow()
   
   #N_W_O_R
   
-  N_W_O_R=df %>% filter(Winner_id==player_id & Rank_W>Rank_L) %>% count() %>% as.numeric()
+  N_W_O_R=df_filtered %>% filter(Winner_id==player_id & Rank_W>Rank_L) %>% nrow()
   
   #N_L_F_B
   
-  N_L_F_B=df %>% filter(Loser_id==player_id & Odd_L<Odd_W) %>% count() %>% as.numeric()
+  N_L_F_B=df_filtered %>% filter(Loser_id==player_id & Odd_L<Odd_W) %>% nrow()
   
   #N_L_O_B
   
-  N_L_O_B=df %>% filter(Loser_id==player_id & Odd_L>=Odd_W) %>% count() %>% as.numeric()
+  N_L_O_B=df_filtered %>% filter(Loser_id==player_id & Odd_L>=Odd_W) %>% nrow()
   
   #N_L_F_R
   
-  N_L_F_R=df %>% filter(Loser_id==player_id & Rank_W<Rank_L) %>% count() %>% as.numeric()
+  N_L_F_R=df_filtered %>% filter(Loser_id==player_id & Rank_W<Rank_L) %>% nrow()
   
   #N_L_O_R
   
-  N_L_O_R=df %>% filter(Loser_id==player_id & Rank_W>Rank_L) %>% count() %>% as.numeric()
+  N_L_O_R=df_filtered %>% filter(Loser_id==player_id & Rank_W>Rank_L) %>% nrow()
   
   stat_player=list(N_match=N_match,
                    N_Win=N_W,
@@ -609,3 +621,4 @@ match_count=function(df,player_id,lag_week,surface,Date_match){
   
   return(stat_player)
 }
+
