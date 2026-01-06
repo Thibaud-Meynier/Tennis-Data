@@ -532,6 +532,7 @@ get_stat_h2h=function(data_set,surface,Season,tournoi,W,L,R,YB=NULL){
 # }
 # 
 
+
 match_count=function(df,player_id,lag_week,surface,Date_match){
   
   Date_min=Date_match-lag_week*7
@@ -598,7 +599,11 @@ match_count=function(df,player_id,lag_week,surface,Date_match){
                    N_Win_Fav_Book=N_W_F_B,
                    N_Win_Out_Book=N_W_O_B,
                    N_Loss_Fav_Book=N_L_F_B,
-                   N_Loss_Out_Book=N_L_O_B)    
+                   N_Loss_Out_Book=N_L_O_B,
+                   N_Win_Fav_Rank=N_W_F_R,
+                   N_Win_Out_Rank=N_W_O_R,
+                   N_Loss_Fav_Rank=N_L_F_R,
+                   N_Loss_Out_Rank=N_L_O_R)    
   
   return(stat_player)
 }
