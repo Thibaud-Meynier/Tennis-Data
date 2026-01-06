@@ -186,7 +186,10 @@ get_stat_h2h=function(data_set,surface,Season,tournoi,W,L,R,YB=NULL){
                     Number_Set_Won=N_S_W_L,
                     Number_Games_Won=N_G_W_L)
     
-  } else if (is_empty(ref)==T){
+  } else if (is_empty(data_set %>% 
+                        filter(stringdist(Tournament, tournoi, method = "lv")<=5 & Year==Annee & Round==R) %>% 
+                        pull(row_i) %>% 
+                        as.numeric())==T)){
     
     # Retourner un data_set vide ou effectuer une autre action appropriée
     data_set <- data_set
