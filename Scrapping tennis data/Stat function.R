@@ -153,6 +153,11 @@ get_stat_h2h=function(data_set,surface,Season,tournoi,W,L,R,YB=NULL){
   
   Annee=Season
   
+  ref=data_set %>% 
+    filter(stringdist(Tournament, tournoi, method = "lv")<=5 & Year==Annee & Round==R) %>% 
+    pull(row_i) %>% 
+    as.numeric()
+  
   if (nrow(data_set) == 0) {
     # Retourner un data_set vide ou effectuer une autre action appropriée
     data_set <- data_set
@@ -181,7 +186,37 @@ get_stat_h2h=function(data_set,surface,Season,tournoi,W,L,R,YB=NULL){
                     Number_Set_Won=N_S_W_L,
                     Number_Games_Won=N_G_W_L)
     
-  } else {
+  } else if (is_empty(ref)==T){
+    
+    # Retourner un data_set vide ou effectuer une autre action appropriée
+    data_set <- data_set
+    
+    # Winner stat
+    
+    N_W_W=0
+    
+    N_S_W_W=0
+    
+    N_G_W_W=0
+    
+    winner_stat=list(Number_Win=N_W_W,
+                     Number_Set_Won=N_S_W_W,
+                     Number_Games_Won=N_G_W_W)
+    
+    # Loser stat
+    
+    N_W_L=0
+    
+    N_S_W_L=0
+    
+    N_G_W_L=0
+    
+    loser_stat=list(Number_Win=N_W_L,
+                    Number_Set_Won=N_S_W_L,
+                    Number_Games_Won=N_G_W_L)
+    
+    
+  }  else {
     
     ref=data_set %>% 
       filter(stringdist(Tournament, tournoi, method = "lv")<=5 & Year==Annee & Round==R) %>% 
@@ -189,7 +224,7 @@ get_stat_h2h=function(data_set,surface,Season,tournoi,W,L,R,YB=NULL){
       pull(row_i) %>% 
       as.numeric()
     
-    if(surface=="all"){ #nrow(data_set)>1
+    if(surface=="all"){ 
       
       data_set=data_set %>%
         filter(row_i<ref) %>%
