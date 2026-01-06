@@ -1,3 +1,5 @@
+library(stringdist)
+
 ##### RED V TOURNAMENT F
 
 load(paste0(here(),"/Scrapping tennis data/Tournament/INFO_TOURNAMENT_2002_2025.RData"))
