@@ -149,6 +149,7 @@ get_h2h=function(winner_url,loser_url){
 }
 
 
+
 get_stat_h2h=function(data_set,surface,Season,tournoi,W,L,R,YB=NULL){
   
   Annee=Season
@@ -187,9 +188,9 @@ get_stat_h2h=function(data_set,surface,Season,tournoi,W,L,R,YB=NULL){
                     Number_Games_Won=N_G_W_L)
     
   } else if (is_empty(data_set %>% 
-                        filter(stringdist(Tournament, tournoi, method = "lv")<=5 & Year==Annee & Round==R) %>% 
-                        pull(row_i) %>% 
-                        as.numeric())==T)){
+                      filter(stringdist(Tournament, tournoi, method = "lv")<=5 & Year==Annee & Round==R) %>% 
+                      pull(row_i) %>% 
+                      as.numeric())==T){
     
     # Retourner un data_set vide ou effectuer une autre action appropriée
     data_set <- data_set
@@ -234,6 +235,8 @@ get_stat_h2h=function(data_set,surface,Season,tournoi,W,L,R,YB=NULL){
         select(-row_i)
       
     }else {
+      
+      surface=ifelse(surface %in% c("Indoors","Various"),"Hard",surface)
       
       data_set=data_set %>%
         filter(row_i<ref) %>%
