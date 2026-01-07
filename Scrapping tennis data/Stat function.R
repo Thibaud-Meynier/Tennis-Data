@@ -577,6 +577,7 @@ get_stat_h2h=function(data_set,surface,Season,tournoi,W,L,R,YB=NULL){
 
 
 
+
 match_count <- function(df, player_id, lag_week, surface, Date_match) {
   
   Date_min <- Date_match - lag_week * 7
@@ -587,6 +588,9 @@ match_count <- function(df, player_id, lag_week, surface, Date_match) {
                         Date < Date_match & 
                         Date >= Date_min]
   } else {
+    
+    surface=ifelse(surface %in% c("Indoors","Various"),"Hard",surface)
+    
     df_filtered <- df[(Winner_id == player_id | Loser_id == player_id) & 
                         Date < Date_match & 
                         Date >= Date_min & 
@@ -596,10 +600,10 @@ match_count <- function(df, player_id, lag_week, surface, Date_match) {
   if(nrow(df_filtered) == 0) {
     
     stat_player=list(N_match = 0, N_Win = 0, N_Loss = 0,
-                N_Win_Fav_Book = 0, N_Win_Out_Book = 0,
-                N_Loss_Fav_Book = 0, N_Loss_Out_Book = 0,
-                N_Win_Fav_Rank = 0, N_Win_Out_Rank = 0,
-                N_Loss_Fav_Rank = 0, N_Loss_Out_Rank = 0)
+                     N_Win_Fav_Book = 0, N_Win_Out_Book = 0,
+                     N_Loss_Fav_Book = 0, N_Loss_Out_Book = 0,
+                     N_Win_Fav_Rank = 0, N_Win_Out_Rank = 0,
+                     N_Loss_Fav_Rank = 0, N_Loss_Out_Rank = 0)
     
     return(stat_player)
   }
