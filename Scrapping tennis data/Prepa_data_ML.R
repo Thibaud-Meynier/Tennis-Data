@@ -143,7 +143,9 @@ proba_calcul=function(elo_p1,elo_p2){
   return(proba)
 }
 
+proba_calcul(1821.4,1651.5)
 
+p=0.5
 
 TABLE = V_MATCH_t %>% 
   mutate(
@@ -182,13 +184,13 @@ TABLE = V_MATCH_t %>%
     
     Elo_F = case_when(Rank_W < Rank_L ~ Elo_W, TRUE ~ Elo_L),
     Elo_s_F = case_when(Rank_W < Rank_L ~ Elo_W_surface, TRUE ~ Elo_L_surface),
-    Elo_O = case_when(Rank_L < Rank_L ~ Elo_W, TRUE ~ Elo_L),
-    Elo_s_O = case_when(Rank_L < Rank_L ~  Elo_W_surface, TRUE ~ Elo_L_surface),
+    Elo_O = case_when(Rank_L < Rank_W ~ Elo_W, TRUE ~ Elo_L),
+    Elo_s_O = case_when(Rank_L < Rank_W ~  Elo_W_surface, TRUE ~ Elo_L_surface),
     P_F = proba_calcul(Elo_F,Elo_O),
     P_s_F = proba_calcul(Elo_s_F,Elo_s_O),
     P_O = 1-P_F,
     P_s_O = 1-P_s_F,
-    
+    P_F_comb=(p * P_s_F) + ((1-p) * P_F),
     # H2H - Historique complet
     H2H_F_W = case_when(Rank_W < Rank_L ~ H2H_Winner_W, TRUE ~ H2H_Loser_W),
     H2H_O_W = case_when(Rank_L < Rank_W ~ H2H_Winner_W, TRUE ~ H2H_Loser_W),
@@ -247,14 +249,14 @@ TABLE = V_MATCH_t %>%
   ) %>% 
   select(
     tournament, Season, Date, Week_tournament, Categorie, Surface_tournament, Round,
-    Favori, Outsider, Issue,
+    Favori, Outsider,Winner_id, Issue,
     Rank_F, Points_F, Odd_F,
     Rank_O, Points_O, Odd_O,
     Country_F, Country_O, 
     Size_F, Size_O, Weight_F, Weight_O,
     IMC_F,IMC_O,
     Birth_date_F, Birth_date_O, Age_F,Age_O,Hand_F, Hand_O,Hand_Score_F,Hand_Score_O,
-    Elo_F,Elo_s_F,Elo_O,Elo_s_O,P_F,P_s_F,P_O,P_s_O,
+    Elo_F,Elo_s_F,Elo_O,Elo_s_O,P_F,P_s_F,P_O,P_s_O,P_F_comb,
     H2H_F_W, H2H_O_W, H2H_F_Set_Won, H2H_O_Set_Won,
     H2H_F_Games_Won, H2H_O_Games_Won,
     H2H_s_F_W, H2H_s_O_W, H2H_s_F_Set_Won, H2H_s_O_Set_Won,
@@ -272,6 +274,9 @@ TABLE = V_MATCH_t %>%
 
 TABLE_ML=TABLE %>%
   mutate(
+    
+    Issue = as.factor(Issue),
+    
     # Différences de classement et points
     Diff_Rank = abs(Rank_F - Rank_O),
     Diff_Points = log(Points_F) - log(Points_O),
@@ -325,11 +330,11 @@ TABLE_ML=TABLE %>%
   ) %>%
   select(
     tournament, Season, Date, Week_tournament, Categorie, Surface_tournament, Round,
-    Favori, Outsider, Issue,Odd_F,Odd_O,S_Odd,
+    Favori, Outsider,Winner_id, Issue, Odd_F,Odd_O,S_Odd,
     Country_F, Country_O, Hand_F, Hand_O,Diff_Hand_Score,
     Diff_Rank, Diff_Points,
     Diff_Size, Diff_Weight,Diff_IMC, Diff_Age,Diff_Log_Age,Diff_Dist_Peak_Age,
-    P_F,P_s_F,
+    P_F,P_s_F,P_F_comb,
     Diff_H2H_W, Diff_H2H_Set_Won, Diff_H2H_Games_Won,
     Diff_H2H_s_W, Diff_H2H_s_Set_Won, Diff_H2H_s_Games_Won,
     Diff_H2H_W_3Y, Diff_H2H_Set_Won_3Y, Diff_H2H_Games_Won_3Y,
@@ -339,5 +344,3 @@ TABLE_ML=TABLE %>%
     Diff_N_Win_12, Diff_N_Loss_12,
     Diff_N_Win_s_12, Diff_N_Loss_s_12
   )
-  
-
