@@ -276,6 +276,7 @@ TABLE_ML=TABLE %>%
     Diff_Rank = abs(Rank_F - Rank_O),
     Diff_Points = log(Points_F) - log(Points_O),
     
+    S_Odd = case_when(Odd_F>=1.9~1,TRUE~0),
     # Différences physiques
     Diff_Size = Size_F - Size_O,
     Diff_Weight = Weight_F - Weight_O,
@@ -324,7 +325,7 @@ TABLE_ML=TABLE %>%
   ) %>%
   select(
     tournament, Season, Date, Week_tournament, Categorie, Surface_tournament, Round,
-    Favori, Outsider, Issue,
+    Favori, Outsider, Issue,Odd_F,Odd_O,S_Odd,
     Country_F, Country_O, Hand_F, Hand_O,Diff_Hand_Score,
     Diff_Rank, Diff_Points,
     Diff_Size, Diff_Weight,Diff_IMC, Diff_Age,Diff_Log_Age,Diff_Dist_Peak_Age,
@@ -339,3 +340,4 @@ TABLE_ML=TABLE %>%
     Diff_N_Win_s_12, Diff_N_Loss_s_12
   )
   
+
