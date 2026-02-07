@@ -104,7 +104,7 @@ V_MATCH_t=V_MATCH %>%
                                       TRUE~Country_tournament)) 
 
 V_MATCH_t=V_MATCH_t %>% 
-  group_by(tournament,Season,Phase,Round,Date,Week_tournament,Winner_id,Loser_id) %>% 
+  group_by(tournament,Country_tournament,Season,Phase,Round,Date,Week_tournament,Winner_id,Loser_id) %>% 
   mutate(CLE_LIGNE=row_number()) %>% 
   filter(CLE_LIGNE==1) %>% 
   select(-CLE_LIGNE)
@@ -124,7 +124,7 @@ V_MATCH_t=V_MATCH_t %>%
                              "ATP 1000","ATP 500",'ATP 250')|tournament %in% c("Atp Cup","United Cup")) & Season>=2021)
 
 V_MATCH_t=V_MATCH_t %>% ungroup() %>% 
-  select(tournament,Season,Date,Week_tournament,Categorie,Surface_tournament,Round,Winner_id,Loser_id,Odd_W,Odd_L,info,Winner,Loser)
+  select(tournament,Country_tournament,Season,Date,Week_tournament,Categorie,Surface_tournament,Round,Winner_id,Loser_id,Odd_W,Odd_L,info,Winner,Loser)
 
 
 V_RANK=data.frame()
