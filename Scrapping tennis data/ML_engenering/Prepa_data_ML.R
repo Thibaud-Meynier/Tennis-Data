@@ -1,6 +1,8 @@
 library(tidyverse)
 library(progress)
 
+load("~/work/Tennis-Data/Scrapping tennis data/MATCH_STATS.RData")
+
 load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING_PLAYERS.RData"))
 
 last_elo=function(base,player_name,surface="all",Date_match,tournoi){
@@ -143,8 +145,6 @@ proba_calcul=function(elo_p1,elo_p2){
   return(proba)
 }
 
-proba_calcul(1821.4,1651.5)
-
 p=0.5
 
 TABLE = V_MATCH_t %>% 
@@ -191,13 +191,17 @@ TABLE = V_MATCH_t %>%
     P_O = 1-P_F,
     P_s_O = 1-P_s_F,
     P_F_comb=(p * P_s_F) + ((1-p) * P_F),
+    
     # H2H - Historique complet
+    
     H2H_F_W = case_when(Rank_W < Rank_L ~ H2H_Winner_W, TRUE ~ H2H_Loser_W),
     H2H_O_W = case_when(Rank_L < Rank_W ~ H2H_Winner_W, TRUE ~ H2H_Loser_W),
     H2H_F_Set_Won = case_when(Rank_W < Rank_L ~ H2H_Winner_Set_Won, TRUE ~ H2H_Loser_Set_Won),
     H2H_O_Set_Won = case_when(Rank_L < Rank_W ~ H2H_Winner_Set_Won, TRUE ~ H2H_Loser_Set_Won),
     H2H_F_Games_Won = case_when(Rank_W < Rank_L ~ H2H_Winner_Games_Won, TRUE ~ H2H_Loser_Games_Won),
     H2H_O_Games_Won = case_when(Rank_L < Rank_W ~ H2H_Winner_Games_Won, TRUE ~ H2H_Loser_Games_Won),
+    H2H_F_Win_Rate = (H2H_F_W/(H2H_F_W+H2H_O_W)),
+    
     
     # H2H - Même surface
     H2H_s_F_W = case_when(Rank_W < Rank_L ~ H2H_s_Winner_W, TRUE ~ H2H_s_Loser_W),
@@ -228,24 +232,47 @@ TABLE = V_MATCH_t %>%
     O_N_Win_4 = case_when(Rank_L < Rank_W ~ Winner_N_Win_4, TRUE ~ Loser_N_Win_4),
     F_N_Loss_4 = case_when(Rank_W < Rank_L ~ Winner_N_Loss_4, TRUE ~ Loser_N_Loss_4),
     O_N_Loss_4 = case_when(Rank_L < Rank_W ~ Winner_N_Loss_4, TRUE ~ Loser_N_Loss_4),
+    F_Win_Rate_4 = (F_N_Win_4/(F_N_Win_4+F_N_Loss_4)),
+    F_Win_Rate_4 = ifelse(is.na(F_Win_Rate_4),0,F_Win_Rate_4)*100,
+    O_Win_Rate_4 = (O_N_Win_4/(O_N_Win_4+O_N_Loss_4)),
+    O_Win_Rate_4 = ifelse(is.na(O_Win_Rate_4),0,O_Win_Rate_4)*100,
     
     # Forme récente sur surface - 4 derniers matchs
     F_N_Win_s_4 = case_when(Rank_W < Rank_L ~ Winner_N_Win_s_4, TRUE ~ Loser_N_Win_s_4),
     O_N_Win_s_4 = case_when(Rank_L < Rank_W ~ Winner_N_Win_s_4, TRUE ~ Loser_N_Win_s_4),
     F_N_Loss_s_4 = case_when(Rank_W < Rank_L ~ Winner_N_Loss_s_4, TRUE ~ Loser_N_Loss_s_4),
     O_N_Loss_s_4 = case_when(Rank_L < Rank_W ~ Winner_N_Loss_s_4, TRUE ~ Loser_N_Loss_s_4),
+    F_Win_Rate_s_4 = (F_N_Win_s_4/(F_N_Win_s_4+F_N_Loss_s_4)),
+    F_Win_Rate_s_4 = ifelse(is.na(F_Win_Rate_s_4),0,F_Win_Rate_s_4)*100,
+    O_Win_Rate_s_4 = (O_N_Win_s_4/(O_N_Win_s_4+O_N_Loss_s_4)),
+    O_Win_Rate_s_4 = ifelse(is.na(O_Win_Rate_s_4),0,O_Win_Rate_s_4)*100,
     
     # Forme récente - 12 derniers matchs
     F_N_Win_12 = case_when(Rank_W < Rank_L ~ Winner_N_Win_12, TRUE ~ Loser_N_Win_12),
     O_N_Win_12 = case_when(Rank_L < Rank_W ~ Winner_N_Win_12, TRUE ~ Loser_N_Win_12),
     F_N_Loss_12 = case_when(Rank_W < Rank_L ~ Winner_N_Loss_12, TRUE ~ Loser_N_Loss_12),
     O_N_Loss_12 = case_when(Rank_L < Rank_W ~ Winner_N_Loss_12, TRUE ~ Loser_N_Loss_12),
+    F_Win_Rate_12 = (F_N_Win_12/(F_N_Win_12+F_N_Loss_12)),
+    F_Win_Rate_12 = ifelse(is.na(F_Win_Rate_12),0,F_Win_Rate_12)*100,
+    O_Win_Rate_12 = (O_N_Win_12/(O_N_Win_12+O_N_Loss_12)),
+    O_Win_Rate_12 = ifelse(is.na(O_Win_Rate_12),0,O_Win_Rate_12)*100,
     
     # Forme récente sur surface - 12 derniers matchs
     F_N_Win_s_12 = case_when(Rank_W < Rank_L ~ Winner_N_Win_s_12, TRUE ~ Loser_N_Win_s_12),
     O_N_Win_s_12 = case_when(Rank_L < Rank_W ~ Winner_N_Win_s_12, TRUE ~ Loser_N_Win_s_12),
     F_N_Loss_s_12 = case_when(Rank_W < Rank_L ~ Winner_N_Loss_s_12, TRUE ~ Loser_N_Loss_s_12),
-    O_N_Loss_s_12 = case_when(Rank_L < Rank_W ~ Winner_N_Loss_s_12, TRUE ~ Loser_N_Loss_s_12)
+    O_N_Loss_s_12 = case_when(Rank_L < Rank_W ~ Winner_N_Loss_s_12, TRUE ~ Loser_N_Loss_s_12),
+    F_Win_Rate_s_12 = (F_N_Win_s_12/(F_N_Win_s_12+F_N_Loss_s_12)),
+    F_Win_Rate_s_12 = ifelse(is.na(F_Win_Rate_s_12),0,F_Win_Rate_s_12)*100,
+    O_Win_Rate_s_12 = (O_N_Win_s_12/(O_N_Win_s_12+O_N_Loss_s_12)),
+    O_Win_Rate_s_12 = ifelse(is.na(O_Win_Rate_s_12),0,O_Win_Rate_s_12)*100,
+    
+    # Momentum 
+    F_Momentum = case_when(F_Win_Rate_4>F_Win_Rate_12~1,TRUE~0),
+    F_Momentum_s = case_when(F_Win_Rate_s_4>F_Win_Rate_s_12~1,TRUE~0),
+    O_Momentum = case_when(O_Win_Rate_4>O_Win_Rate_12~1,TRUE~0),
+    O_Momentum_s = case_when(O_Win_Rate_s_4>O_Win_Rate_s_12~1,TRUE~0)
+    
   ) %>% 
   select(
     tournament, Season, Date, Week_tournament, Categorie, Surface_tournament, Round,
@@ -268,7 +295,10 @@ TABLE = V_MATCH_t %>%
     F_N_Win_4, O_N_Win_4, F_N_Loss_4, O_N_Loss_4,
     F_N_Win_s_4, O_N_Win_s_4, F_N_Loss_s_4, O_N_Loss_s_4,
     F_N_Win_12, O_N_Win_12, F_N_Loss_12, O_N_Loss_12,
-    F_N_Win_s_12, O_N_Win_s_12, F_N_Loss_s_12, O_N_Loss_s_12
+    F_N_Win_s_12, O_N_Win_s_12, F_N_Loss_s_12, O_N_Loss_s_12,
+    F_Win_Rate_4,F_Win_Rate_s_4,F_Win_Rate_12,F_Win_Rate_s_12,
+    O_Win_Rate_4,O_Win_Rate_s_4,O_Win_Rate_12,O_Win_Rate_s_12,
+    F_Momentum,F_Momentum_s,O_Momentum,O_Momentum_s
   )
 
 
@@ -282,6 +312,7 @@ TABLE_ML=TABLE %>%
     Diff_Points = log(Points_F) - log(Points_O),
     
     S_Odd = case_when(Odd_F>=1.9~1,TRUE~0),
+    
     # Différences physiques
     Diff_Size = Size_F - Size_O,
     Diff_Weight = Weight_F - Weight_O,
