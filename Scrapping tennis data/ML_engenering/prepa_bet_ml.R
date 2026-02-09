@@ -1,6 +1,19 @@
+library(here)
+library(tidyverse)
+library(data.table)
+library(progress)
+library(rvest)
+library(dplyr)
+library(stringr)
+library(lubridate)
+library(xml2)
+library(sjmisc)
+
 source(paste0(getwd(),"/Scrapping tennis data/Stat function.R"))
 
 load(paste0(getwd(),"/Scrapping tennis data/Info_players/V_PLAYERS_RED.RData"))
+
+year_lim=2017
 
 V_PLAYERS=V_PLAYERS %>% 
   group_by(Player_name,Birth_date,Hand,Size,Weight) %>% 
@@ -25,7 +38,7 @@ V_MATCH=data.frame()
 
 #i=2016
 
-for (i in 2020:2025){
+for (i in year_lim:2025){
   
   load(file = paste0(getwd(),"/Scrapping tennis data/Extraction/ATP_",i,"_Extraction.RData"))
   
@@ -52,7 +65,7 @@ rm(table_stock)
 
 load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2017_2023.RData"))
 
-V_TOURNAMENT_2017_2023=V_TOURNAMENT_F %>% filter(Year>=2020)
+V_TOURNAMENT_2017_2023=V_TOURNAMENT_F %>% filter(Year>=year_lim)
 
 load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2024.RData"))
 
@@ -100,7 +113,8 @@ V_MATCH_t=V_MATCH %>%
   mutate(Week_tournament=isoweek(Date),
          Country_tournament=case_when(tournament=="Olympics - Paris"~"France",
                                       tournament=="Olympics - Tokyo"~"Japan",
-                                      tournament=="Masters Cup Atp"~"Italy",
+                                      tournament=="Masters Cup Atp" & Season>2021~"Italy",
+                                      tournament=="Masters Cup Atp" & Season %in% c(2009:2020)~"Great Britain",
                                       TRUE~Country_tournament)) 
 
 V_MATCH_t=V_MATCH_t %>% 
@@ -121,7 +135,7 @@ V_MATCH_HIST=V_MATCH_t
 V_MATCH_t=V_MATCH_t %>% 
   filter(Phase=="Main Draw" & 
            (Categorie %in% c("Grand Slam","Olympics","Masters",
-                             "ATP 1000","ATP 500",'ATP 250')|tournament %in% c("Atp Cup","United Cup")) & Season>=2021)
+                             "ATP 1000","ATP 500",'ATP 250')|tournament %in% c("Atp Cup","United Cup")) & Season>=year_lim)
 
 V_MATCH_t=V_MATCH_t %>% ungroup() %>% 
   select(tournament,Country_tournament,Season,Date,Week_tournament,Categorie,Surface_tournament,Round,Winner_id,Loser_id,Odd_W,Odd_L,info,Winner,Loser)
@@ -129,7 +143,7 @@ V_MATCH_t=V_MATCH_t %>% ungroup() %>%
 
 V_RANK=data.frame()
 
-for (i in 2020:2025){
+for (i in year_lim:2025){
   
   load(file = paste0(getwd(),"/Scrapping tennis data/Rank/RANK_ATP_",i,".RData"))
   
@@ -217,6 +231,17 @@ V_MATCH_t$H2H_Loser_Set_Won=NA
 V_MATCH_t$H2H_Winner_Games_Won=NA
 V_MATCH_t$H2H_Loser_Games_Won=NA
 
+# 3Y
+
+V_MATCH_t$H2H_Winner_W_3Y=NA
+V_MATCH_t$H2H_Loser_W_3Y=NA
+
+V_MATCH_t$H2H_Winner_Set_Won_3Y=NA
+V_MATCH_t$H2H_Loser_Set_Won_3Y=NA
+
+V_MATCH_t$H2H_Winner_Games_Won_3Y=NA
+V_MATCH_t$H2H_Loser_Games_Won_3Y=NA
+
 # Surface
 
 V_MATCH_t$H2H_s_Winner_W=NA
@@ -228,23 +253,91 @@ V_MATCH_t$H2H_s_Loser_Set_Won=NA
 V_MATCH_t$H2H_s_Winner_Games_Won=NA
 V_MATCH_t$H2H_s_Loser_Games_Won=NA
 
+# Surface 3Y
+
+V_MATCH_t$H2H_s_Winner_W_3Y=NA
+V_MATCH_t$H2H_s_Loser_W_3Y=NA
+
+V_MATCH_t$H2H_s_Winner_Set_Won_3Y=NA
+V_MATCH_t$H2H_s_Loser_Set_Won_3Y=NA
+
+V_MATCH_t$H2H_s_Winner_Games_Won_3Y=NA
+V_MATCH_t$H2H_s_Loser_Games_Won_3Y=NA
+
 # Stats joueur encours global 4 dernières semaines
 
-# 4 12 24 48
+# 4 Weeks 
 
 V_MATCH_t$Winner_N_Win_4=NA
 V_MATCH_t$Winner_N_Loss_4=NA
 
+V_MATCH_t$Winner_N_Win_Fav_Rank_4=NA
+V_MATCH_t$Winner_N_Win_Out_Rank_4=NA
+V_MATCH_t$Winner_N_Loss_Fav_Rank_4=NA
+V_MATCH_t$Winner_N_Loss_Out_Rank_4=NA
+
 V_MATCH_t$Loser_N_Win_4=NA
 V_MATCH_t$Loser_N_Loss_4=NA
 
-# Surface
+V_MATCH_t$Loser_N_Win_Fav_Rank_4=NA
+V_MATCH_t$Loser_N_Win_Out_Rank_4=NA
+V_MATCH_t$Loser_N_Loss_Fav_Rank_4=NA
+V_MATCH_t$Loser_N_Loss_Out_Rank_4=NA
+
+# 12 weeks 
+
+V_MATCH_t$Winner_N_Win_12=NA
+V_MATCH_t$Winner_N_Loss_12=NA
+
+V_MATCH_t$Winner_N_Win_Fav_Rank_12=NA
+V_MATCH_t$Winner_N_Win_Out_Rank_12=NA
+V_MATCH_t$Winner_N_Loss_Fav_Rank_12=NA
+V_MATCH_t$Winner_N_Loss_Out_Rank_12=NA
+
+V_MATCH_t$Loser_N_Win_12=NA
+V_MATCH_t$Loser_N_Loss_12=NA
+
+V_MATCH_t$Loser_N_Win_Fav_Rank_12=NA
+V_MATCH_t$Loser_N_Win_Out_Rank_12=NA
+V_MATCH_t$Loser_N_Loss_Fav_Rank_12=NA
+V_MATCH_t$Loser_N_Loss_Out_Rank_12=NA
+
+# Surface 4 weeks 
 
 V_MATCH_t$Winner_N_Win_s_4=NA
 V_MATCH_t$Winner_N_Loss_s_4=NA
 
+V_MATCH_t$Winner_N_Win_Fav_Rank_s_4=NA
+V_MATCH_t$Winner_N_Win_Out_Rank_s_4=NA
+V_MATCH_t$Winner_N_Loss_Fav_Rank_s_4=NA
+V_MATCH_t$Winner_N_Loss_Out_Rank_s_4=NA
+
 V_MATCH_t$Loser_N_Win_s_4=NA
 V_MATCH_t$Loser_N_Loss_s_4=NA
+
+V_MATCH_t$Loser_N_Win_Fav_Rank_s_4=NA
+V_MATCH_t$Loser_N_Win_Out_Rank_s_4=NA
+V_MATCH_t$Loser_N_Loss_Fav_Rank_s_4=NA
+V_MATCH_t$Loser_N_Loss_Out_Rank_s_4=NA
+
+# Surface 12 weeks 
+
+V_MATCH_t$Winner_N_Win_s_12=NA
+V_MATCH_t$Winner_N_Loss_s_12=NA
+
+V_MATCH_t$Winner_N_Win_Fav_Rank_s_12=NA
+V_MATCH_t$Winner_N_Win_Out_Rank_s_12=NA
+V_MATCH_t$Winner_N_Loss_Fav_Rank_s_12=NA
+V_MATCH_t$Winner_N_Loss_Out_Rank_s_12=NA
+
+V_MATCH_t$Loser_N_Win_s_12=NA
+V_MATCH_t$Loser_N_Loss_s_12=NA
+
+V_MATCH_t$Loser_N_Win_Fav_Rank_s_12=NA
+V_MATCH_t$Loser_N_Win_Out_Rank_s_12=NA
+V_MATCH_t$Loser_N_Loss_Fav_Rank_s_12=NA
+V_MATCH_t$Loser_N_Loss_Out_Rank_s_12=NA
+
 
 pb= progress_bar$new(
   format = "[:bar] :current/:total (:percent) ETA: :eta",
@@ -253,9 +346,11 @@ pb= progress_bar$new(
   width = 60
 )
 
-i=13454
+#i=13454
 
-for (i in 5169:nrow(V_MATCH_t)){
+i=37
+
+for (i in 1:nrow(V_MATCH_t)){
   
   ### INFO function ####
   
@@ -274,14 +369,20 @@ for (i in 5169:nrow(V_MATCH_t)){
   ### CALCUL Stats ###
   
   # h2h
+  
   result=get_h2h(winner_url,loser_url)
   
   stat_g=get_stat_h2h(result,"all",Season,tournoi,W,L,R)
   
+  stat_g_3y=get_stat_h2h(result,"all",Season,tournoi,W,L,R,YB=Season-3)
+  
   stat_s=get_stat_h2h(result,surface,Season,tournoi,W,L,R)
+  
+  stat_s_3y=get_stat_h2h(result,surface,Season,tournoi,W,L,R,YB=Season-3)
   
   # global
   
+  # 4 w
   match_count_w_g_4=match_count(V_MATCH_HIST,winner_id,4,"all",Date_match)
   
   match_count_l_g_4=match_count(V_MATCH_HIST,loser_id,4,"all",Date_match)
@@ -290,47 +391,119 @@ for (i in 5169:nrow(V_MATCH_t)){
   
   match_count_l_s_4=match_count(V_MATCH_HIST,loser_id,4,surface,Date_match)
   
+  # 12 w
+  
+  match_count_w_g_12=match_count(V_MATCH_HIST,winner_id,12,"all",Date_match)
+  
+  match_count_l_g_12=match_count(V_MATCH_HIST,loser_id,12,"all",Date_match)
+  
+  match_count_w_s_12=match_count(V_MATCH_HIST,winner_id,12,surface,Date_match)
+  
+  match_count_l_s_12=match_count(V_MATCH_HIST,loser_id,12,surface,Date_match)
+  
   ### Assigniation des valeurs ###
   
   # Global
+  V_MATCH_t$H2H_Winner_W[i] = stat_g$W$Number_Win
+  V_MATCH_t$H2H_Loser_W[i] = stat_g$L$Number_Win
   
-  V_MATCH_t$H2H_Winner_W[i]=stat_g$W$Number_Win
-  V_MATCH_t$H2H_Loser_W[i]=stat_g$L$Number_Win
+  V_MATCH_t$H2H_Winner_Set_Won[i] = stat_g$W$Number_Set_Won
+  V_MATCH_t$H2H_Loser_Set_Won[i] = stat_g$L$Number_Set_Won
   
-  V_MATCH_t$H2H_Winner_Set_Won[i]=stat_g$W$Number_Set_Won
-  V_MATCH_t$H2H_Loser_Set_Won[i]=stat_g$L$Number_Set_Won
+  V_MATCH_t$H2H_Winner_Games_Won[i] = stat_g$W$Number_Games_Won
+  V_MATCH_t$H2H_Loser_Games_Won[i] = stat_g$L$Number_Games_Won
   
-  V_MATCH_t$H2H_Winner_Games_Won[i]=stat_g$W$Number_Games_Won
-  V_MATCH_t$H2H_Loser_Games_Won[i]=stat_g$L$Number_Games_Won
-
-  # Surface
+  # Global 3Y
+  V_MATCH_t$H2H_Winner_W_3Y[i] = stat_g_3y$W$Number_Win
+  V_MATCH_t$H2H_Loser_W_3Y[i] = stat_g_3y$L$Number_Win
   
-  V_MATCH_t$H2H_s_Winner_W[i]=stat_s$W$Number_Win
-  V_MATCH_t$H2H_s_Loser_W[i]=stat_s$L$Number_Win
+  V_MATCH_t$H2H_Winner_Set_Won_3Y[i] = stat_g_3y$W$Number_Set_Won
+  V_MATCH_t$H2H_Loser_Set_Won_3Y[i] = stat_g_3y$L$Number_Set_Won
   
-  V_MATCH_t$H2H_s_Winner_Set_Won[i]=stat_s$W$Number_Set_Won
-  V_MATCH_t$H2H_s_Loser_Set_Won[i]=stat_s$L$Number_Set_Won
-  
-  V_MATCH_t$H2H_s_Winner_Games_Won[i]=stat_s$W$Number_Games_Won
-  V_MATCH_t$H2H_s_Loser_Games_Won[i]=stat_s$L$Number_Games_Won
-  
-  # Stats joueur encours global 4 dernières semaines
-  
-  V_MATCH_t$Winner_N_Win_4[i]=match_count_w_g_4$N_Win
-  V_MATCH_t$Winner_N_Loss_4[i]=match_count_w_g_4$N_Loss
-    
-  V_MATCH_t$Loser_N_Win_4[i]=match_count_l_g_4$N_Win
-  V_MATCH_t$Loser_N_Loss_4[i]=match_count_l_g_4$N_Loss
+  V_MATCH_t$H2H_Winner_Games_Won_3Y[i] = stat_g_3y$W$Number_Games_Won
+  V_MATCH_t$H2H_Loser_Games_Won_3Y[i] = stat_g_3y$L$Number_Games_Won
   
   # Surface
+  V_MATCH_t$H2H_s_Winner_W[i] = stat_s$W$Number_Win
+  V_MATCH_t$H2H_s_Loser_W[i] = stat_s$L$Number_Win
   
-  V_MATCH_t$Winner_N_Win_s_4[i]=match_count_w_s_4$N_Win
-  V_MATCH_t$Winner_N_Loss_s_4[i]=match_count_w_s_4$N_Loss
-    
-  V_MATCH_t$Loser_N_Win_s_4[i]=match_count_l_s_4$N_Win
-  V_MATCH_t$Loser_N_Loss_s_4[i]=match_count_l_s_4$N_Loss
+  V_MATCH_t$H2H_s_Winner_Set_Won[i] = stat_s$W$Number_Set_Won
+  V_MATCH_t$H2H_s_Loser_Set_Won[i] = stat_s$L$Number_Set_Won
   
-  print(i)
+  V_MATCH_t$H2H_s_Winner_Games_Won[i] = stat_s$W$Number_Games_Won
+  V_MATCH_t$H2H_s_Loser_Games_Won[i] = stat_s$L$Number_Games_Won
+  
+  # Surface 3Y
+  V_MATCH_t$H2H_s_Winner_W_3Y[i] = stat_s_3y$W$Number_Win
+  V_MATCH_t$H2H_s_Loser_W_3Y[i] = stat_s_3y$L$Number_Win
+  
+  V_MATCH_t$H2H_s_Winner_Set_Won_3Y[i] = stat_s_3y$W$Number_Set_Won
+  V_MATCH_t$H2H_s_Loser_Set_Won_3Y[i] = stat_s_3y$L$Number_Set_Won
+  
+  V_MATCH_t$H2H_s_Winner_Games_Won_3Y[i] = stat_s_3y$W$Number_Games_Won
+  V_MATCH_t$H2H_s_Loser_Games_Won_3Y[i] = stat_s_3y$L$Number_Games_Won
+  
+  # Stats joueur en cours global 4 semaines
+  V_MATCH_t$Winner_N_Win_4[i] = match_count_w_g_4$N_Win
+  V_MATCH_t$Winner_N_Loss_4[i] = match_count_w_g_4$N_Loss
+  V_MATCH_t$Winner_N_Win_Fav_Rank_4[i] = match_count_w_g_4$N_Win_Fav_Rank
+  V_MATCH_t$Winner_N_Win_Out_Rank_4[i] = match_count_w_g_4$N_Win_Out_Rank
+  V_MATCH_t$Winner_N_Loss_Fav_Rank_4[i] = match_count_w_g_4$N_Loss_Fav_Rank
+  V_MATCH_t$Winner_N_Loss_Out_Rank_4[i] = match_count_w_g_4$N_Loss_Out_Rank
+  
+  V_MATCH_t$Loser_N_Win_4[i] = match_count_l_g_4$N_Win
+  V_MATCH_t$Loser_N_Loss_4[i] = match_count_l_g_4$N_Loss
+  V_MATCH_t$Loser_N_Win_Fav_Rank_4[i] = match_count_l_g_4$N_Win_Fav_Rank
+  V_MATCH_t$Loser_N_Win_Out_Rank_4[i] = match_count_l_g_4$N_Win_Out_Rank
+  V_MATCH_t$Loser_N_Loss_Fav_Rank_4[i] = match_count_l_g_4$N_Loss_Fav_Rank
+  V_MATCH_t$Loser_N_Loss_Out_Rank_4[i] = match_count_l_g_4$N_Loss_Out_Rank
+  
+  # Stats joueur en cours global 12 semaines
+  V_MATCH_t$Winner_N_Win_12[i] = match_count_w_g_12$N_Win
+  V_MATCH_t$Winner_N_Loss_12[i] = match_count_w_g_12$N_Loss
+  V_MATCH_t$Winner_N_Win_Fav_Rank_12[i] = match_count_w_g_12$N_Win_Fav_Rank
+  V_MATCH_t$Winner_N_Win_Out_Rank_12[i] = match_count_w_g_12$N_Win_Out_Rank
+  V_MATCH_t$Winner_N_Loss_Fav_Rank_12[i] = match_count_w_g_12$N_Loss_Fav_Rank
+  V_MATCH_t$Winner_N_Loss_Out_Rank_12[i] = match_count_w_g_12$N_Loss_Out_Rank
+  
+  V_MATCH_t$Loser_N_Win_12[i] = match_count_l_g_12$N_Win
+  V_MATCH_t$Loser_N_Loss_12[i] = match_count_l_g_12$N_Loss
+  V_MATCH_t$Loser_N_Win_Fav_Rank_12[i] = match_count_l_g_12$N_Win_Fav_Rank
+  V_MATCH_t$Loser_N_Win_Out_Rank_12[i] = match_count_l_g_12$N_Win_Out_Rank
+  V_MATCH_t$Loser_N_Loss_Fav_Rank_12[i] = match_count_l_g_12$N_Loss_Fav_Rank
+  V_MATCH_t$Loser_N_Loss_Out_Rank_12[i] = match_count_l_g_12$N_Loss_Out_Rank
+  
+  # Surface 4 semaines
+  V_MATCH_t$Winner_N_Win_s_4[i] = match_count_w_s_4$N_Win
+  V_MATCH_t$Winner_N_Loss_s_4[i] = match_count_w_s_4$N_Loss
+  V_MATCH_t$Winner_N_Win_Fav_Rank_s_4[i] = match_count_w_s_4$N_Win_Fav_Rank
+  V_MATCH_t$Winner_N_Win_Out_Rank_s_4[i] = match_count_w_s_4$N_Win_Out_Rank
+  V_MATCH_t$Winner_N_Loss_Fav_Rank_s_4[i] = match_count_w_s_4$N_Loss_Fav_Rank
+  V_MATCH_t$Winner_N_Loss_Out_Rank_s_4[i] = match_count_w_s_4$N_Loss_Out_Rank
+  
+  V_MATCH_t$Loser_N_Win_s_4[i] = match_count_l_s_4$N_Win
+  V_MATCH_t$Loser_N_Loss_s_4[i] = match_count_l_s_4$N_Loss
+  V_MATCH_t$Loser_N_Win_Fav_Rank_s_4[i] = match_count_l_s_4$N_Win_Fav_Rank
+  V_MATCH_t$Loser_N_Win_Out_Rank_s_4[i] = match_count_l_s_4$N_Win_Out_Rank
+  V_MATCH_t$Loser_N_Loss_Fav_Rank_s_4[i] = match_count_l_s_4$N_Loss_Fav_Rank
+  V_MATCH_t$Loser_N_Loss_Out_Rank_s_4[i] = match_count_l_s_4$N_Loss_Out_Rank
+  
+  # Surface 12 semaines
+  V_MATCH_t$Winner_N_Win_s_12[i] = match_count_w_s_12$N_Win
+  V_MATCH_t$Winner_N_Loss_s_12[i] = match_count_w_s_12$N_Loss
+  V_MATCH_t$Winner_N_Win_Fav_Rank_s_12[i] = match_count_w_s_12$N_Win_Fav_Rank
+  V_MATCH_t$Winner_N_Win_Out_Rank_s_12[i] = match_count_w_s_12$N_Win_Out_Rank
+  V_MATCH_t$Winner_N_Loss_Fav_Rank_s_12[i] = match_count_w_s_12$N_Loss_Fav_Rank
+  V_MATCH_t$Winner_N_Loss_Out_Rank_s_12[i] = match_count_w_s_12$N_Loss_Out_Rank
+  
+  V_MATCH_t$Loser_N_Win_s_12[i] = match_count_l_s_12$N_Win
+  V_MATCH_t$Loser_N_Loss_s_12[i] = match_count_l_s_12$N_Loss
+  V_MATCH_t$Loser_N_Win_Fav_Rank_s_12[i] = match_count_l_s_12$N_Win_Fav_Rank
+  V_MATCH_t$Loser_N_Win_Out_Rank_s_12[i] = match_count_l_s_12$N_Win_Out_Rank
+  V_MATCH_t$Loser_N_Loss_Fav_Rank_s_12[i] = match_count_l_s_12$N_Loss_Fav_Rank
+  V_MATCH_t$Loser_N_Loss_Out_Rank_s_12[i] = match_count_l_s_12$N_Loss_Out_Rank
+  
+  pb$tick()
   
 }
 
