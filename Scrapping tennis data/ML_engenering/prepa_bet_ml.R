@@ -507,3 +507,141 @@ for (i in 1:nrow(V_MATCH_t)){
   
 }
 
+##### AJOUT DU ELO #####
+
+load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING_PLAYERS.RData"))
+
+last_elo=function(base,player_name,surface="all",Date_match,tournoi){
+  
+  if (surface=="all"){
+    
+    
+    elo_player=base %>% 
+      filter(Player_name==player_name & Date<Date_match & tournament!=tournoi) %>% 
+      mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>% 
+      arrange(desc(Date),desc(Round)) %>% 
+      mutate(ORDRE_ELO=row_number()) %>% 
+      filter(ORDRE_ELO==1) %>% 
+      select(Player_name,tournament,Date,Elo_player)
+    
+    return(elo_player)
+    
+  }else if (surface=="Grass"){
+    
+    elo_player=base %>% 
+      filter(Player_name==player_name & !is.na(Elo_player_grass) & Date<Date_match & tournament!=tournoi) %>% 
+      mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>% 
+      arrange(desc(Date),desc(Round)) %>% 
+      mutate(ORDRE_ELO=row_number()) %>% 
+      filter(ORDRE_ELO==1) %>% 
+      select(Player_name,tournament,Date,Elo_player_grass)
+    
+    return(elo_player)
+    
+  }else if (surface=="Clay"){
+    
+    elo_player=base %>% 
+      filter(Player_name==player_name & !is.na(Elo_player_clay) & Date<Date_match & tournament!=tournoi) %>% 
+      mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>% 
+      arrange(desc(Date),desc(Round)) %>% 
+      mutate(ORDRE_ELO=row_number()) %>% 
+      filter(ORDRE_ELO==1) %>% 
+      select(Player_name,tournament,Date,Elo_player_clay)
+    
+    return(elo_player)
+    
+  }else{
+    
+    elo_player=base %>% 
+      filter(Player_name==player_name & !is.na(Elo_player_hard) & Date<Date_match & tournament!=tournoi) %>% 
+      mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>% 
+      arrange(desc(Date),desc(Round)) %>% 
+      mutate(ORDRE_ELO=row_number()) %>% 
+      filter(ORDRE_ELO==1) %>% 
+      select(Player_name,tournament,Date,Elo_player_hard)
+    
+    return(elo_player)
+    
+  }
+}
+
+penalty=function(diff_date){
+  
+  penalty=ifelse(between(diff_date,60,80),0.7,
+                 ifelse(between(diff_date,81,180),0.85,
+                        ifelse(diff_date>180,1,0)))
+  
+  return(penalty)
+}
+
+pb= progress_bar$new(
+  format = "[:bar] :current/:total (:percent) ETA: :eta",
+  total = nrow(V_MATCH_t),
+  clear = FALSE,
+  width = 60
+)
+
+V_MATCH_t$Elo_W=NA
+V_MATCH_t$Elo_L=NA
+V_MATCH_t$Elo_W_surface=NA
+V_MATCH_t$Elo_L_surface=NA
+
+for (i in 1:nrow(V_MATCH_t)){
+  
+  P1=V_MATCH_t$Winner_id[i]
+  
+  P2=V_MATCH_t$Loser_id[i]
+  
+  surface=V_MATCH_t$Surface_tournament[i]
+  
+  Date_match=V_MATCH_t$Date[i]
+  
+  tournoi=V_MATCH_t$tournament[i]
+  
+  ##### ELO CLASSIC #####
+  
+  last_elo_p1=last_elo(ELO_RATING_PLAYERS,P1,"all",Date_match,tournoi)
+  
+  last_elo_p2=last_elo(ELO_RATING_PLAYERS,P2,"all",Date_match,tournoi)
+  
+  diff_date_p1=as.numeric(Date_match-last_elo_p1$Date)
+  
+  diff_date_p2=as.numeric(Date_match-last_elo_p2$Date)
+  
+  covid=ifelse(between(Date_match,as.Date("2020-08-01"),as.Date("2021-02-01")) ,0,1)
+  
+  elo_p1=ifelse(is_empty(last_elo_p1$Elo_player)==T,1500,last_elo_p1$Elo_player-(penalty(diff_date_p1)*covid*100))
+  
+  elo_p2=ifelse(is_empty(last_elo_p2$Elo_player)==T,1500,last_elo_p2$Elo_player-(penalty(diff_date_p2)*covid*100))
+  
+  ##### ELO SURFACE #####
+  
+  if (surface %in% c("Indoors","Various")){
+    
+    surface="Hard"
+    
+  }else{
+    
+    surface=surface
+  }
+  
+  last_elo_p1_surface=last_elo(ELO_RATING_PLAYERS,P1,surface,Date_match,tournoi) %>% pull(4)
+  
+  last_elo_p2_surface=last_elo(ELO_RATING_PLAYERS,P2,surface,Date_match,tournoi) %>% pull(4)
+  
+  elo_p1_surface=ifelse(is_empty(last_elo_p1_surface)==T,1500,last_elo_p1_surface)
+  
+  elo_p2_surface=ifelse(is_empty(last_elo_p2_surface)==T,1500,last_elo_p2_surface)
+  
+  ##### assigniation
+  
+  V_MATCH_t$Elo_W[i]=elo_p1
+  V_MATCH_t$Elo_L[i]=elo_p2
+  V_MATCH_t$Elo_W_surface[i]=elo_p1_surface
+  V_MATCH_t$Elo_L_surface[i]=elo_p2_surface
+  
+  pb$tick()
+  
+}
+
+save(V_MATCH_t,file="MATCH_STATS.RData",compress = "xz")
