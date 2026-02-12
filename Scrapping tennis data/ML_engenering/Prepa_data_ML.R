@@ -3,7 +3,46 @@ library(progress)
 
 load("~/work/Tennis-Data/Scrapping tennis data/MATCH_STATS.RData")
 
+V_MATCH_t=V_MATCH_t %>% 
+  mutate(Country_tournament = case_when(Categorie=="Masters" & Season==2021~"Italy",
+                                        Categorie=="Team"~"Australia",
+                                        TRUE~Country_tournament))
 p=0.5
+
+proba_calcul=function(elo_p1,elo_p2){
+  
+  proba=1 / (1 + 10 ^ ((elo_p2 - elo_p1)/400))
+  
+  return(proba)
+}
+# 
+# # Créer la table de référence
+# P_optimal_table <- tibble::tribble(
+#   ~Categorie,    ~Surface_tournament, ~P_optimal,
+#   "ATP 1000",    "Clay",              0.59,
+#   "ATP 1000",    "Hard",              0.54,
+#   "ATP 1000",    "Indoors",           0.07,
+#   "ATP 250",     "Clay",              0.59,
+#   "ATP 250",     "Grass",             0.55,
+#   "ATP 250",     "Hard",              0.53,
+#   "ATP 250",     "Indoors",           0.43,
+#   "ATP 500",     "Clay",              0.95,
+#   "ATP 500",     "Grass",             0.41,
+#   "ATP 500",     "Hard",              0.63,
+#   "ATP 500",     "Indoors",           0.00,
+#   "Grand Slam",  "Clay",              0.33,
+#   "Grand Slam",  "Grass",             0.57,
+#   "Grand Slam",  "Hard",              0.55,
+#   "Masters",     "Indoors",           0.88,
+#   "Olympics",    "Clay",              0.71,
+#   "Olympics",    "Hard",              0.00,
+#   "Team",        "Hard",              0.92
+# )
+# 
+# # Joindre avec le dataframe principal
+# V_MATCH_t <- V_MATCH_t %>%
+#   left_join(P_optimal_table, by = c("Categorie", "Surface_tournament")) %>%
+#   rename(P = P_optimal)
 
 TABLE = V_MATCH_t %>% 
   mutate(
@@ -20,6 +59,9 @@ TABLE = V_MATCH_t %>%
     # Informations personnelles
     Country_F = case_when(Rank_W < Rank_L ~ Country_W, TRUE ~ Country_L),
     Country_O = case_when(Rank_L < Rank_W ~ Country_W, TRUE ~ Country_L),
+    Country_F_score = case_when(Country_F==Country_tournament~1,TRUE~0),
+    Country_O_score = case_when(Country_O==Country_tournament~1,TRUE~0),
+    
     Size_F = as.numeric(case_when(Rank_W < Rank_L ~ Size_W, TRUE ~ Size_L)),
     Size_O = as.numeric(case_when(Rank_L < Rank_W ~ Size_W, TRUE ~ Size_L)),
     Weight_F = as.numeric(case_when(Rank_W < Rank_L ~ Weight_W, TRUE ~ Weight_L)),
@@ -112,27 +154,7 @@ TABLE = V_MATCH_t %>%
     H2H_s_F_Games_Win_Rate_3Y = ifelse((H2H_s_F_Games_Won_3Y + H2H_s_O_Games_Won_3Y) > 0, (H2H_s_F_Games_Won_3Y / (H2H_s_F_Games_Won_3Y + H2H_s_O_Games_Won_3Y)) * 100, 0),
     H2H_s_O_Games_Win_Rate_3Y = ifelse((H2H_s_F_Games_Won_3Y + H2H_s_O_Games_Won_3Y) > 0, (H2H_s_O_Games_Won_3Y / (H2H_s_F_Games_Won_3Y + H2H_s_O_Games_Won_3Y)) * 100, 0),
     
-    # Momentum Favori
-    H2H_F_Momentum = case_when(H2H_F_Win_Rate_3Y > H2H_F_Win_Rate ~ 1, TRUE ~ 0),
-    H2H_s_F_Momentum = case_when(H2H_s_F_Win_Rate_3Y > H2H_s_F_Win_Rate ~ 1, TRUE ~ 0),
-    
-    H2H_F_Set_Momentum = case_when(H2H_F_Set_Win_Rate_3Y > H2H_F_Set_Win_Rate ~ 1, TRUE ~ 0),
-    H2H_s_F_Set_Momentum = case_when(H2H_s_F_Set_Win_Rate_3Y > H2H_s_F_Set_Win_Rate ~ 1, TRUE ~ 0),
-    
-    H2H_F_Games_Momentum = case_when(H2H_F_Games_Win_Rate_3Y > H2H_F_Games_Win_Rate ~ 1, TRUE ~ 0),
-    H2H_s_F_Games_Momentum = case_when(H2H_s_F_Games_Win_Rate_3Y > H2H_s_F_Games_Win_Rate ~ 1, TRUE ~ 0),
-    
-    # Momentum Outsider
-    H2H_O_Momentum = case_when(H2H_O_Win_Rate_3Y > H2H_O_Win_Rate ~ 1, TRUE ~ 0),
-    H2H_s_O_Momentum = case_when(H2H_s_O_Win_Rate_3Y > H2H_s_O_Win_Rate ~ 1, TRUE ~ 0),
-    
-    H2H_O_Set_Momentum = case_when(H2H_O_Set_Win_Rate_3Y > H2H_O_Set_Win_Rate ~ 1, TRUE ~ 0),
-    H2H_s_O_Set_Momentum = case_when(H2H_s_O_Set_Win_Rate_3Y > H2H_s_O_Set_Win_Rate ~ 1, TRUE ~ 0),
-    
-    H2H_O_Games_Momentum = case_when(H2H_O_Games_Win_Rate_3Y > H2H_O_Games_Win_Rate ~ 1, TRUE ~ 0),
-    H2H_s_O_Games_Momentum = case_when(H2H_s_O_Games_Win_Rate_3Y > H2H_s_O_Games_Win_Rate ~ 1, TRUE ~ 0),
-    
-    # Forme récente - 4 derniers matchs
+     # Forme récente - 4 derniers matchs
     F_N_Win_4 = case_when(Rank_W < Rank_L ~ Winner_N_Win_4, TRUE ~ Loser_N_Win_4),
     O_N_Win_4 = case_when(Rank_L < Rank_W ~ Winner_N_Win_4, TRUE ~ Loser_N_Win_4),
     F_N_Loss_4 = case_when(Rank_W < Rank_L ~ Winner_N_Loss_4, TRUE ~ Loser_N_Loss_4),
@@ -141,6 +163,50 @@ TABLE = V_MATCH_t %>%
     F_Win_Rate_4 = ifelse(is.na(F_Win_Rate_4),0,F_Win_Rate_4)*100,
     O_Win_Rate_4 = (O_N_Win_4/(O_N_Win_4+O_N_Loss_4)),
     O_Win_Rate_4 = ifelse(is.na(O_Win_Rate_4),0,O_Win_Rate_4)*100,
+
+  #  Performance as Favoris (Joueurs mieux classés) 
+    F_N_Win_as_Fav_12  = case_when(Rank_W < Rank_L ~ Winner_N_Win_Fav_Rank_12,  TRUE ~ Loser_N_Win_Fav_Rank_12),
+    O_N_Win_as_Fav_12  = case_when(Rank_L < Rank_W ~ Winner_N_Win_Fav_Rank_12,  TRUE ~ Loser_N_Win_Fav_Rank_12),
+    F_N_Loss_as_Fav_12 = case_when(Rank_W < Rank_L ~ Winner_N_Loss_Fav_Rank_12, TRUE ~ Loser_N_Loss_Fav_Rank_12),
+    O_N_Loss_as_Fav_12 = case_when(Rank_L < Rank_W ~ Winner_N_Loss_Fav_Rank_12, TRUE ~ Loser_N_Loss_Fav_Rank_12),
+        
+  #  Performance as Outsiders (Joueurs moins bien classés) 
+    F_N_Win_as_Out_12  = case_when(Rank_W < Rank_L ~ Winner_N_Win_Out_Rank_12,  TRUE ~ Loser_N_Win_Out_Rank_12),
+    O_N_Win_as_Out_12  = case_when(Rank_L < Rank_W ~ Winner_N_Win_Out_Rank_12,  TRUE ~ Loser_N_Win_Out_Rank_12),
+    F_N_Loss_as_Out_12 = case_when(Rank_W < Rank_L ~ Winner_N_Loss_Out_Rank_12, TRUE ~ Loser_N_Loss_Out_Rank_12),
+    O_N_Loss_as_Out_12 = case_when(Rank_L < Rank_W ~ Winner_N_Loss_Out_Rank_12, TRUE ~ Loser_N_Loss_Out_Rank_12),
+        
+  #  Calcul des Win Rates Specifiques 
+    F_as_Fav_12_Win_rate = ifelse((F_N_Win_as_Fav_12 + F_N_Loss_as_Fav_12) == 0, 0, (F_N_Win_as_Fav_12 / (F_N_Win_as_Fav_12 + F_N_Loss_as_Fav_12)) * 100),
+    O_as_Fav_12_Win_rate = ifelse((O_N_Win_as_Fav_12 + O_N_Loss_as_Fav_12) == 0, 0, (O_N_Win_as_Fav_12 / (O_N_Win_as_Fav_12 + O_N_Loss_as_Fav_12)) * 100),
+    
+    F_as_Out_12_Win_rate = ifelse((F_N_Win_as_Out_12 + F_N_Loss_as_Out_12) == 0, 0, (F_N_Win_as_Out_12 / (F_N_Win_as_Out_12 + F_N_Loss_as_Out_12)) * 100),
+    O_as_Out_12_Win_rate = ifelse((O_N_Win_as_Out_12 + O_N_Loss_as_Out_12) == 0, 0, (O_N_Win_as_Out_12 / (O_N_Win_as_Out_12 + O_N_Loss_as_Out_12)) * 100),
+
+  #  Performance en tant que Favori (Statut basé sur le Rank) - 4 
+    F_N_Win_as_Fav_4  = case_when(Rank_W < Rank_L ~ Winner_N_Win_Fav_Rank_4,  TRUE ~ Loser_N_Win_Fav_Rank_4),
+    O_N_Win_as_Fav_4  = case_when(Rank_L < Rank_W ~ Winner_N_Win_Fav_Rank_4,  TRUE ~ Loser_N_Win_Fav_Rank_4),
+    F_N_Loss_as_Fav_4 = case_when(Rank_W < Rank_L ~ Winner_N_Loss_Fav_Rank_4, TRUE ~ Loser_N_Loss_Fav_Rank_4),
+    O_N_Loss_as_Fav_4 = case_when(Rank_L < Rank_W ~ Winner_N_Loss_Fav_Rank_4, TRUE ~ Loser_N_Loss_Fav_Rank_4),
+      
+    #  Performance en tant qu'Outsider (Statut basé sur le Rank) - 4 
+    F_N_Win_as_Out_4  = case_when(Rank_W < Rank_L ~ Winner_N_Win_Out_Rank_4,  TRUE ~ Loser_N_Win_Out_Rank_4),
+    O_N_Win_as_Out_4  = case_when(Rank_L < Rank_W ~ Winner_N_Win_Out_Rank_4,  TRUE ~ Loser_N_Win_Out_Rank_4),
+    F_N_Loss_as_Out_4 = case_when(Rank_W < Rank_L ~ Winner_N_Loss_Out_Rank_4, TRUE ~ Loser_N_Loss_Out_Rank_4),
+    O_N_Loss_as_Out_4 = case_when(Rank_L < Rank_W ~ Winner_N_Loss_Out_Rank_4, TRUE ~ Loser_N_Loss_Out_Rank_4),
+      
+    #  Calcul des Win Rates Spécifiques - 4 
+    F_as_Fav_4_Win_rate = ifelse((F_N_Win_as_Fav_4 + F_N_Loss_as_Fav_4) == 0, 0, 
+                                   (F_N_Win_as_Fav_4 / (F_N_Win_as_Fav_4 + F_N_Loss_as_Fav_4)) * 100),
+      
+    O_as_Fav_4_Win_rate = ifelse((O_N_Win_as_Fav_4 + O_N_Loss_as_Fav_4) == 0, 0, 
+                                   (O_N_Win_as_Fav_4 / (O_N_Win_as_Fav_4 + O_N_Loss_as_Fav_4)) * 100),
+      
+    F_as_Out_4_Win_rate = ifelse((F_N_Win_as_Out_4 + F_N_Loss_as_Out_4) == 0, 0, 
+                                   (F_N_Win_as_Out_4 / (F_N_Win_as_Out_4 + F_N_Loss_as_Out_4)) * 100),
+      
+    O_as_Out_4_Win_rate = ifelse((O_N_Win_as_Out_4 + O_N_Loss_as_Out_4) == 0, 0, 
+                                   (O_N_Win_as_Out_4 / (O_N_Win_as_Out_4 + O_N_Loss_as_Out_4)) * 100),
     
     # Forme récente sur surface - 4 derniers matchs
     F_N_Win_s_4 = case_when(Rank_W < Rank_L ~ Winner_N_Win_s_4, TRUE ~ Loser_N_Win_s_4),
@@ -172,16 +238,9 @@ TABLE = V_MATCH_t %>%
     O_Win_Rate_s_12 = (O_N_Win_s_12/(O_N_Win_s_12+O_N_Loss_s_12)),
     O_Win_Rate_s_12 = ifelse(is.na(O_Win_Rate_s_12),0,O_Win_Rate_s_12)*100,
     
-    # Momentum 
-    F_Momentum = case_when(F_Win_Rate_4>F_Win_Rate_12~1,TRUE~0),
-    F_Momentum_s = case_when(F_Win_Rate_s_4>F_Win_Rate_s_12~1,TRUE~0),
-    O_Momentum = case_when(O_Win_Rate_4>O_Win_Rate_12~1,TRUE~0),
-    O_Momentum_s = case_when(O_Win_Rate_s_4>O_Win_Rate_s_12~1,TRUE~0),
-    
-    
     # Categorie tournoi
     Categ_Elite = case_when(Categorie %in% c("Grand Slam","Olympics","Team")~1,TRUE~0),
-    Categ_Mid = case_when(Categorie %in% c("ATP 1000","ATP 500")~1,TRUE~0),
+    Categ_Mid = case_when(Categorie %in% c("ATP 1000","ATP 500","Masters")~1,TRUE~0),
     Categ_low = case_when(Categorie=="ATP 250"~1,TRUE~0),
     
     Round_RR = case_when(Round=="-"~1,TRUE~0),
@@ -191,256 +250,334 @@ TABLE = V_MATCH_t %>%
     Round_R16 = case_when(Round=="R16"~1,TRUE~0),
     Round_QF = case_when(Round=="QF"~1,TRUE~0),
     Round_SF = case_when(Round=="SF"~1,TRUE~0),
-    Round_F = case_when(Round=="F"~1,TRUE~0),
-    
-    # Variable mixte
-    
-    Categ_Round = paste0(Categorie,"_",Round)
+    Round_F = case_when(Round=="F"~1,TRUE~0)
+
     
   ) %>% 
   filter(info=="Completed") %>% 
   select(
-    tournament, Season, Date, Week_tournament, Categorie, Surface_tournament, Round,
-    Favori, Outsider, Winner_id, Issue,
-    Rank_F, Points_F, Odd_F,
-    Rank_O, Points_O, Odd_O,
-    Country_F, Country_O, 
-    Size_F, Size_O, Weight_F, Weight_O,
-    IMC_F, IMC_O,
-    Birth_date_F, Birth_date_O, Age_F, Age_O, 
-    Hand_F, Hand_O, Hand_Score_F, Hand_Score_O,
-    Elo_F, Elo_s_F, Elo_O, Elo_s_O, 
-    P_F, P_s_F, P_O, P_s_O, P_F_comb,
-    
-    # H2H historique complet
-    H2H_F_W, H2H_O_W, 
-    H2H_F_Set_Won, H2H_O_Set_Won,
-    H2H_F_Games_Won, H2H_O_Games_Won,
-    H2H_F_Win_Rate, H2H_O_Win_Rate,
-    H2H_F_Set_Win_Rate, H2H_O_Set_Win_Rate,
-    H2H_F_Games_Win_Rate, H2H_O_Games_Win_Rate,
-    
-    # H2H même surface
-    H2H_s_F_W, H2H_s_O_W, 
-    H2H_s_F_Set_Won, H2H_s_O_Set_Won,
-    H2H_s_F_Games_Won, H2H_s_O_Games_Won,
-    H2H_s_F_Win_Rate, H2H_s_O_Win_Rate,
-    H2H_s_F_Set_Win_Rate, H2H_s_O_Set_Win_Rate,
-    H2H_s_F_Games_Win_Rate, H2H_s_O_Games_Win_Rate,
-    
-    # H2H 3 dernières années
-    H2H_F_W_3Y, H2H_O_W_3Y, 
-    H2H_F_Set_Won_3Y, H2H_O_Set_Won_3Y,
-    H2H_F_Games_Won_3Y, H2H_O_Games_Won_3Y,
-    H2H_F_Win_Rate_3Y, H2H_O_Win_Rate_3Y,
-    H2H_F_Set_Win_Rate_3Y, H2H_O_Set_Win_Rate_3Y,
-    H2H_F_Games_Win_Rate_3Y, H2H_O_Games_Win_Rate_3Y,
-    
-    # H2H même surface 3 dernières années
-    H2H_s_F_W_3Y, H2H_s_O_W_3Y, 
-    H2H_s_F_Set_Won_3Y, H2H_s_O_Set_Won_3Y,
-    H2H_s_F_Games_Won_3Y, H2H_s_O_Games_Won_3Y,
-    H2H_s_F_Win_Rate_3Y, H2H_s_O_Win_Rate_3Y,
-    H2H_s_F_Set_Win_Rate_3Y, H2H_s_O_Set_Win_Rate_3Y,
-    H2H_s_F_Games_Win_Rate_3Y, H2H_s_O_Games_Win_Rate_3Y,
-    
-    # Momentum H2H
-    H2H_F_Momentum, H2H_s_F_Momentum,
-    H2H_F_Set_Momentum, H2H_s_F_Set_Momentum,
-    H2H_F_Games_Momentum, H2H_s_F_Games_Momentum,
-    H2H_O_Momentum, H2H_s_O_Momentum,
-    H2H_O_Set_Momentum, H2H_s_O_Set_Momentum,
-    H2H_O_Games_Momentum, H2H_s_O_Games_Momentum,
-    
-    # Forme récente 4 semaines
-    F_N_Win_4, O_N_Win_4, F_N_Loss_4, O_N_Loss_4,
-    F_Win_Rate_4, O_Win_Rate_4,
-    
-    # Forme récente surface 4 semaines
-    F_N_Win_s_4, O_N_Win_s_4, F_N_Loss_s_4, O_N_Loss_s_4,
-    F_Win_Rate_s_4, O_Win_Rate_s_4,
-    
-    # Forme récente 12 semaines
-    F_N_Win_12, O_N_Win_12, F_N_Loss_12, O_N_Loss_12,
-    F_Win_Rate_12, O_Win_Rate_12,
-    
-    # Forme récente surface 12 semaines
-    F_N_Win_s_12, O_N_Win_s_12, F_N_Loss_s_12, O_N_Loss_s_12,
-    F_Win_Rate_s_12, O_Win_Rate_s_12,
-    
-    # Momentum forme
-    F_Momentum, F_Momentum_s, O_Momentum, O_Momentum_s,
-    
-    # Info stade match
-    Categ_Elite,Categ_Mid,Categ_low,Round_RR,Round_R1,Round_R2,Round_R3,Round_R16,Round_QF,Round_SF,Round_F,
-    
-    Categ_Round
+    tournament,
+    Categorie,
+    Round,
+    Season,
+    Date,
+    Surface_tournament,
+    Country_tournament,
+    Favori,
+    Outsider,
+    Issue,
+    Rank_F,
+    Rank_O,
+    Points_F,
+    Points_O,
+    Odd_F,
+    Odd_O,
+    Country_F_score,
+    Country_O_score,
+    Size_F,
+    Size_O,
+    Weight_F,
+    Weight_O,
+    IMC_F,
+    IMC_O,
+    Birth_date_F,
+    Birth_date_O,
+    Age_F,
+    Age_O,
+    Hand_Score_F,
+    Hand_Score_O,
+    Elo_F,
+    Elo_s_F,
+    Elo_O,
+    Elo_s_O,
+    P_F,
+    P_s_F,
+    P_O,
+    P_s_O,
+    P_F_comb,
+    H2H_F_W,
+    H2H_O_W,
+    H2H_F_Set_Won,
+    H2H_O_Set_Won,
+    H2H_F_Games_Won,
+    H2H_O_Games_Won,
+    H2H_F_Win_Rate,
+    H2H_O_Win_Rate,
+    H2H_F_Set_Win_Rate,
+    H2H_O_Set_Win_Rate,
+    H2H_F_Games_Win_Rate,
+    H2H_O_Games_Win_Rate,
+    H2H_s_F_W,
+    H2H_s_O_W,
+    H2H_s_F_Set_Won,
+    H2H_s_O_Set_Won,
+    H2H_s_F_Games_Won,
+    H2H_s_O_Games_Won,
+    H2H_s_F_Win_Rate,
+    H2H_s_O_Win_Rate,
+    H2H_s_F_Set_Win_Rate,
+    H2H_s_O_Set_Win_Rate,
+    H2H_s_F_Games_Win_Rate,
+    H2H_s_O_Games_Win_Rate,
+    H2H_F_W_3Y,
+    H2H_O_W_3Y,
+    H2H_F_Set_Won_3Y,
+    H2H_O_Set_Won_3Y,
+    H2H_F_Games_Won_3Y,
+    H2H_O_Games_Won_3Y,
+    H2H_F_Win_Rate_3Y,
+    H2H_O_Win_Rate_3Y,
+    H2H_F_Set_Win_Rate_3Y,
+    H2H_O_Set_Win_Rate_3Y,
+    H2H_F_Games_Win_Rate_3Y,
+    H2H_O_Games_Win_Rate_3Y,
+    H2H_s_F_W_3Y,
+    H2H_s_O_W_3Y,
+    H2H_s_F_Set_Won_3Y,
+    H2H_s_O_Set_Won_3Y,
+    H2H_s_F_Games_Won_3Y,
+    H2H_s_O_Games_Won_3Y,
+    H2H_s_F_Win_Rate_3Y,
+    H2H_s_O_Win_Rate_3Y,
+    H2H_s_F_Set_Win_Rate_3Y,
+    H2H_s_O_Set_Win_Rate_3Y,
+    H2H_s_F_Games_Win_Rate_3Y,
+    H2H_s_O_Games_Win_Rate_3Y,
+    F_N_Win_4,
+    O_N_Win_4,
+    F_N_Loss_4,
+    O_N_Loss_4,
+    F_Win_Rate_4,
+    F_Win_Rate_4,
+    O_Win_Rate_4,
+    O_Win_Rate_4,
+    F_N_Win_as_Fav_12,
+    O_N_Win_as_Fav_12,
+    F_N_Loss_as_Fav_12,
+    O_N_Loss_as_Fav_12,
+    F_N_Win_as_Out_12,
+    O_N_Win_as_Out_12,
+    F_N_Loss_as_Out_12,
+    O_N_Loss_as_Out_12,
+    F_as_Fav_12_Win_rate,
+    O_as_Fav_12_Win_rate,
+    F_as_Out_12_Win_rate,
+    O_as_Out_12_Win_rate,
+    F_N_Win_as_Fav_4,
+    O_N_Win_as_Fav_4,
+    F_N_Loss_as_Fav_4,
+    O_N_Loss_as_Fav_4,
+    F_N_Win_as_Out_4,
+    O_N_Win_as_Out_4,
+    F_N_Loss_as_Out_4,
+    O_N_Loss_as_Out_4,
+    F_as_Fav_4_Win_rate,
+    F_N_Win_as_Fav_4,
+    O_as_Fav_4_Win_rate,
+    O_N_Win_as_Fav_4,
+    F_as_Out_4_Win_rate,
+    F_N_Win_as_Out_4,
+    O_as_Out_4_Win_rate,
+    O_N_Win_as_Out_4,
+    F_N_Win_s_4,
+    O_N_Win_s_4,
+    F_N_Loss_s_4,
+    O_N_Loss_s_4,
+    F_Win_Rate_s_4,
+    F_Win_Rate_s_4,
+    O_Win_Rate_s_4,
+    O_Win_Rate_s_4,
+    F_N_Win_12,
+    O_N_Win_12,
+    F_N_Loss_12,
+    O_N_Loss_12,
+    F_Win_Rate_12,
+    F_Win_Rate_12,
+    O_Win_Rate_12,
+    O_Win_Rate_12,
+    F_N_Win_s_12,
+    O_N_Win_s_12,
+    F_N_Loss_s_12,
+    O_N_Loss_s_12,
+    F_Win_Rate_s_12,
+    F_Win_Rate_s_12,
+    O_Win_Rate_s_12,
+    O_Win_Rate_s_12,
+    Categ_Elite,
+    Categ_Mid,
+    Categ_low,
+    Round_RR,
+    Round_R1,
+    Round_R2,
+    Round_R3,
+    Round_R16,
+    Round_QF,
+    Round_SF,
+    Round_F
     
   )
 
+# save(TABLE,file="TABLE_RAW.RData",compress="xz")
+# write.csv(TABLE, "TABLE_RAW.csv", row.names = FALSE,sep = ";")
 
-##### TABLE ML DIFF #####
+##### TABLE DIFF 
 
-# TABLE_ML_DIFF - Différences entre Favori et Outsider
-TABLE_ML_DIFF = TABLE %>%
+TABLE_ML_DIFF=TABLE %>% 
   mutate(
-    
-    Issue = as.factor(Issue),
-    
-    # Différences de classement et points
-    Diff_Rank = abs(Rank_F - Rank_O),
-    Diff_Points = log(Points_F) - log(Points_O),
-    
-    S_Odd = case_when(Odd_F >= 1.9 ~ 1, TRUE ~ 0),
-    
-    # Différences physiques
-    Diff_Size = Size_F - Size_O,
-    Diff_Weight = Weight_F - Weight_O,
-    Diff_IMC = IMC_F - IMC_O,
+    # --- DIFFÉRENCES - Profils Joueurs ---
+    Diff_Rank = Rank_F - Rank_O,
+    Diff_Points = Points_F - Points_O,
     Diff_Age = Age_F - Age_O,
-    Diff_Log_Age = log(Age_F) - log(Age_O),
+    Diff_IMC = IMC_F - IMC_O,
+    Diff_Size = Size_F- Size_O,
+    Diff_Weight = Weight_F - Weight_O,
     Diff_Hand_Score = Hand_Score_F - Hand_Score_O,
-
+    Diff_Country_score = Country_F_score - Country_O_score,
     
-    # Différences H2H - Historique complet
-    Diff_H2H_W = H2H_F_W - H2H_O_W,
-    Diff_H2H_Set_Won = H2H_F_Set_Won - H2H_O_Set_Won,
-    Diff_H2H_Games_Won = H2H_F_Games_Won - H2H_O_Games_Won,
+    # --- DIFFÉRENCES - ELO & Probabilités ---
+    Diff_Elo = Elo_F - Elo_O,
+    Diff_Elo_s = Elo_s_F - Elo_s_O,
+    #P_F_comb,  # Déjà une probabilité relative
+    
+    # --- DIFFÉRENCES - H2H (Historique Face à Face) ---
+    
     Diff_H2H_Win_Rate = H2H_F_Win_Rate - H2H_O_Win_Rate,
     Diff_H2H_Set_Win_Rate = H2H_F_Set_Win_Rate - H2H_O_Set_Win_Rate,
     Diff_H2H_Games_Win_Rate = H2H_F_Games_Win_Rate - H2H_O_Games_Win_Rate,
     
-    # Différences H2H - Même surface
-    Diff_H2H_s_W = H2H_s_F_W - H2H_s_O_W,
-    Diff_H2H_s_Set_Won = H2H_s_F_Set_Won - H2H_s_O_Set_Won,
-    Diff_H2H_s_Games_Won = H2H_s_F_Games_Won - H2H_s_O_Games_Won,
     Diff_H2H_s_Win_Rate = H2H_s_F_Win_Rate - H2H_s_O_Win_Rate,
     Diff_H2H_s_Set_Win_Rate = H2H_s_F_Set_Win_Rate - H2H_s_O_Set_Win_Rate,
     Diff_H2H_s_Games_Win_Rate = H2H_s_F_Games_Win_Rate - H2H_s_O_Games_Win_Rate,
     
-    # Différences H2H - 3 dernières années
-    Diff_H2H_W_3Y = H2H_F_W_3Y - H2H_O_W_3Y,
-    Diff_H2H_Set_Won_3Y = H2H_F_Set_Won_3Y - H2H_O_Set_Won_3Y,
-    Diff_H2H_Games_Won_3Y = H2H_F_Games_Won_3Y - H2H_O_Games_Won_3Y,
     Diff_H2H_Win_Rate_3Y = H2H_F_Win_Rate_3Y - H2H_O_Win_Rate_3Y,
     Diff_H2H_Set_Win_Rate_3Y = H2H_F_Set_Win_Rate_3Y - H2H_O_Set_Win_Rate_3Y,
     Diff_H2H_Games_Win_Rate_3Y = H2H_F_Games_Win_Rate_3Y - H2H_O_Games_Win_Rate_3Y,
     
-    # Différences H2H - Même surface, 3 dernières années
-    Diff_H2H_s_W_3Y = H2H_s_F_W_3Y - H2H_s_O_W_3Y,
-    Diff_H2H_s_Set_Won_3Y = H2H_s_F_Set_Won_3Y - H2H_s_O_Set_Won_3Y,
-    Diff_H2H_s_Games_Won_3Y = H2H_s_F_Games_Won_3Y - H2H_s_O_Games_Won_3Y,
     Diff_H2H_s_Win_Rate_3Y = H2H_s_F_Win_Rate_3Y - H2H_s_O_Win_Rate_3Y,
     Diff_H2H_s_Set_Win_Rate_3Y = H2H_s_F_Set_Win_Rate_3Y - H2H_s_O_Set_Win_Rate_3Y,
     Diff_H2H_s_Games_Win_Rate_3Y = H2H_s_F_Games_Win_Rate_3Y - H2H_s_O_Games_Win_Rate_3Y,
     
-    # Différences Momentum H2H (dummy)
-    Diff_H2H_Momentum = H2H_F_Momentum - H2H_O_Momentum,
-    Diff_H2H_s_Momentum = H2H_s_F_Momentum - H2H_s_O_Momentum,
-    Diff_H2H_Set_Momentum = H2H_F_Set_Momentum - H2H_O_Set_Momentum,
-    Diff_H2H_s_Set_Momentum = H2H_s_F_Set_Momentum - H2H_s_O_Set_Momentum,
-    Diff_H2H_Games_Momentum = H2H_F_Games_Momentum - H2H_O_Games_Momentum,
-    Diff_H2H_s_Games_Momentum = H2H_s_F_Games_Momentum - H2H_s_O_Games_Momentum,
-    
-    # First_meeting
-    
-    First_meeting = case_when((H2H_F_W+H2H_O_W)==0~1,TRUE~0),
-    First_meeting_s = case_when((H2H_s_F_W+H2H_s_O_W)==0~1,TRUE~0),
-    
-    # Différences forme récente - 4 derniers matchs
-    Diff_N_Win_4 = F_N_Win_4 - O_N_Win_4,
-    Diff_N_Loss_4 = F_N_Loss_4 - O_N_Loss_4,
+    # --- DIFFÉRENCES - Forme Récente (4 matchs) ---
     Diff_Win_Rate_4 = F_Win_Rate_4 - O_Win_Rate_4,
-    
-    # Différences forme récente sur surface - 4 derniers matchs
-    Diff_N_Win_s_4 = F_N_Win_s_4 - O_N_Win_s_4,
-    Diff_N_Loss_s_4 = F_N_Loss_s_4 - O_N_Loss_s_4,
     Diff_Win_Rate_s_4 = F_Win_Rate_s_4 - O_Win_Rate_s_4,
     
-    # Différences forme récente - 12 derniers matchs
-    Diff_N_Win_12 = F_N_Win_12 - O_N_Win_12,
-    Diff_N_Loss_12 = F_N_Loss_12 - O_N_Loss_12,
+    # --- DIFFÉRENCES - Forme Récente (12 matchs) ---
     Diff_Win_Rate_12 = F_Win_Rate_12 - O_Win_Rate_12,
-    
-    # Différences forme récente sur surface - 12 derniers matchs
-    Diff_N_Win_s_12 = F_N_Win_s_12 - O_N_Win_s_12,
-    Diff_N_Loss_s_12 = F_N_Loss_s_12 - O_N_Loss_s_12,
     Diff_Win_Rate_s_12 = F_Win_Rate_s_12 - O_Win_Rate_s_12,
     
-    # Indic_play
-    Indic_F_play_4 = case_when((F_N_Win_4+F_N_Loss_4)==0~1,TRUE~0),
-    Indic_O_play_4 = case_when((O_N_Win_4+O_N_Loss_4)==0~1,TRUE~0),
-    Indic_F_play_12 = case_when((F_N_Win_12+F_N_Loss_12)==0~1,TRUE~0),
-    Indic_O_play_12 = case_when((O_N_Win_12+O_N_Loss_12)==0~1,TRUE~0),
+    # --- DIFFÉRENCES - Performance As Fav (12 mois) ---
+    Diff_as_Fav_12_Win_rate = F_as_Fav_12_Win_rate - O_as_Fav_12_Win_rate,
     
-    # Diff_Play
+    # --- DIFFÉRENCES - Performance As Out (12 mois) ---
+    Diff_as_Out_12_Win_rate = F_as_Out_12_Win_rate - O_as_Out_12_Win_rate,
     
-    Diff_Indic_Play_4 = Indic_F_play_4 - Indic_O_play_4,
-    Diff_Indic_Play_12 = Indic_F_play_12 - Indic_O_play_12,
+    # --- DIFFÉRENCES - Performance As Fav (4 mois) ---
+    Diff_as_Fav_4_Win_rate = F_as_Fav_4_Win_rate - O_as_Fav_4_Win_rate,
     
-    # Différences Momentum forme (dummy)
-    Diff_Momentum = F_Momentum - O_Momentum,
-    Diff_Momentum_s = F_Momentum_s - O_Momentum_s
-    
-  ) %>%
+    # --- DIFFÉRENCES - Performance As Out (4 mois) ---
+    Diff_as_Out_4_Win_rate = F_as_Out_4_Win_rate - O_as_Out_4_Win_rate
+  ) %>% 
   select(
-    tournament, Season, Date, Week_tournament, Categorie, Surface_tournament, Round,
-    Favori, Outsider, Winner_id, Issue, Odd_F, Odd_O, S_Odd,
-    Country_F, Country_O, Hand_F, Hand_O,
+    # --- Identification & Backtest (non-features) ---
+    tournament, Season, Date, Favori, Outsider, 
+    Odd_F, Odd_O,
     
-    # Différences physiques et classement
-    Diff_Rank, Diff_Points,
-    Diff_Size, Diff_Weight, Diff_IMC, 
-    Diff_Age, Diff_Log_Age, 
+    # --- VARIABLE CIBLE ---
+    Issue, 
+    
+    # --- Caractéristiques du Match ---
+    Categorie, Surface_tournament, Round,
+    Categ_Elite, Categ_Mid, Categ_low,
+    Round_RR, Round_R1, Round_R2, Round_R3, Round_R16, Round_QF, Round_SF, Round_F,
+    
+    # --- DIFFÉRENCES - Profils Joueurs ---
+    Diff_Rank,
+    Diff_Points,
+    Diff_Age,
+    Diff_IMC,
+    Diff_Size,
+    Diff_Weight,
     Diff_Hand_Score,
+    Diff_Country_score,
     
-    # Différences ELO et proba
-     P_F,P_s_F,P_F_comb,
+    # --- DIFFÉRENCES - ELO & Probabilités ---
+    Diff_Elo,
+    Diff_Elo_s,
+    P_F_comb,  # Déjà une probabilité relative
     
-    # Différences H2H historique complet
-    Diff_H2H_W, Diff_H2H_Set_Won, Diff_H2H_Games_Won,
-    Diff_H2H_Win_Rate, Diff_H2H_Set_Win_Rate, Diff_H2H_Games_Win_Rate,
+    # --- DIFFÉRENCES - H2H (Historique Face à Face) ---
+    Diff_H2H_Win_Rate,
+    Diff_H2H_Set_Win_Rate,
+    Diff_H2H_Games_Win_Rate,
     
-    # Différences H2H même surface
-    Diff_H2H_s_W, Diff_H2H_s_Set_Won, Diff_H2H_s_Games_Won,
-    Diff_H2H_s_Win_Rate, Diff_H2H_s_Set_Win_Rate, Diff_H2H_s_Games_Win_Rate,
+    Diff_H2H_s_Win_Rate,
+    Diff_H2H_s_Set_Win_Rate,
+    Diff_H2H_s_Games_Win_Rate,
     
-    # Différences H2H 3 ans
-    Diff_H2H_W_3Y, Diff_H2H_Set_Won_3Y, Diff_H2H_Games_Won_3Y,
-    Diff_H2H_Win_Rate_3Y, Diff_H2H_Set_Win_Rate_3Y, Diff_H2H_Games_Win_Rate_3Y,
+    Diff_H2H_Win_Rate_3Y,
+    Diff_H2H_Set_Win_Rate_3Y,
+    Diff_H2H_Games_Win_Rate_3Y,
     
-    # Différences H2H même surface 3 ans
-    Diff_H2H_s_W_3Y, Diff_H2H_s_Set_Won_3Y, Diff_H2H_s_Games_Won_3Y,
-    Diff_H2H_s_Win_Rate_3Y, Diff_H2H_s_Set_Win_Rate_3Y, Diff_H2H_s_Games_Win_Rate_3Y,
+    Diff_H2H_s_Win_Rate_3Y,
+    Diff_H2H_s_Set_Win_Rate_3Y,
+    Diff_H2H_s_Games_Win_Rate_3Y,
     
-    # Différences Momentum H2H
-    Diff_H2H_Momentum, Diff_H2H_s_Momentum,
-    Diff_H2H_Set_Momentum, Diff_H2H_s_Set_Momentum,
-    Diff_H2H_Games_Momentum, Diff_H2H_s_Games_Momentum,
     
-    First_meeting,First_meeting_s,
+    # --- DIFFÉRENCES - Forme Récente (4 matchs) ---
+    Diff_Win_Rate_4,
+    Diff_Win_Rate_s_4,
     
-    # Différences forme 4 semaines
-    Diff_N_Win_4, Diff_N_Loss_4, Diff_Win_Rate_4,
+    # --- DIFFÉRENCES - Forme Récente (12 matchs) ---
+    Diff_Win_Rate_12,
+    Diff_Win_Rate_s_12,
     
-    # Différences forme surface 4 semaines
-    Diff_N_Win_s_4, Diff_N_Loss_s_4, Diff_Win_Rate_s_4,
+    # --- DIFFÉRENCES - Performance As Fav (12 mois) ---
+    Diff_as_Fav_12_Win_rate,
     
-    # Différences forme 12 semaines
-    Diff_N_Win_12, Diff_N_Loss_12, Diff_Win_Rate_12,
+    # --- DIFFÉRENCES - Performance As Out (12 mois) ---
+    Diff_as_Out_12_Win_rate,
     
-    # Différences forme surface 12 semaines
-    Diff_N_Win_s_12, Diff_N_Loss_s_12, Diff_Win_Rate_s_12,
+    # --- DIFFÉRENCES - Performance As Fav (4 mois) ---
+    Diff_as_Fav_4_Win_rate,
     
-    # Différences Momentum forme
-    Diff_Momentum, Diff_Momentum_s,
-    
-    Diff_Indic_Play_4, Diff_Indic_Play_12,
-    # Info stade match
-    Categ_Elite,Categ_Mid,Categ_low,Round_RR,Round_R1,Round_R2,Round_R3,Round_R16,Round_QF,Round_SF,Round_F
-    
-    #,Categ_Round
+    # --- DIFFÉRENCES - Performance As Out (4 mois) ---
+    Diff_as_Out_4_Win_rate
   )
 
 
+#### TABLE MOMENTUM #####
 
+  TABLE_MOMENTUM = TABLE_ML_DIFF %>%
+  mutate(
+    # --- Momentum H2H (Matchs, Sets, Games) ---
+    Mom_H2H               = sign(Diff_H2H_Win_Rate),
+    Mom_H2H_Set           = sign(Diff_H2H_Set_Win_Rate),
+    Mom_H2H_Games         = sign(Diff_H2H_Games_Win_Rate),
+    
+    Mom_H2H_s             = sign(Diff_H2H_s_Win_Rate),
+    Mom_H2H_s_Set         = sign(ifelse(is.na(Diff_H2H_s_Set_Win_Rate), 0, Diff_H2H_s_Set_Win_Rate)),
+    Mom_H2H_s_Games       = sign(ifelse(is.na(Diff_H2H_s_Games_Win_Rate), 0, Diff_H2H_s_Games_Win_Rate)),
+    
+    Mom_H2H_3Y            = sign(Diff_H2H_Win_Rate_3Y),
+    Mom_H2H_Set_3Y        = sign(Diff_H2H_Set_Win_Rate_3Y),
+    Mom_H2H_Games_3Y      = sign(Diff_H2H_Games_Win_Rate_3Y),
+    
+    Mom_H2H_s_3Y          = sign(Diff_H2H_s_Win_Rate_3Y),
+    Mom_H2H_s_Set_3Y      = sign(Diff_H2H_s_Set_Win_Rate_3Y),
+    Mom_H2H_s_Games_3Y    = sign(Diff_H2H_s_Games_Win_Rate_3Y),
+    
+    # --- Momentum Forme Récente ---
+    Mom_WR_4              = sign(Diff_Win_Rate_4),
+    Mom_WR_s_4            = sign(Diff_Win_Rate_s_4),
+    Mom_WR_12             = sign(Diff_Win_Rate_12),
+    Mom_WR_s_12           = sign(Diff_Win_Rate_s_12),
+    
+    # --- Momentum Statut ---
+    Mom_as_Fav_12         = sign(Diff_as_Fav_12_Win_rate),
+    Mom_as_Out_12         = sign(Diff_as_Out_12_Win_rate),
+    Mom_as_Fav_4          = sign(Diff_as_Fav_4_Win_rate),
+    Mom_as_Out_4          = sign(Diff_as_Out_4_Win_rate),
+    
+    # --- Score Global ---
+    Global_Momentum_Score = rowSums(across(starts_with("Mom_")), na.rm = TRUE)
+  )
