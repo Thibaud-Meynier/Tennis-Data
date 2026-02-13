@@ -2,12 +2,15 @@ library(tidyverse)
 library(caret)
 library(glmnet)      # lasso, ridge, elastic net
 library(randomForest)
+library(e1071)
+library(scales)
 library(rpart)       # CART
 library(class)       # KNN
 library(gbm)         # Gradient Boosting
 library(lightgbm)    # LightGBM
 library(pROC)
 library(plotly)
+library(nnet)
 
 # Préparation des données
 # Supposons que votre variable cible s'appelle 'victoire_favori' (0/1)
@@ -22,7 +25,7 @@ features_diff <- c(
   "Round_R3", "Round_R16", "Round_QF", "Round_SF", "Round_F",
   
   # --- DIFFÉRENCES - Profils Joueurs ---
-  "Diff_Rank",
+  "Diff_Score_Rank",
   "Diff_Points",
   "Diff_Age",
   "Diff_IMC",
@@ -73,6 +76,7 @@ features_diff <- c(
   # --- DIFFÉRENCES - Performance As Out (4 mois) ---
   "Diff_as_Out_4_Win_rate"
 )
+
 feature_momentum <-c(
   # --- Momentum H2H ---
   "Mom_H2H",
@@ -108,6 +112,7 @@ feature_momentum <-c(
   "Mom_WR_global",
   "Mom_as_Fav",
   "Mom_as_Out",
+  "Mom_Fatigue",
   "Global_Momentum_Score"
 )
 
@@ -117,18 +122,21 @@ features_mix <- c(
   "Categ_Elite", "Categ_Mid", "Categ_low",
   "Round_RR", "Round_R1", "Round_R2", 
   "Round_R3", "Round_R16", "Round_QF", "Round_SF", "Round_F",
-  "Diff_Points",
+  "Diff_Score_Rank",
   "Diff_Age",
   "Diff_IMC",
   "Diff_Size",
   "Diff_Weight",
   "Diff_Hand_Score",
   "Diff_Country_score",
-  "P_F_comb",
+  "Diff_Fatigue",
+  "P_F",
+  "P_s_F",
   "Mom_H2H_global",
   "Mom_WR_global",
   "Mom_as_Fav",
-  "Mom_as_Out")
+  "Mom_as_Out",
+  "Mom_Fatigue")
 
 all_features = c(features_diff,feature_momentum)
 
@@ -359,6 +367,42 @@ auc_gbm <- roc(y_test, pred_gbm)
 auc_gbm$auc
 
 #plot(auc_gbm, main="Courbe ROC du Modèle", col="#2c3e50", lwd=3)
+
+# ============================================
+# 6. NN1
+# ============================================
+
+train_scaled <- train %>%
+  mutate(across(all_of(features_mix), ~ as.numeric(scale(.))))
+
+train_scaled$Issue <- train$Issue
+
+test_scaled <- test %>%
+  mutate(across(all_of(features_mix), ~ as.numeric(scale(.))))
+
+# Modèle à 1 couche cachée (size = 5 neurones)
+nn_1layer <- nnet(formule, data = train_scaled, 
+                  size = 25, 
+                  decay = 0.01, # Régularisation pour éviter l'overfitting
+                  maxit = 1000)
+
+# Prédiction
+# On doit scaler le test avec les mêmes paramètres que le train
+
+pred_NN1 <- predict(nn_1layer, test_scaled, type = "raw")
+
+test_pred$NN1=pred_NN1[,1]
+
+confusion_maxtrix <- table(test$Issue,ifelse(test_pred$NN1>0.5,"Faw_W_Pred","Out_W_Pred"))
+
+NN1_diag=model_precision(confusion_maxtrix)
+
+NN1_diag
+
+auc_NN1 <- roc(y_test, test_pred$NN1)
+
+auc_NN1$auc
+
 
 # ============================================
 # 6. Le marché 
