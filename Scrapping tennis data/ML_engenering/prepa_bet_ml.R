@@ -38,7 +38,7 @@ V_MATCH=data.frame()
 
 #i=2016
 
-for (i in year_lim:2025){
+for (i in (year_lim-1):2025){
   
   load(file = paste0(getwd(),"/Scrapping tennis data/Extraction/ATP_",i,"_Extraction.RData"))
   
@@ -196,7 +196,7 @@ V_MATCH_HIST=V_MATCH_HIST %>%
   mutate(Rank_W=case_when(is.na(Rank_W)~1000,TRUE~Rank_W),
          Points_W=case_when(is.na(Points_W)~10,TRUE~Points_W),
          Rank_L=case_when(is.na(Rank_L)~1000,TRUE~Rank_L),
-         Points_L=case_when(is.na(Points_W)~10,TRUE~Points_L))
+         Points_L=case_when(is.na(Points_L)~10,TRUE~Points_L))
 
 V_MATCH_t=V_MATCH_t %>% 
   mutate(Match_week=sapply(Date, get_tennis_week)) %>% 
@@ -213,7 +213,7 @@ V_MATCH_t=V_MATCH_t %>%
   mutate(Rank_W=case_when(is.na(Rank_W)~1000,TRUE~Rank_W),
          Points_W=case_when(is.na(Points_W)~10,TRUE~Points_W),
          Rank_L=case_when(is.na(Rank_L)~1000,TRUE~Rank_L),
-         Points_L=case_when(is.na(Points_W)~10,TRUE~Points_L))
+         Points_L=case_when(is.na(Points_L)~10,TRUE~Points_L))
 
 rm(V_RANK)
 
