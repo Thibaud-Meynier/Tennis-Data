@@ -1,7 +1,7 @@
 library(tidyverse)
 library(progress)
 
-load("~/work/Tennis-Data/Scrapping tennis data/MATCH_STATS.RData")
+load(paste0(getwd(),"/Scrapping tennis data/MATCH_STATS.RData"))
 
 V_MATCH_t=V_MATCH_t %>% 
   mutate(Country_tournament = case_when(Categorie=="Masters" & Season==2021~"Italy",
@@ -15,34 +15,65 @@ proba_calcul=function(elo_p1,elo_p2){
   
   return(proba)
 }
-# 
-# # Créer la table de référence
-# P_optimal_table <- tibble::tribble(
-#   ~Categorie,    ~Surface_tournament, ~P_optimal,
-#   "ATP 1000",    "Clay",              0.59,
-#   "ATP 1000",    "Hard",              0.54,
-#   "ATP 1000",    "Indoors",           0.07,
-#   "ATP 250",     "Clay",              0.59,
-#   "ATP 250",     "Grass",             0.55,
-#   "ATP 250",     "Hard",              0.53,
-#   "ATP 250",     "Indoors",           0.43,
-#   "ATP 500",     "Clay",              0.95,
-#   "ATP 500",     "Grass",             0.41,
-#   "ATP 500",     "Hard",              0.63,
-#   "ATP 500",     "Indoors",           0.00,
-#   "Grand Slam",  "Clay",              0.33,
-#   "Grand Slam",  "Grass",             0.57,
-#   "Grand Slam",  "Hard",              0.55,
-#   "Masters",     "Indoors",           0.88,
-#   "Olympics",    "Clay",              0.71,
-#   "Olympics",    "Hard",              0.00,
-#   "Team",        "Hard",              0.92
-# )
-# 
-# # Joindre avec le dataframe principal
-# V_MATCH_t <- V_MATCH_t %>%
-#   left_join(P_optimal_table, by = c("Categorie", "Surface_tournament")) %>%
-#   rename(P = P_optimal)
+
+get_tennis_week <- function(date) {
+  year <- year(date)
+  week_num <- isoweek(date)
+  
+  # Gérer le cas des premiers jours de janvier qui appartiennent 
+  # à la dernière semaine de l'année précédente
+  if (month(date) == 1 && week_num >= 52) {
+    year <- year - 1
+  }
+  
+  # Gérer le cas de fin décembre appartenant à la semaine 1 de l'année suivante
+  if (month(date) == 12 && week_num == 1) {
+    year <- year + 1
+  }
+  
+  return(paste0(year, "-", sprintf("%02d", week_num)))
+}
+
+V_RANK=data.frame()
+
+for (i in (year_lim-1):2025){
+  
+  load(file = paste0(getwd(),"/Scrapping tennis data/Rank/RANK_ATP_",i,".RData"))
+  
+  V_RANK=rbind(V_RANK,rank)
+  
+  print(i)  
+  
+}
+
+V_RANK=V_RANK %>% 
+  select(-Move) %>% 
+  rename("Player_name"="Player name") %>% 
+  mutate(Week_Rank = sapply(Date, get_tennis_week))
+
+rm(rank)
+rm(V_TOURNAMENT_INFO)
+rm(V_MATCH)
+
+V_MATCH_t=V_MATCH_t %>% 
+select(-c(Rank_W,Rank_L,Points_W,Points_L) %>% 
+  mutate(Match_week=sapply(Date, get_tennis_week)) %>% 
+  left_join(V_RANK %>% select(Rank,Player_name,Points,Week_Rank) %>% 
+              rename(Rank_W=Rank,Points_W=Points) %>% 
+              mutate(Rank_W=as.numeric(Rank_W),
+                     Points_W=as.numeric(Points_W)),
+            by=c("Winner_id"="Player_name","Match_week"="Week_Rank")) %>% 
+  left_join(V_RANK %>% select(Rank,Player_name,Points,Week_Rank) %>% 
+              rename(Rank_L=Rank,Points_L=Points) %>% 
+              mutate(Rank_L=as.numeric(Rank_L),
+                     Points_L=as.numeric(Points_L)),
+            by=c("Loser_id"="Player_name","Match_week"="Week_Rank")) %>% 
+  mutate(Rank_W=case_when(is.na(Rank_W)~1000,TRUE~Rank_W),
+         Points_W=case_when(is.na(Points_W)~10,TRUE~Points_W),
+         Rank_L=case_when(is.na(Rank_L)~1000,TRUE~Rank_L),
+         Points_L=case_when(is.na(Points_L)~10,TRUE~Points_L))
+
+rm(V_RANK)
 
 TABLE = V_MATCH_t %>% 
   mutate(
