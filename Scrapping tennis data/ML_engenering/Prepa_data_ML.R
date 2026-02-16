@@ -1,5 +1,6 @@
 library(tidyverse)
 library(progress)
+library(dbplyr)
 
 year_lim=2017
 
@@ -49,23 +50,21 @@ for (i in (year_lim-1):2025){
 }
 
 V_RANK=V_RANK %>% 
-  select(-Move) %>% 
+  dplyr::select(-Move) %>% 
   rename("Player_name"="Player name") %>% 
   mutate(Week_Rank = sapply(Date, get_tennis_week))
 
 rm(rank)
-rm(V_TOURNAMENT_INFO)
-rm(V_MATCH)
 
 V_MATCH_t=V_MATCH_t %>% 
-select(-c(Rank_W,Rank_L,Points_W,Points_L)) %>% 
+dplyr::select(-c(Rank_W,Rank_L,Points_W,Points_L)) %>% 
   mutate(Match_week=sapply(Date, get_tennis_week)) %>% 
-  left_join(V_RANK %>% select(Rank,Player_name,Points,Week_Rank) %>% 
+  left_join(V_RANK %>% dplyr::select(Rank,Player_name,Points,Week_Rank) %>% 
               rename(Rank_W=Rank,Points_W=Points) %>% 
               mutate(Rank_W=as.numeric(Rank_W),
                      Points_W=as.numeric(Points_W)),
             by=c("Winner_id"="Player_name","Match_week"="Week_Rank")) %>% 
-  left_join(V_RANK %>% select(Rank,Player_name,Points,Week_Rank) %>% 
+  left_join(V_RANK %>% dplyr::select(Rank,Player_name,Points,Week_Rank) %>% 
               rename(Rank_L=Rank,Points_L=Points) %>% 
               mutate(Rank_L=as.numeric(Rank_L),
                      Points_L=as.numeric(Points_L)),
@@ -322,7 +321,7 @@ TABLE = V_MATCH_t %>%
     
   ) %>% 
   filter(info=="Completed") %>% 
-  select(
+  dplyr::select(
     tournament,
     Categorie,
     Round,
@@ -496,6 +495,18 @@ TABLE_ML_DIFF=TABLE %>%
   mutate(
     # --- DIFFÉRENCES - Profils Joueurs ---
     Diff_Rank = Rank_F - Rank_O,
+    Diff_Rank_Class = case_when(
+      Diff_Rank >= 1 & Diff_Rank <= 5 ~ 1,
+      Diff_Rank >= 6 & Diff_Rank <= 10 ~ 2,
+      Diff_Rank >= 11 & Diff_Rank <= 20 ~ 3,
+      Diff_Rank >= 21 & Diff_Rank <= 30 ~ 4,
+      Diff_Rank >= 31 & Diff_Rank <= 50 ~ 5
+      Diff_Rank >= 51 & Diff_Rank <= 100 ~ 6,
+      Diff_Rank >= 101 & Diff_Rank <= 200 ~ 7,
+      Diff_Rank >= 201 ~ 8,
+      TRUE ~ NA
+    ),
+    
     Diff_Score_Rank = Rank_F_score - Rank_O_score,
     Diff_Points = Points_F - Points_O,
     Diff_Age = Age_F - Age_O,
@@ -546,12 +557,12 @@ TABLE_ML_DIFF=TABLE %>%
     Diff_as_Fav_4_Win_rate = F_as_Fav_4_Win_rate - O_as_Fav_4_Win_rate,
     
     # --- DIFFÉRENCES - Performance As Out (4 mois) ---
-    Diff_as_Out_4_Win_rate = F_as_Out_4_Win_rate - O_as_Out_4_Win_rate
+    Diff_as_Out_4_Win_rate = F_as_Out_4_Win_rate - O_as_Out_4_Win_rate,
    
     # --- DIFFERENCE - Fatigue
     Diff_Fatigue = F_Fatigue_index - O_Fatigue_index
   ) %>% 
-  select(
+  dplyr::select(
     # --- Identification & Backtest (non-features) ---
     tournament, Season, Date, Favori, Outsider, 
     Odd_F, Odd_O,
@@ -565,6 +576,7 @@ TABLE_ML_DIFF=TABLE %>%
     Round_RR, Round_R1, Round_R2, Round_R3, Round_R16, Round_QF, Round_SF, Round_F,
     
     # --- DIFFÉRENCES - Profils Joueurs ---
+    Diff_Rank_Class,
     Diff_Rank,
     Diff_Points,
     Diff_Score_Rank,
@@ -578,6 +590,7 @@ TABLE_ML_DIFF=TABLE %>%
     # --- DIFFÉRENCES - ELO & Probabilités ---
     P_F,
     P_s_F,
+    P_F_comb,
     
     # --- DIFFÉRENCES - H2H (Historique Face à Face) ---
     Diff_H2H_Win_Rate,
@@ -655,7 +668,7 @@ TABLE_ML_DIFF=TABLE %>%
     Mom_as_Fav_4          = sign(Diff_as_Fav_4_Win_rate),
     Mom_as_Out_4          = sign(Diff_as_Out_4_Win_rate),
 
-    Mom_Fatigue = sign(Diff_Fatigue)
+    Mom_Fatigue = sign(Diff_Fatigue),
     
     # --- Score Global ---
     Global_Momentum_Score = rowSums(across(starts_with("Mom_")), na.rm = TRUE)
