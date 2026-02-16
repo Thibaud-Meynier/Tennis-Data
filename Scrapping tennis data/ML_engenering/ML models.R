@@ -171,11 +171,16 @@ model_precision=function(confusion_maxtrix){
   
   accuracy=(confusion_maxtrix[2,2]+confusion_maxtrix[1,1])/(confusion_maxtrix[2,1]+confusion_maxtrix[2,2]+confusion_maxtrix[1,2]+confusion_maxtrix[1,1])
   
-  accuracy*100
+  PPV = confusion_maxtrix[1,1]/(confusion_maxtrix[1,1]+confusion_maxtrix[2,1])
+  
+  NPV = confusion_maxtrix[2,2]/(confusion_maxtrix[1,2]+confusion_maxtrix[2,2])
+  
   
   return(list(sensitivity=sensitivity*100,
               specificity=specificity*100,
               accuracy=accuracy*100,
+              PPV = PPV*100,
+              NPV = NPV*100,
               confusion_maxtrix=confusion_maxtrix
   ))
 }
