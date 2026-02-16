@@ -82,6 +82,28 @@ TABLE = V_MATCH_t %>%
     Issue = case_when(Favori == Winner_id ~ "Fav_W", TRUE ~ "Out_W"),
     Rank_F = case_when(Rank_W < Rank_L ~ Rank_W, TRUE ~ Rank_L),
     Rank_O = case_when(Rank_L < Rank_W ~ Rank_W, TRUE ~ Rank_L),
+    Rank_F_score = case_when(
+      Rank_F >= 1 & Rank_F <= 5 ~ 8,
+      Rank_F >= 6 & Rank_F <= 10 ~ 7,
+      Rank_F >= 11 & Rank_F <= 20 ~ 6,
+      Rank_F >= 21 & Rank_F <= 30 ~ 5,
+      Rank_F >= 31 & Rank_F <= 50 ~ 4,
+      Rank_F >= 51 & Rank_F <= 100 ~ 3,
+      Rank_F >= 101 & Rank_F <= 200 ~ 2,
+      Rank_F >= 201 ~ 1,
+      TRUE ~ NA
+    ),
+    Rank_O_score = case_when(
+      Rank_O >= 1 & Rank_O <= 5 ~ 8,
+      Rank_O >= 6 & Rank_O <= 10 ~ 7,
+      Rank_O >= 11 & Rank_O <= 20 ~ 6,
+      Rank_O >= 21 & Rank_O <= 30 ~ 5,
+      Rank_O >= 31 & Rank_O <= 50 ~ 4,
+      Rank_O >= 51 & Rank_O <= 100 ~ 3,
+      Rank_O >= 101 & Rank_O <= 200 ~ 2,
+      Rank_O >= 201 ~ 1,
+      TRUE ~ NA
+    ),
     Points_F = case_when(Rank_W < Rank_L ~ Points_W, TRUE ~ Points_L),
     Points_O = case_when(Rank_L < Rank_W ~ Points_W, TRUE ~ Points_L),
     Odd_F = case_when(Rank_W < Rank_L ~ Odd_W, TRUE ~ Odd_L),
@@ -268,6 +290,18 @@ TABLE = V_MATCH_t %>%
     F_Win_Rate_s_12 = ifelse(is.na(F_Win_Rate_s_12),0,F_Win_Rate_s_12)*100,
     O_Win_Rate_s_12 = (O_N_Win_s_12/(O_N_Win_s_12+O_N_Loss_s_12)),
     O_Win_Rate_s_12 = ifelse(is.na(O_Win_Rate_s_12),0,O_Win_Rate_s_12)*100,
+
+    # Indice de fatigue 
+    F_N_match_12 = F_N_Win_12+F_N_Loss_12,
+    O_N_match_12 = O_N_Win_12+O_N_Loss_12,
+    F_N_match_4 = F_N_Win_4+F_N_Loss_4,
+    O_N_match_4 = O_N_Win_4+O_N_Loss_4,
+    
+    P4_P12_F = ifelse(is.na(F_N_match_4/F_N_match_12),0,F_N_match_4/F_N_match_12),
+    P4_P12_O = ifelse(is.na(O_N_match_4/O_N_match_12),0,O_N_match_4/O_N_match_12),
+
+    F_Fatigue_index = F_N_match_12/21*(1+P4_P12_F),
+    O_Fatigue_index = O_N_match_12/21*(1+P4_P12_O),
     
     # Categorie tournoi
     Categ_Elite = case_when(Categorie %in% c("Grand Slam","Olympics","Team")~1,TRUE~0),
@@ -299,6 +333,8 @@ TABLE = V_MATCH_t %>%
     Issue,
     Rank_F,
     Rank_O,
+    Rank_F_score,
+    Rank_O_score,
     Points_F,
     Points_O,
     Odd_F,
@@ -444,8 +480,9 @@ TABLE = V_MATCH_t %>%
     Round_R16,
     Round_QF,
     Round_SF,
-    Round_F
-    
+    Round_F,
+    F_Fatigue_index,
+    O_Fatigue_index
   )
 
 # save(TABLE,file="TABLE_RAW.RData",compress="xz")
@@ -457,6 +494,7 @@ TABLE_ML_DIFF=TABLE %>%
   mutate(
     # --- DIFFÉRENCES - Profils Joueurs ---
     Diff_Rank = Rank_F - Rank_O,
+    Diff_Score_Rank = Rank_F_score - Rank_O_score,
     Diff_Points = Points_F - Points_O,
     Diff_Age = Age_F - Age_O,
     Diff_IMC = IMC_F - IMC_O,
@@ -507,6 +545,9 @@ TABLE_ML_DIFF=TABLE %>%
     
     # --- DIFFÉRENCES - Performance As Out (4 mois) ---
     Diff_as_Out_4_Win_rate = F_as_Out_4_Win_rate - O_as_Out_4_Win_rate
+   
+    # --- DIFFERENCE - Fatigue
+    Diff_Fatigue = F_Fatigue_index - O_Fatigue_index
   ) %>% 
   select(
     # --- Identification & Backtest (non-features) ---
@@ -524,6 +565,7 @@ TABLE_ML_DIFF=TABLE %>%
     # --- DIFFÉRENCES - Profils Joueurs ---
     Diff_Rank,
     Diff_Points,
+    Diff_Score_Rank,
     Diff_Age,
     Diff_IMC,
     Diff_Size,
@@ -532,9 +574,8 @@ TABLE_ML_DIFF=TABLE %>%
     Diff_Country_score,
     
     # --- DIFFÉRENCES - ELO & Probabilités ---
-    Diff_Elo,
-    Diff_Elo_s,
-    P_F_comb,  # Déjà une probabilité relative
+    P_F,
+    P_s_F,
     
     # --- DIFFÉRENCES - H2H (Historique Face à Face) ---
     Diff_H2H_Win_Rate,
@@ -572,7 +613,10 @@ TABLE_ML_DIFF=TABLE %>%
     Diff_as_Fav_4_Win_rate,
     
     # --- DIFFÉRENCES - Performance As Out (4 mois) ---
-    Diff_as_Out_4_Win_rate
+    Diff_as_Out_4_Win_rate,
+
+    # --- DIFFERENCE - Fatigue
+    Diff_Fatigue 
   )
 
 
@@ -608,7 +652,16 @@ TABLE_ML_DIFF=TABLE %>%
     Mom_as_Out_12         = sign(Diff_as_Out_12_Win_rate),
     Mom_as_Fav_4          = sign(Diff_as_Fav_4_Win_rate),
     Mom_as_Out_4          = sign(Diff_as_Out_4_Win_rate),
+
+    Mom_Fatigue = sign(Diff_Fatigue)
     
     # --- Score Global ---
     Global_Momentum_Score = rowSums(across(starts_with("Mom_")), na.rm = TRUE)
+  ) %>%
+mutate(
+  Mom_H2H_global = Mom_H2H+Mom_H2H_s+Mom_H2H_3Y+Mom_H2H_s_3Y,
+  Mom_WR_global = Mom_WR_4+Mom_WR_s_4+Mom_WR_12+Mom_WR_s_12,
+  Mom_as_Fav = Mom_as_Fav_12+Mom_as_Fav_4,
+  Mom_as_Out = Mom_as_Out_4+Mom_as_Out_12,  
   )
+       
