@@ -11,6 +11,8 @@ library(lightgbm)    # LightGBM
 library(pROC)
 library(plotly)
 library(nnet)
+library(MASS)
+library(MLmetrics)
 
 # Préparation des données
 # Supposons que votre variable cible s'appelle 'victoire_favori' (0/1)
@@ -26,6 +28,7 @@ features_diff <- c(
   
   # --- DIFFÉRENCES - Profils Joueurs ---
   "Diff_Score_Rank",
+  "Diff_Rank_Class",
   "Diff_Points",
   "Diff_Age",
   "Diff_IMC",
@@ -123,6 +126,7 @@ features_mix <- c(
   "Round_RR", "Round_R1", "Round_R2", 
   "Round_R3", "Round_R16", "Round_QF", "Round_SF", "Round_F",
   "Diff_Score_Rank",
+  "Diff_Rank_Class",
   "Diff_Age",
   "Diff_IMC",
   "Diff_Size",
@@ -414,8 +418,6 @@ auc_NN1$auc
 # NAIVE BAYES
 # ============================================
 
-library(e1071)
-
 # Préparer les données (pas besoin de scaling)
 nb_model <- naiveBayes(
   x = X_train,
@@ -444,10 +446,8 @@ print(nb_model$tables)
 # KNN
 # ============================================
 
-library(class)
-
 # Avec caret pour tuning
-knn_grid <- expand.grid(k = c(3, 5, 7, 9, 11, 15, 21))
+knn_grid <- expand.grid(k = c(3, 5, 7, 9, 11, 15, 21, 25, 30))
 
 y_train_factor <- factor(y_train, levels = c(0, 1), labels = c("Out_W", "Fav_W"))
 
@@ -481,8 +481,6 @@ knn_diag
 # LDA 
 # ============================================
 
-library(MASS)
-
 lda_model <- lda(
   x = X_train,
   grouping = as.factor(y_train)
@@ -507,8 +505,6 @@ lda_diag
 # ============================================
 # Lightgbm
 # ============================================
-
-library(lightgbm)
 
 # Préparer les données
 lgb_train <- lgb.Dataset(data = X_train, label = y_train)
@@ -605,43 +601,6 @@ xgb_diag
 
 
 # ============================================
-# 6. Aggrégation des prédictions 
-# ============================================
-
-aggreg_pred=glm(y_test~LASSO+P_F_comb+Elastic+Ridge+GBM+XGB+LGB+NN1+LDA+Random_Forest+KNN+Naive_Bayes,data=c(test_pred,y_test),
-                family = binomial(link = "logit"))
-
-summary(aggreg_pred)
-
-test_pred$aggreg_pred=predict(aggreg_pred, test_pred,type = "response")
-
-auc_aggreg <- roc(y_test, test_pred$aggreg_pred)
-
-auc_aggreg$auc
-
-confusion_maxtrix=table(test$Issue,ifelse(test_pred$aggreg_pred>0.5,"Faw_W_Pred","Out_W_Pred"))
-
-aggreg_diag=model_precision(confusion_maxtrix)
-
-aggreg_diag
-
-model_list=c("Ridge","KNN","Random_Forest","Naive_Bayes","LDA","P_F_comb","XGB","GBM","NN1")
-
-test_pred=test_pred %>% 
-  mutate(mean_pred=rowMeans(across(all_of(model_list)))
-  )
-
-auc_aggreg_mean <- roc(y_test, test_pred$mean_pred)
-
-auc_aggreg_mean$auc
-
-confusion_maxtrix=table(test$Issue,ifelse(test_pred$mean_pred>0.5,"Faw_W_Pred","Out_W_Pred"))
-
-aggreg_mean_diag=model_precision(confusion_maxtrix)
-
-aggreg_mean_diag
-
-# ============================================
 # 6. Le marché 
 # ============================================
 
@@ -692,12 +651,106 @@ resultats <- data.frame(
   Specificity=c(market_diag$specificity,elo_diag$specificity,lasso_diag$specificity,elastic_diag$specificity,
              ridge_diag$specificity,rf_diag$specificity,gbm_diag$specificity,NN1_diag$specificity,nb_diag$specificity,
              knn_diag$specificity,lda_diag$specificity,lgb_diag$specificity,xgb_diag$specificity
-  )
+  ),
   
+  PPV=c(market_diag$PPV,elo_diag$PPV,lasso_diag$PPV,elastic_diag$PPV,
+        ridge_diag$PPV,rf_diag$PPV,gbm_diag$PPV,NN1_diag$PPV,nb_diag$PPV,
+        knn_diag$PPV,lda_diag$PPV,lgb_diag$PPV,xgb_diag$PPV	
+  ),
+  
+  NPV=c(market_diag$NPV,elo_diag$NPV,lasso_diag$NPV,elastic_diag$NPV,
+        ridge_diag$NPV,rf_diag$NPV,gbm_diag$NPV,NN1_diag$NPV,nb_diag$NPV,
+        knn_diag$NPV,lda_diag$NPV,lgb_diag$NPV,xgb_diag$NPV	
+  ),
+  
+  Log_Loss=c(LogLoss(test_pred$P_F_market,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+             LogLoss(test_pred$P_F_comb,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+             LogLoss(test_pred$LASSO,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+             LogLoss(test_pred$Elastic,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+             LogLoss(test_pred$Ridge,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+             LogLoss(test_pred$Random_Forest,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+             LogLoss(test_pred$GBM,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+             LogLoss(test_pred$NN1,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+             LogLoss(test_pred$Naive_Bayes,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+             LogLoss(test_pred$KNN,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+             LogLoss(test_pred$LDA,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+             LogLoss(test_pred$LGB,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+             LogLoss(test_pred$XGB,ifelse(test_pred$Issue == "Fav_W", 1, 0))
+  ),
+  
+  Brier_score = c(
+    Market        = mean((test_pred$P_F_market - ifelse(test_pred$Issue == "Fav_W", 1, 0))^2),
+    Elo_Comb      = mean((test_pred$P_F_comb - ifelse(test_pred$Issue == "Fav_W", 1, 0))^2),
+    LASSO         = mean((test_pred$LASSO - ifelse(test_pred$Issue == "Fav_W", 1, 0))^2),
+    Elastic       = mean((test_pred$Elastic - ifelse(test_pred$Issue == "Fav_W", 1, 0))^2),
+    Ridge         = mean((test_pred$Ridge - ifelse(test_pred$Issue == "Fav_W", 1, 0))^2),
+    Random_Forest = mean((test_pred$Random_Forest - ifelse(test_pred$Issue == "Fav_W", 1, 0))^2),
+    GBM           = mean((test_pred$GBM - ifelse(test_pred$Issue == "Fav_W", 1, 0))^2),
+    NN1           = mean((test_pred$NN1 - ifelse(test_pred$Issue == "Fav_W", 1, 0))^2),
+    Naive_Bayes   = mean((test_pred$Naive_Bayes - ifelse(test_pred$Issue == "Fav_W", 1, 0))^2),
+    KNN           = mean((test_pred$KNN - ifelse(test_pred$Issue == "Fav_W", 1, 0))^2),
+    LDA           = mean((test_pred$LDA - ifelse(test_pred$Issue == "Fav_W", 1, 0))^2),
+    LGB           = mean((test_pred$LGB - ifelse(test_pred$Issue == "Fav_W", 1, 0))^2),
+    XGB           = mean((test_pred$XGB - ifelse(test_pred$Issue == "Fav_W", 1, 0))^2)
+  ),
+  
+  Calc_ECE = c(
+  calc_ece(test_pred$P_F_market,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+  calc_ece(test_pred$P_F_comb,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+  calc_ece(test_pred$LASSO,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+  calc_ece(test_pred$Elastic,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+  calc_ece(test_pred$Ridge,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+  calc_ece(test_pred$Random_Forest,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+  calc_ece(test_pred$GBM,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+  calc_ece(test_pred$NN1,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+  calc_ece(test_pred$Naive_Bayes,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+  calc_ece(test_pred$KNN,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+  calc_ece(test_pred$LDA,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+  calc_ece(test_pred$LGB,ifelse(test_pred$Issue == "Fav_W", 1, 0)),
+  calc_ece(test_pred$XGB,ifelse(test_pred$Issue == "Fav_W", 1, 0))
+  )
 )
 
-
 print(resultats)
+
+
+# ============================================
+# 6. Aggrégation des prédictions 
+# ============================================
+
+aggreg_pred=glm(as.factor(Issue)~LASSO+Random_Forest,data=test_pred,
+                family = binomial)
+
+summary(aggreg_pred)
+
+test_pred$aggreg_pred=predict(aggreg_pred, test_pred,type = "response")
+
+auc_aggreg <- roc(y_test, test_pred$aggreg_pred)
+
+auc_aggreg$auc
+
+confusion_maxtrix=table(test$Issue,ifelse(test_pred$aggreg_pred<0.5,"Faw_W_Pred","Out_W_Pred"))
+
+aggreg_diag=model_precision(confusion_maxtrix)
+
+aggreg_diag
+
+model_list=c("Ridge","KNN","Random_Forest","Naive_Bayes","LDA","P_F_comb","XGB","GBM","NN1")
+
+test_pred=test_pred %>% 
+  mutate(mean_pred=rowMeans(across(all_of(model_list)))
+  )
+
+auc_aggreg_mean <- roc(y_test, test_pred$mean_pred)
+
+auc_aggreg_mean$auc
+
+confusion_maxtrix=table(test$Issue,ifelse(test_pred$mean_pred>0.5,"Faw_W_Pred","Out_W_Pred"))
+
+aggreg_mean_diag=model_precision(confusion_maxtrix)
+
+aggreg_mean_diag
+
 
 # Visualisation
 
