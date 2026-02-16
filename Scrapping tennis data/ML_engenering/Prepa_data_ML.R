@@ -1,6 +1,8 @@
 library(tidyverse)
 library(progress)
 
+year_lim=2017
+
 load(paste0(getwd(),"/Scrapping tennis data/MATCH_STATS.RData"))
 
 V_MATCH_t=V_MATCH_t %>% 
@@ -56,7 +58,7 @@ rm(V_TOURNAMENT_INFO)
 rm(V_MATCH)
 
 V_MATCH_t=V_MATCH_t %>% 
-select(-c(Rank_W,Rank_L,Points_W,Points_L) %>% 
+select(-c(Rank_W,Rank_L,Points_W,Points_L)) %>% 
   mutate(Match_week=sapply(Date, get_tennis_week)) %>% 
   left_join(V_RANK %>% select(Rank,Player_name,Points,Week_Rank) %>% 
               rename(Rank_W=Rank,Points_W=Points) %>% 
