@@ -598,6 +598,44 @@ xgb_diag=model_precision(confusion_maxtrix)
 
 xgb_diag
 
+
+# ============================================
+# 6. Aggrégation des prédictions 
+# ============================================
+
+aggreg_pred=glm(y_test~LASSO+P_F_comb+Elastic+Ridge+GBM+XGB+LGB+NN1+LDA+Random_Forest+KNN+Naive_Bayes,data=c(test_pred,y_test),
+                family = binomial(link = "logit"))
+
+summary(aggreg_pred)
+
+test_pred$aggreg_pred=predict(aggreg_pred, test_pred,type = "response")
+
+auc_aggreg <- roc(y_test, test_pred$aggreg_pred)
+
+auc_aggreg$auc
+
+confusion_maxtrix=table(test$Issue,ifelse(test_pred$aggreg_pred>0.5,"Faw_W_Pred","Out_W_Pred"))
+
+aggreg_diag=model_precision(confusion_maxtrix)
+
+aggreg_diag
+
+model_list=c("Ridge","KNN","Random_Forest","Naive_Bayes","LDA","P_F_comb","XGB","GBM","NN1")
+
+test_pred=test_pred %>% 
+  mutate(mean_pred=rowMeans(across(all_of(model_list)))
+  )
+
+auc_aggreg_mean <- roc(y_test, test_pred$mean_pred)
+
+auc_aggreg_mean$auc
+
+confusion_maxtrix=table(test$Issue,ifelse(test_pred$mean_pred>0.5,"Faw_W_Pred","Out_W_Pred"))
+
+aggreg_mean_diag=model_precision(confusion_maxtrix)
+
+aggreg_mean_diag
+
 # ============================================
 # 6. Le marché 
 # ============================================
@@ -672,10 +710,12 @@ df_calib <- data.frame(
   KNN = test_pred$KNN,
   LDA = test_pred$LDA,
   LGB = test_pred$LGB,
-  XGB = test_pred$XGB
+  XGB = test_pred$XGB,
+  Mean = test_pred$mean_pred
   )
 
-cal_obj <- calibration(as.factor(Actual) ~ Elo + Lasso + Ridge + ElasticNet + RandomForest + GBM  + Market + NN1 + KNN + Naive_Bayes + LDA + LGB + XGB, 
+cal_obj <- calibration(as.factor(Actual) ~ Elo + Lasso + Ridge + ElasticNet + RandomForest + GBM  +
+                         Market + NN1 + KNN + Naive_Bayes + LDA + LGB + XGB + Mean, 
                        data = df_calib, 
                        cuts = 20) # Divise en 10 tranches de 10%
 
@@ -690,7 +730,12 @@ library(tidyr)
 
 df_long <- df_calib %>%
   pivot_longer(cols = -Actual, names_to = "Modèle", values_to = "Prob") %>%
-  mutate(bin = cut(Prob, breaks = seq(0, 1, by = 0.1), include.lowest = TRUE, labels = seq(0.05, 0.95, by = 0.1))) %>%
+  # 1. On réduit le pas à 0.05 pour les breaks
+  # 2. On centre les labels au milieu de chaque nouveau bin (ex: milieu de [0, 0.05] = 0.025)
+  mutate(bin = cut(Prob, 
+                   breaks = seq(0, 1, by = 0.05), 
+                   include.lowest = TRUE, 
+                   labels = seq(0.025, 0.975, by = 0.05))) %>%
   mutate(bin = as.numeric(as.character(bin)))
 
 # 2. Calcul des fréquences observées par bin et par modèle
