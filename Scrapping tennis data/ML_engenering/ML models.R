@@ -136,7 +136,8 @@ features_mix <- c(
   "Mom_WR_global",
   "Mom_as_Fav",
   "Mom_as_Out",
-  "Mom_Fatigue")
+  "Mom_Fatigue",
+  "Global_Momentum_Score")
 
 all_features = c(features_diff,feature_momentum)
 
@@ -150,12 +151,12 @@ index_train <- createDataPartition(TABLE_MOMENTUM$Issue, p = 0.8, list = FALSE)
 train <- TABLE_MOMENTUM[index_train, ]
 test <- TABLE_MOMENTUM[-index_train, ]
 test_pred=TABLE_MOMENTUM[-index_train, ]
-test_pred=test_pred %>% select(tournament,Surface_tournament,Categorie,Season,Round,Favori,Outsider,Odd_F,Odd_O,Issue,P_F_comb)
+test_pred=test_pred %>% dplyr::select(tournament,Surface_tournament,Categorie,Season,Round,Favori,Outsider,Odd_F,Odd_O,Issue,P_F_comb)
 
 # Préparation des matrices pour glmnet
-X_train <- model.matrix(formule, train %>% select(all_of(c(features_mix, "Issue"))))[, -1]
+X_train <- model.matrix(formule, train %>% dplyr::select(all_of(c(features_mix, "Issue"))))[, -1]
 y_train <- ifelse(train$Issue=="Fav_W",1,0)
-X_test <- model.matrix(formule, test %>% select(all_of(c(features_mix, "Issue"))))[, -1]
+X_test <- model.matrix(formule, test %>% dplyr::select(all_of(c(features_mix, "Issue"))))[, -1]
 y_test <- ifelse(test$Issue=="Fav_W",1,0)
 
 model_precision=function(confusion_maxtrix){
@@ -303,7 +304,7 @@ model_rf <- randomForest(formule,
                          mtry = sqrt(length(all_features)),
                          importance = TRUE)
 
-varImpPlot(model_rf,type=1,n.var=10)
+varImpPlot(model_rf,type=1,n.var=20)
 
 pred_rf <- predict(model_rf, test, type = "prob")[, 1]
 
@@ -346,7 +347,7 @@ best_iter <- gbm.perf(model_gbm, method = "cv", plot.it = FALSE)
 importance_gbm <- summary(model_gbm)
 
 # Affiche le top 10 des variables
-print(importance_gbm[1:10, ])
+print(importance_gbm[1:20, ])
 
 pred_gbm <- predict(model_gbm, test, 
                     n.trees = best_iter, 
@@ -382,8 +383,8 @@ test_scaled <- test %>%
 
 # Modèle à 1 couche cachée (size = 5 neurones)
 nn_1layer <- nnet(formule, data = train_scaled, 
-                  size = 25, 
-                  decay = 0.01, # Régularisation pour éviter l'overfitting
+                  size = 15, 
+                  decay = 0.1, # Régularisation pour éviter l'overfitting
                   maxit = 1000)
 
 # Prédiction
@@ -405,6 +406,199 @@ auc_NN1$auc
 
 
 # ============================================
+# NAIVE BAYES
+# ============================================
+
+library(e1071)
+
+# Préparer les données (pas besoin de scaling)
+nb_model <- naiveBayes(
+  x = X_train,
+  y = as.factor(y_train)
+)
+
+# Prédictions
+pred_nb <- predict(nb_model, X_test, type = "raw")[, 2]
+
+test_pred$Naive_Bayes=pred_nb
+
+auc_nb <- roc(y_test, pred_nb)
+
+auc_nb$auc
+
+confusion_maxtrix=table(test$Issue,ifelse(pred_nb>0.5,"Faw_W_Pred","Out_W_Pred"))
+
+nb_diag=model_precision(confusion_maxtrix)
+
+nb_diag
+
+print(nb_model$tables)
+
+
+# ============================================
+# KNN
+# ============================================
+
+library(class)
+
+# Avec caret pour tuning
+knn_grid <- expand.grid(k = c(3, 5, 7, 9, 11, 15, 21))
+
+y_train_factor <- factor(y_train, levels = c(0, 1), labels = c("Out_W", "Fav_W"))
+
+knn_model <- train(
+  x = X_train,
+  y = y_train_factor,
+  method = "knn",
+  trControl = trainControl(method = "cv", number = 5, classProbs = TRUE),
+  tuneGrid = knn_grid,
+  preProcess = c("center", "scale")  # Important pour KNN
+)
+
+knn_model$bestTune
+
+# Prédictions
+pred_knn <- predict(knn_model, X_test, type = "prob")[, 2]
+
+test_pred$KNN=pred_knn
+
+auc_knn <- roc(y_test, pred_knn)
+
+auc_knn$auc
+
+confusion_maxtrix=table(test$Issue,ifelse(pred_knn>0.5,"Faw_W_Pred","Out_W_Pred"))
+
+knn_diag=model_precision(confusion_maxtrix)
+
+knn_diag
+
+# ============================================
+# LDA 
+# ============================================
+
+library(MASS)
+
+lda_model <- lda(
+  x = X_train,
+  grouping = as.factor(y_train)
+)
+
+# Prédictions
+pred_lda <- predict(lda_model, X_test)$posterior[, 2]
+
+test_pred$LDA=pred_lda
+
+auc_lda <- roc(y_test, pred_lda)
+
+auc_lda$auc
+
+confusion_maxtrix=table(test$Issue,ifelse(pred_lda>0.5,"Faw_W_Pred","Out_W_Pred"))
+
+lda_diag=model_precision(confusion_maxtrix)
+
+lda_diag
+
+
+# ============================================
+# Lightgbm
+# ============================================
+
+library(lightgbm)
+
+# Préparer les données
+lgb_train <- lgb.Dataset(data = X_train, label = y_train)
+lgb_test <- lgb.Dataset.create.valid(lgb_train, data = X_test, label = y_test)
+
+# Paramètres
+params <- list(
+  objective = "binary",
+  metric = "auc",
+  learning_rate = 0.1,
+  num_leaves = 31,
+  max_depth = -1,
+  min_data_in_leaf = 5,
+  feature_fraction = 0.8,
+  bagging_fraction = 0.8,
+  bagging_freq = 5
+)
+
+# Entraînement
+lgb_model <- lgb.train(
+  params = params,
+  data = lgb_train,
+  nrounds = 500,
+  valids = list(test = lgb_test),
+  early_stopping_rounds = 20,
+  eval_freq = 50
+)
+
+# Prédictions
+pred_lgb <- predict(lgb_model, X_test)
+
+test_pred$LGB=pred_lgb
+
+auc_lgb <- roc(y_test, pred_lgb)
+
+auc_lgb$auc
+
+confusion_maxtrix=table(test$Issue,ifelse(pred_lgb>0.5,"Faw_W_Pred","Out_W_Pred"))
+
+lgb_diag=model_precision(confusion_maxtrix)
+
+lgb_diag
+
+# ============================================
+# XGBOOST
+# ============================================
+
+library(xgboost)
+
+# Préparer les données
+dtrain <- xgb.DMatrix(data = X_train, label = y_train)
+dtest <- xgb.DMatrix(data = X_test, label = y_test)
+
+# Entraînement
+xgb_model <- xgb.train(
+  params = list(
+    objective = "binary:logistic",
+    eval_metric = "auc",
+    max_depth = 6,
+    eta = 0.1,  # ou learning_rate = 0.3 (nouveau nom)
+    subsample = 0.8,
+    colsample_bytree = 0.8
+  ),
+  data = dtrain,
+  nrounds = 1000,
+  watchlist = list(train = dtrain, test = dtest),
+  print_every_n = 10
+)
+
+importance_matrix <- xgb.importance(
+  feature_names = colnames(X_train),
+  model = xgb_model
+)
+
+xgb.plot.importance(
+  importance_matrix = importance_matrix[1:20],
+  main = "Top 20 Features - XGBoost"
+)
+
+# Prédictions
+pred_xgb <- predict(xgb_model, dtest)
+
+test_pred$XGB=pred_xgb
+
+auc_xgb <- roc(y_test, pred_xgb)
+
+auc_xgb$auc
+
+confusion_maxtrix=table(test$Issue,ifelse(pred_xgb>0.5,"Faw_W_Pred","Out_W_Pred"))
+
+xgb_diag=model_precision(confusion_maxtrix)
+
+xgb_diag
+
+# ============================================
 # 6. Le marché 
 # ============================================
 
@@ -413,7 +607,7 @@ test_pred=test_pred %>%
          P_O_market_raw = (1 / Odd_O),
          Marge = P_F_market_raw + P_O_market_raw,
          P_F_market = P_F_market_raw / Marge) %>% 
-  select(-c(P_F_market_raw,P_O_market_raw,Marge))
+  dplyr::select(-c(P_F_market_raw,P_O_market_raw,Marge))
 
 
 confusion_maxtrix=table(test$Issue,ifelse(test_pred$P_F_market>0.5,"Faw_W_Pred","Out_W_Pred"))
@@ -438,19 +632,23 @@ print(End)
 
 resultats <- data.frame(
   Modele = c("Market","Elo","Lasso", "Elastic Net", "Ridge", "Random Forest", 
-             "Gradient Boosting"),
+             "Gradient Boosting","NN1","Naives Bayes","KNN","LDA","LGB","XGB"),
   AUC = c(auc_market$auc,auc_elo_comb$auc,auc_lasso$auc, auc_elastic$auc, auc_ridge$auc, auc_rf$auc, 
-          auc_gbm$auc),
+          auc_gbm$auc,auc_NN1$auc,auc_nb$auc,auc_knn$auc,auc_lda$auc,auc_lgb$auc,auc_xgb$auc),
+  
   Accuracy=c(market_diag$accuracy,elo_diag$accuracy,lasso_diag$accuracy,elastic_diag$accuracy,
-             ridge_diag$accuracy,rf_diag$accuracy,gbm_diag$accuracy
+             ridge_diag$accuracy,rf_diag$accuracy,gbm_diag$accuracy,NN1_diag$accuracy,nb_diag$accuracy,
+             knn_diag$accuracy,lda_diag$accuracy,lgb_diag$accuracy,xgb_diag$accuracy
              ),
   
   Sensitivity=c(market_diag$sensitivity,elo_diag$sensitivity,lasso_diag$sensitivity,elastic_diag$sensitivity,
-             ridge_diag$sensitivity,rf_diag$sensitivity,gbm_diag$sensitivity
+             ridge_diag$sensitivity,rf_diag$sensitivity,gbm_diag$sensitivity,NN1_diag$sensitivity,nb_diag$sensitivity,
+             knn_diag$sensitivity,lda_diag$sensitivity,lgb_diag$sensitivity,xgb_diag$sensitivity
   ),
   
   Specificity=c(market_diag$specificity,elo_diag$specificity,lasso_diag$specificity,elastic_diag$specificity,
-             ridge_diag$specificity,rf_diag$specificity,gbm_diag$specificity
+             ridge_diag$specificity,rf_diag$specificity,gbm_diag$specificity,NN1_diag$specificity,nb_diag$specificity,
+             knn_diag$specificity,lda_diag$specificity,lgb_diag$specificity,xgb_diag$specificity
   )
   
 )
@@ -468,11 +666,18 @@ df_calib <- data.frame(
   Ridge = as.numeric(pred_ridge),              # alpha = 0
   ElasticNet = as.numeric(pred_elastic),            # alpha = 0.5
   RandomForest = as.numeric(pred_rf),      # ranger predictions[, "1"]
-  GBM = as.numeric(pred_gbm))
+  GBM = as.numeric(pred_gbm),
+  NN1 = test_pred$NN1,
+  Naive_Bayes = test_pred$Naive_Bayes,
+  KNN = test_pred$KNN,
+  LDA = test_pred$LDA,
+  LGB = test_pred$LGB,
+  XGB = test_pred$XGB
+  )
 
-cal_obj <- calibration(as.factor(Actual) ~ Elo + Lasso + Ridge + ElasticNet + RandomForest + GBM  + Market, 
+cal_obj <- calibration(as.factor(Actual) ~ Elo + Lasso + Ridge + ElasticNet + RandomForest + GBM  + Market + NN1 + KNN + Naive_Bayes + LDA + LGB + XGB, 
                        data = df_calib, 
-                       cuts = 10) # Divise en 10 tranches de 10%
+                       cuts = 20) # Divise en 10 tranches de 10%
 
 # Affichage du graphique
 library(ggplot2)
