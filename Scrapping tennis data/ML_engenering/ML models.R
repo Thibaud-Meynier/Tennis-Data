@@ -13,6 +13,7 @@ library(plotly)
 library(nnet)
 library(MASS)
 library(MLmetrics)
+library(xgboost)
 
 # Préparation des données
 # Supposons que votre variable cible s'appelle 'victoire_favori' (0/1)
@@ -23,7 +24,8 @@ features_diff <- c(
   #"Categorie", "Round",
   #"Surface_tournament", 
   "Categ_Elite", "Categ_Mid", "Categ_low",
-  "Round_RR", "Round_R1", "Round_R2", 
+  "Round_RR",
+  "Round_R1", "Round_R2", 
   "Round_R3", "Round_R16", "Round_QF", "Round_SF", "Round_F",
   
   # --- DIFFÉRENCES - Profils Joueurs ---
@@ -40,7 +42,8 @@ features_diff <- c(
   # --- DIFFÉRENCES - ELO & Probabilités ---
   #"Diff_Elo",
   #"Diff_Elo_s",
-  "P_F_comb",
+  "P_F",
+  "P_s_F",
   
   # --- DIFFÉRENCES - H2H (Historique Face à Face) ---
   "Diff_H2H_Win_Rate",
@@ -123,8 +126,7 @@ features_mix <- c(
   # --- Caractéristiques du Match ---
   #"Surface_tournament", 
   "Categ_Elite", "Categ_Mid", "Categ_low",
-  "Round_RR", "Round_R1", "Round_R2", 
-  "Round_R3", "Round_R16", "Round_QF", "Round_SF", "Round_F",
+  "Round_RR",  "Round_R1", "Round_R2",  "Round_R3", "Round_R16", "Round_QF", "Round_SF", "Round_F",
   "Diff_Score_Rank",
   "Diff_Rank_Class",
   "Diff_Age",
@@ -148,14 +150,16 @@ all_features = c(features_diff,feature_momentum)
 formule <- as.formula(paste0("Issue ~ ", paste0(features_mix, collapse = " + ")))
 
 # Division train/test
-set.seed(456)
+set.seed(456) 
 TABLE_MOMENTUM = na.omit(TABLE_MOMENTUM)
 
-index_train <- createDataPartition(TABLE_MOMENTUM$Issue, p = 0.8, list = FALSE)
+#TABLE_MOMENTUM=TABLE_MOMENTUM %>% filter(Categ_low==1)
+
+index_train <- createDataPartition(TABLE_MOMENTUM$Issue, p = 0.8, list = FALSE) #which(TABLE_MOMENTUM$Season < 2024)
 train <- TABLE_MOMENTUM[index_train, ]
 test <- TABLE_MOMENTUM[-index_train, ]
 test_pred=TABLE_MOMENTUM[-index_train, ]
-test_pred=test_pred %>% dplyr::select(tournament,Surface_tournament,Categorie,Season,Round,Favori,Outsider,Odd_F,Odd_O,Issue,P_F_comb)
+test_pred=test_pred %>% dplyr::select(tournament,Diff_Rank_Class,Diff_Score_Rank,Surface_tournament,Categorie,Season,Round,Favori,Outsider,Odd_F,Odd_O,Issue,P_F_comb)
 
 # Préparation des matrices pour glmnet
 X_train <- model.matrix(formule, train %>% dplyr::select(all_of(c(features_mix, "Issue"))))[, -1]
@@ -187,6 +191,23 @@ model_precision=function(confusion_maxtrix){
               NPV = NPV*100,
               confusion_maxtrix=confusion_maxtrix
   ))
+}
+
+calc_ece <- function(probs, actuals, n_bins = 20) {
+  bin_cuts <- seq(0, 1, length.out = n_bins + 1)
+  bin_indices <- cut(probs, breaks = bin_cuts, include.lowest = TRUE)
+  
+  data.frame(probs, actuals, bin_indices) %>%
+    group_by(bin_indices) %>%
+    summarise(
+      bin_avg_prob = mean(probs),
+      bin_actual_freq = mean(actuals),
+      bin_size = n(),
+      .groups = 'drop'
+    ) %>%
+    mutate(bin_error = abs(bin_avg_prob - bin_actual_freq)) %>%
+    summarise(ece = sum(bin_error * bin_size) / sum(bin_size)) %>%
+    pull(ece)
 }
 
 Start=Sys.time()
@@ -310,7 +331,7 @@ test$Issue=as.factor(test$Issue)
 model_rf <- randomForest(formule, 
                          data = train,
                          ntree = 1000,
-                         mtry = sqrt(length(all_features)),
+                         mtry = sqrt(length(features_mix)),
                          importance = TRUE)
 
 varImpPlot(model_rf,type=1,n.var=20)
@@ -413,7 +434,6 @@ auc_NN1 <- roc(y_test, test_pred$NN1)
 
 auc_NN1$auc
 
-
 # ============================================
 # NAIVE BAYES
 # ============================================
@@ -439,15 +459,14 @@ nb_diag=model_precision(confusion_maxtrix)
 
 nb_diag
 
-print(nb_model$tables)
-
+# print(nb_model$tables)
 
 # ============================================
 # KNN
 # ============================================
 
 # Avec caret pour tuning
-knn_grid <- expand.grid(k = c(3, 5, 7, 9, 11, 15, 21, 25, 30))
+knn_grid <- expand.grid(k = c(3, 5, 7, 9, 11, 15, 21))
 
 y_train_factor <- factor(y_train, levels = c(0, 1), labels = c("Out_W", "Fav_W"))
 
@@ -501,7 +520,6 @@ lda_diag=model_precision(confusion_maxtrix)
 
 lda_diag
 
-
 # ============================================
 # Lightgbm
 # ============================================
@@ -552,8 +570,6 @@ lgb_diag
 # XGBOOST
 # ============================================
 
-library(xgboost)
-
 # Préparer les données
 dtrain <- xgb.DMatrix(data = X_train, label = y_train)
 dtest <- xgb.DMatrix(data = X_test, label = y_test)
@@ -564,14 +580,14 @@ xgb_model <- xgb.train(
     objective = "binary:logistic",
     eval_metric = "auc",
     max_depth = 6,
-    eta = 0.1,  # ou learning_rate = 0.3 (nouveau nom)
+    eta = 0.3,  # ou learning_rate = 0.3 (nouveau nom)
     subsample = 0.8,
     colsample_bytree = 0.8
   ),
   data = dtrain,
   nrounds = 1000,
   watchlist = list(train = dtrain, test = dtest),
-  print_every_n = 10
+  print_every_n = 50
 )
 
 importance_matrix <- xgb.importance(
@@ -711,7 +727,8 @@ resultats <- data.frame(
   )
 )
 
-print(resultats)
+print(resultats %>% 
+        arrange(Accuracy))
 
 
 # ============================================
@@ -735,7 +752,7 @@ aggreg_diag=model_precision(confusion_maxtrix)
 
 aggreg_diag
 
-model_list=c("Ridge","KNN","Random_Forest","Naive_Bayes","LDA","P_F_comb","XGB","GBM","NN1")
+model_list=c("Ridge","LASSO","Elastic","KNN","Random_Forest","Naive_Bayes","LDA","P_F_comb","XGB","GBM","LGB","NN1")
 
 test_pred=test_pred %>% 
   mutate(mean_pred=rowMeans(across(all_of(model_list)))
@@ -768,12 +785,11 @@ df_calib <- data.frame(
   KNN = test_pred$KNN,
   LDA = test_pred$LDA,
   LGB = test_pred$LGB,
-  XGB = test_pred$XGB,
-  Mean = test_pred$mean_pred
+  XGB = test_pred$XGB
   )
 
 cal_obj <- calibration(as.factor(Actual) ~ Elo + Lasso + Ridge + ElasticNet + RandomForest + GBM  +
-                         Market + NN1 + KNN + Naive_Bayes + LDA + LGB + XGB + Mean, 
+                         Market + NN1 + KNN + Naive_Bayes + LDA + LGB + XGB , 
                        data = df_calib, 
                        cuts = 20) # Divise en 10 tranches de 10%
 
