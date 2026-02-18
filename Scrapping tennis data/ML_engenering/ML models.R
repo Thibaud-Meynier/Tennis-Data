@@ -125,6 +125,8 @@ feature_momentum <-c(
 features_mix <- c(
   # --- Caractéristiques du Match ---
   #"Surface_tournament", 
+  "INDEX",
+  "Grass","Clay","Hard","Indoors",
   "Categ_Elite", "Categ_Mid", "Categ_low",
   "Round_RR",  "Round_R1", "Round_R2",  "Round_R3", "Round_R16", "Round_QF", "Round_SF", "Round_F",
   "Diff_Score_Rank",
@@ -529,25 +531,24 @@ lgb_train <- lgb.Dataset(data = X_train, label = y_train)
 lgb_test <- lgb.Dataset.create.valid(lgb_train, data = X_test, label = y_test)
 
 # Paramètres
-params <- list(
+params_lgb <- list(
   objective = "binary",
-  metric = "auc",
-  learning_rate = 0.1,
-  num_leaves = 31,
-  max_depth = -1,
-  min_data_in_leaf = 5,
-  feature_fraction = 0.8,
-  bagging_fraction = 0.8,
-  bagging_freq = 5
+  metric = "binary_logloss", # Utilise logloss plutôt que AUC pour mieux calibrer les probas
+  learning_rate = 0.02,      # Réduit drastiquement (apprend plus lentement mais mieux)
+  num_leaves = 20,           # Réduit pour éviter l'overfitting
+  min_data_in_leaf = 50,     # Augmente (évite de créer une règle pour 5 matchs seulement)
+  feature_fraction = 0.7,    # Force le modèle à ne pas trop compter sur le Rank seul
+  lambda_l1 = 0.5,           # Ajoute de la régularisation L1
+  lambda_l2 = 0.5            # Ajoute de la régularisation L2
 )
 
-# Entraînement
+# Entraînement avec early stopping auto-géré
 lgb_model <- lgb.train(
-  params = params,
+  params = params_lgb,
   data = lgb_train,
-  nrounds = 500,
+  nrounds = 2000,            # Plus de rounds car le learning_rate est plus bas
   valids = list(test = lgb_test),
-  early_stopping_rounds = 20,
+  early_stopping_rounds = 50, # Laisse-lui plus de temps pour converger
   eval_freq = 50
 )
 
@@ -574,20 +575,21 @@ lgb_diag
 dtrain <- xgb.DMatrix(data = X_train, label = y_train)
 dtest <- xgb.DMatrix(data = X_test, label = y_test)
 
-# Entraînement
 xgb_model <- xgb.train(
   params = list(
     objective = "binary:logistic",
-    eval_metric = "auc",
-    max_depth = 6,
-    eta = 0.3,  # ou learning_rate = 0.3 (nouveau nom)
-    subsample = 0.8,
-    colsample_bytree = 0.8
+    eval_metric = "logloss",    # Préférable pour le Brier Score final
+    max_depth = 7,              # Arbres plus courts (évite de capturer des cas trop spécifiques)
+    eta = 0.01,                 # Beaucoup plus bas pour une convergence fine
+    subsample = 0.7,            # Utilise 70% des matchs pour chaque arbre
+    colsample_bytree = 0.7,     # Utilise 70% des variables (force l'usage du Momentum/Speed Index)
+    gamma = 1                   # Ajoute une pénalité pour la création de nouveaux nœuds
   ),
   data = dtrain,
-  nrounds = 1000,
+  nrounds = 3000,               # Nécessite beaucoup plus de rounds à 0.01
   watchlist = list(train = dtrain, test = dtest),
-  print_every_n = 50
+  early_stopping_rounds = 200,  # Arrête si l'AUC ne progresse plus sur 100 rounds
+  print_every_n = 100
 )
 
 importance_matrix <- xgb.importance(
