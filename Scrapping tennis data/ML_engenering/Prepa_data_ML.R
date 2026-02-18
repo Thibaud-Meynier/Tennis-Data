@@ -494,13 +494,13 @@ TABLE = V_MATCH_t %>%
 TABLE_ML_DIFF=TABLE %>% 
   mutate(
     # --- DIFFÉRENCES - Profils Joueurs ---
-    Diff_Rank = Rank_F - Rank_O,
-    Diff_Rank_Class = case_when(
+    Diff_Rank = abs(Rank_F - Rank_O),
+    Diff_Rank_Class = dplyr::case_when(
       Diff_Rank >= 1 & Diff_Rank <= 5 ~ 1,
       Diff_Rank >= 6 & Diff_Rank <= 10 ~ 2,
       Diff_Rank >= 11 & Diff_Rank <= 20 ~ 3,
       Diff_Rank >= 21 & Diff_Rank <= 30 ~ 4,
-      Diff_Rank >= 31 & Diff_Rank <= 50 ~ 5
+      Diff_Rank >= 31 & Diff_Rank <= 50 ~ 5,
       Diff_Rank >= 51 & Diff_Rank <= 100 ~ 6,
       Diff_Rank >= 101 & Diff_Rank <= 200 ~ 7,
       Diff_Rank >= 201 ~ 8,
