@@ -13,7 +13,7 @@ source(paste0(getwd(),"/Scrapping tennis data/Stat function.R"))
 
 load(paste0(getwd(),"/Scrapping tennis data/Info_players/V_PLAYERS_RED.RData"))
 
-year_lim=2017
+year_lim=2003
 
 V_PLAYERS=V_PLAYERS %>% 
   group_by(Player_name,Birth_date,Hand,Size,Weight) %>% 
@@ -62,10 +62,35 @@ for (i in (year_lim-1):2025){
 
 rm(table_stock)
 
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT4_2002_2008.RData"))
+
+V_TOURNAMENT_F = V_TOURNAMENT_4 %>% 
+  mutate(Categorie=Categorie_new) %>% 
+  select(-Categorie_new)
+
+rm(V_TOURNAMENT_4)
+
+V_TOURNAMENT_2002_2008=V_TOURNAMENT_F 
+
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2009.RData"))
+
+V_TOURNAMENT_2009=V_TOURNAMENT_F 
+
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2010.RData"))
+
+V_TOURNAMENT_2010=V_TOURNAMENT_F 
+
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2011.RData"))
+
+V_TOURNAMENT_2011=V_TOURNAMENT_F 
+
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2012_2016.RData"))
+
+V_TOURNAMENT_2012_2016=V_TOURNAMENT_F 
 
 load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2017_2023.RData"))
 
-V_TOURNAMENT_2017_2023=V_TOURNAMENT_F %>% filter(Year>=year_lim)
+V_TOURNAMENT_2017_2023=V_TOURNAMENT_F 
 
 load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2024.RData"))
 
@@ -75,9 +100,10 @@ load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2025.RData
 
 V_TOURNAMENT_2025=V_TOURNAMENT_F
 
-V_TOURNAMENT_F=rbind(V_TOURNAMENT_2017_2023,V_TOURNAMENT_2024,V_TOURNAMENT_2025)
+V_TOURNAMENT_F=rbind(V_TOURNAMENT_2002_2008,V_TOURNAMENT_2009,V_TOURNAMENT_2010,V_TOURNAMENT_2011,V_TOURNAMENT_2012_2016,V_TOURNAMENT_2017_2023,V_TOURNAMENT_2024,V_TOURNAMENT_2025)
 
-rm(V_TOURNAMENT_2017_2023,V_TOURNAMENT_2024,V_TOURNAMENT_2025)
+rm(V_TOURNAMENT_2017_2023,V_TOURNAMENT_2024,V_TOURNAMENT_2025,V_TOURNAMENT_2002_2008,
+   V_TOURNAMENT_2012_2016,V_TOURNAMENT_2009,V_TOURNAMENT_2010,V_TOURNAMENT_2011)
 
 
 V_TOURNAMENT_INFO=V_TOURNAMENT_F %>% 
@@ -85,7 +111,8 @@ V_TOURNAMENT_INFO=V_TOURNAMENT_F %>%
   unique() %>% 
   mutate(Categorie=case_when(Categorie=="ATP 2000"~"Grand Slam",
                              TRUE~Categorie)) %>% 
-  mutate(CLE_TOURNAMENT=toupper(tournament))
+  mutate(CLE_TOURNAMENT=toupper(tournament)) %>% 
+  filter(Year>=(year_lim-1))
 
 rm(V_TOURNAMENT_F)
 
@@ -161,7 +188,7 @@ get_tennis_week <- function(date) {
 
 V_RANK=data.frame()
 
-for (i in year_lim:2025){
+for (i in (year_lim-1):2025){
   
   load(file = paste0(getwd(),"/Scrapping tennis data/Rank/RANK_ATP_",i,".RData"))
   
