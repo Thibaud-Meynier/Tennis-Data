@@ -1,6 +1,11 @@
 library(tidyverse)
 library(progress)
 library(dbplyr)
+library(conflicted)
+
+# Définir la priorité explicitement
+conflict_prefer("select", "dplyr")
+conflict_prefer("filter", "dplyr")
 
 year_lim=2017
 
@@ -50,21 +55,21 @@ for (i in (year_lim-1):2025){
 }
 
 V_RANK=V_RANK %>% 
-  dplyr::select(-Move) %>% 
+  select(-Move) %>% 
   rename("Player_name"="Player name") %>% 
   mutate(Week_Rank = sapply(Date, get_tennis_week))
 
 rm(rank)
 
 V_MATCH_t=V_MATCH_t %>% 
-dplyr::select(-c(Rank_W,Rank_L,Points_W,Points_L)) %>% 
+select(-c(Rank_W,Rank_L,Points_W,Points_L)) %>% 
   mutate(Match_week=sapply(Date, get_tennis_week)) %>% 
-  left_join(V_RANK %>% dplyr::select(Rank,Player_name,Points,Week_Rank) %>% 
+  left_join(V_RANK %>% select(Rank,Player_name,Points,Week_Rank) %>% 
               rename(Rank_W=Rank,Points_W=Points) %>% 
               mutate(Rank_W=as.numeric(Rank_W),
                      Points_W=as.numeric(Points_W)),
             by=c("Winner_id"="Player_name","Match_week"="Week_Rank")) %>% 
-  left_join(V_RANK %>% dplyr::select(Rank,Player_name,Points,Week_Rank) %>% 
+  left_join(V_RANK %>% select(Rank,Player_name,Points,Week_Rank) %>% 
               rename(Rank_L=Rank,Points_L=Points) %>% 
               mutate(Rank_L=as.numeric(Rank_L),
                      Points_L=as.numeric(Points_L)),
@@ -318,10 +323,9 @@ TABLE = V_MATCH_t %>%
     Round_SF = case_when(Round=="SF"~1,TRUE~0),
     Round_F = case_when(Round=="F"~1,TRUE~0)
 
-    
   ) %>% 
   filter(info=="Completed") %>% 
-  dplyr::select(
+  select(
     tournament,
     Categorie,
     Round,
@@ -495,7 +499,7 @@ TABLE_ML_DIFF=TABLE %>%
   mutate(
     # --- DIFFÉRENCES - Profils Joueurs ---
     Diff_Rank = abs(Rank_F - Rank_O),
-    Diff_Rank_Class = dplyr::case_when(
+    Diff_Rank_Class = case_when(
       Diff_Rank >= 1 & Diff_Rank <= 5 ~ 1,
       Diff_Rank >= 6 & Diff_Rank <= 10 ~ 2,
       Diff_Rank >= 11 & Diff_Rank <= 20 ~ 3,
@@ -562,7 +566,7 @@ TABLE_ML_DIFF=TABLE %>%
     # --- DIFFERENCE - Fatigue
     Diff_Fatigue = F_Fatigue_index - O_Fatigue_index
   ) %>% 
-  dplyr::select(
+  select(
     # --- Identification & Backtest (non-features) ---
     tournament, Season, Date, Favori, Outsider, 
     Odd_F, Odd_O,
@@ -679,4 +683,18 @@ mutate(
   Mom_as_Fav = Mom_as_Fav_12+Mom_as_Fav_4,
   Mom_as_Out = Mom_as_Out_4+Mom_as_Out_12,  
   )
-       
+
+load("~/work/Tennis-Data/Scrapping tennis data/ML_engenering/INDEX_SURFACE.RData")
+
+TABLE_MOMENTUM=TABLE_MOMENTUM %>% 
+  left_join(INDEX_SURFACE %>% select(-Surface_tournament),by=c("tournament","Season"))
+
+TABLE_MOMENTUM=TABLE_MOMENTUM %>% 
+ mutate(Speed_Category=factor(Speed_Category, 
+                              levels = c("Ultra-Slow", "Slow-Medium", "Medium","Medium-Fast", "Fast"), 
+                              ordered = TRUE),
+      Clay = case_when(Surface_tournament=="Clay"~1,TRUE~0),
+      Hard = case_when(Surface_tournament=="Hard"~1,TRUE~0),
+      Grass = case_when(Surface_tournament=="Grass"~1,TRUE~0),
+      Indoors = case_when(Surface_tournament %in% c("Indoors","Various")~1,TRUE~0)
+)
