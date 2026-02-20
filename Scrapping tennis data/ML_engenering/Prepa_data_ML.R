@@ -310,9 +310,12 @@ TABLE = V_MATCH_t %>%
     O_Fatigue_index = O_N_match_12/21*(1+P4_P12_O),
     
     # Categorie tournoi
-    Categ_Elite = case_when(Categorie %in% c("Grand Slam","Olympics","Team")~1,TRUE~0),
-    Categ_Mid = case_when(Categorie %in% c("ATP 1000","ATP 500","Masters")~1,TRUE~0),
-    Categ_low = case_when(Categorie=="ATP 250"~1,TRUE~0),
+    Grand_Slam = case_when(Categorie %in% c("Grand Slam")~1,TRUE~0),
+    Country_Champ = case_when(Categorie %in% c("Olympics","Team")~1,TRUE~0),
+    ATP_1000 = case_when(Categorie %in%"ATP 1000"~1,TRUE~0),
+    ATP_500 = case_when(Categorie %in%"ATP 500"~1,TRUE~0),
+    ATP_250 = case_when(Categorie %in%"ATP 250"~1,TRUE~0),
+    Masters = case_when(Categorie=="Masters"~1,TRUE~0),
     
     Round_RR = case_when(Round=="-"~1,TRUE~0),
     Round_R1 = case_when(Round=="1R"~1,TRUE~0),
@@ -475,9 +478,12 @@ TABLE = V_MATCH_t %>%
     F_Win_Rate_s_12,
     O_Win_Rate_s_12,
     O_Win_Rate_s_12,
-    Categ_Elite,
-    Categ_Mid,
-    Categ_low,
+    Grand_Slam,
+    Country_Champ,
+    Masters,
+    ATP_1000,
+    ATP_500,
+    ATP_250,
     Round_RR,
     Round_R1,
     Round_R2,
@@ -576,7 +582,12 @@ TABLE_ML_DIFF=TABLE %>%
     
     # --- Caractéristiques du Match ---
     Categorie, Surface_tournament, Round,
-    Categ_Elite, Categ_Mid, Categ_low,
+    Grand_Slam,
+    Country_Champ,
+    Masters,
+    ATP_1000,
+    ATP_500,
+    ATP_250,
     Round_RR, Round_R1, Round_R2, Round_R3, Round_R16, Round_QF, Round_SF, Round_F,
     
     # --- DIFFÉRENCES - Profils Joueurs ---
@@ -595,6 +606,8 @@ TABLE_ML_DIFF=TABLE %>%
     P_F,
     P_s_F,
     P_F_comb,
+    Diff_Elo,
+    Diff_Elo_s,
     
     # --- DIFFÉRENCES - H2H (Historique Face à Face) ---
     Diff_H2H_Win_Rate,
