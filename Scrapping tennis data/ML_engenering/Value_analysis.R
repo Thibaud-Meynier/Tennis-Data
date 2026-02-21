@@ -1,8 +1,6 @@
 
-
 is_value=function(pred,margin=0,U=1){
-  
-  
+    
   value=test_pred %>% select(1,2,3,4,5,6,7,8,9,"P_F_market","Issue")
   
   value=value %>% 
@@ -46,10 +44,10 @@ is_value=function(pred,margin=0,U=1){
 }
 
 
-Fav_1=is_value("XGB",margin=5) %>% 
+Fav_1=is_value("KNN",margin=0) %>% 
   select(-c(P_F_pred,P_F_market,Ratio_Odd_O,Ratio_Odd_F,Signal)) %>% 
   filter(!is.na(Value)) %>% 
-  filter(Value=="Value Out1") %>% 
+  filter(Value=="Value Fav1") %>% 
   mutate(
     Ratio_Bin = cut(
       Ratio_Value,
@@ -74,6 +72,7 @@ Fav_1=is_value("XGB",margin=5) %>%
    BK = cumsum(Result)) 
 
 
+
 ggplot(Fav_1,aes(x = n_bet, y = BK, group = Ratio_Bin, color = Ratio_Bin)) +
   geom_line(linewidth = 0.8) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
@@ -87,5 +86,3 @@ ggplot(Fav_1,aes(x = n_bet, y = BK, group = Ratio_Bin, color = Ratio_Bin)) +
   ) +
   theme_classic() +
   theme(legend.position = "bottom")
-
-
