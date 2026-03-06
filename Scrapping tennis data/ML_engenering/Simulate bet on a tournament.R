@@ -5,13 +5,13 @@ tournoi="Rio De Janeiro"
 
 Year=2010
 
-simulate_tournament_strategy <- function(tournoi,Year,Favorite_Side="Market") {
+simulate_tournament_strategy <- function(tournoi,Year,Favorite_Side="Market",Diff_Rank=Inf) {
   
   if(Favorite_Side=="Market"){
     
     # Préparation des données
     data <- V_MATCH_t %>%
-      filter(tournament == tournoi & year(Date) >= Year & info == "Completed") %>%
+      filter(tournament %in% tournoi & year(Date) >= Year & info == "Completed" & abs(Rank_W-Rank_L)<=Diff_Rank) %>%
       select(Date, Winner_id, Loser_id, Round, Odd_W, Odd_L, Rank_W, Rank_L) %>%
       na.omit() %>% 
       mutate(
@@ -34,7 +34,7 @@ simulate_tournament_strategy <- function(tournoi,Year,Favorite_Side="Market") {
   }else{
     
     data <- V_MATCH_t %>%
-      filter(tournament == tournoi & year(Date) >= Year & info == "Completed") %>%
+      filter(tournament %in% tournoi & year(Date) >= Year & info == "Completed" & abs(Rank_W-Rank_L)<=Diff_Rank) %>%
       select(Date, Winner_id, Loser_id, Round, Odd_W, Odd_L, Rank_W, Rank_L) %>%
       na.omit() %>% 
       mutate(
