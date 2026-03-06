@@ -358,3 +358,134 @@ match_count <- function(df, player_id, lag_week, surface, Date_match) {
   return(stat_player)
 }
 
+##### INFO ON PLAYERS #####
+
+get_player_win_rate = function(Player_name,Date_match){
+  
+  Date_match=as.Date(Date_match)
+  
+  WR_GLOBAL=V_MATCH_HIST %>% 
+    filter(Phase == "Main Draw" & 
+             (Categorie %in% c("Grand Slam", "Olympics", "Masters",
+                               "ATP 1000", "ATP 500", 'ATP 250') | 
+                tournament %in% c("Atp Cup", "United Cup"))) %>%  
+    filter((Winner_id == Player_name | Loser_id == Player_name) & Date <= Date_match) %>% 
+    group_by(Categorie) %>% 
+    summarise(N=n(),
+              PRCT_WIN=mean(Winner_id == Player_name,na.rm=T)*100
+    )
+}
+
+
+get_player_best_run = function(Player_name,Date_match,ID){
+  
+  Date_match=as.Date(Date_match)
+  
+  palmares <- V_MATCH_HIST %>% 
+    filter(Phase == "Main Draw" & 
+             (Categorie %in% c("Grand Slam", "Olympics", "Masters",
+                               "ATP 1000", "ATP 500", 'ATP 250') | 
+                tournament %in% c("Atp Cup", "United Cup"))) %>%  
+    filter((Winner_id == Player_name | Loser_id == Player_name) & Date <= Date_match & MATCH_ID != ID) %>% 
+    mutate(
+      Round = ifelse(Winner_id == Player_name & Round == "F", "W", Round),
+      Round_Factor = factor(Round, levels = c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F", "W"),
+                            ordered = TRUE)  # ← ordonné !
+    ) %>% 
+    group_by(Categorie) %>% 
+    summarise(
+      Best_Run = levels(Round_Factor)[max(as.integer(Round_Factor), na.rm = TRUE)]
+    )
+  
+  return(palmares)
+  
+}
+
+#get_player_best_run("Karatsev Aslan","2021-02-18",ID=242578)
+
+is_giant_killer = function(Player_name,Date_match,ID){
+  
+  Date_match=as.Date(Date_match)
+  
+  last_match = V_MATCH_HIST %>% 
+    filter(Phase == "Main Draw" & 
+             (Categorie %in% c("Grand Slam", "Olympics", "Masters",
+                               "ATP 1000", "ATP 500", 'ATP 250') | 
+                tournament %in% c("Atp Cup", "United Cup"))) %>%  
+    filter(
+      (Winner_id == Player_name | Loser_id == Player_name) &  # ← tous les matchs
+        Date <= Date_match &
+        MATCH_ID != ID
+    ) %>% 
+    arrange(desc(Date)) %>% 
+    slice(1)                                                   # ← dernier match
+  
+  # Vérifier si ce dernier match est un giant kill
+  giant_kill = last_match %>%
+    filter(
+      Winner_id == Player_name &   # ← a gagné
+        Odd_W >= 5                   # ← en tant qu'outsider
+    ) %>%
+    nrow() > 0                     # ← retourne TRUE/FALSE
+  
+  return(giant_kill)
+  
+}
+
+
+#is_giant_killer("Cecchinato Marco","2018-06-05",ID=217810)
+
+is_finalist = function(Player_name,Date_match,ID){
+  
+  Date_match=as.Date(Date_match)
+  
+  finalist = V_MATCH_HIST %>% 
+    filter(Phase == "Main Draw" & 
+             (Categorie %in% c("Grand Slam", "Olympics", "Masters",
+                               "ATP 1000", "ATP 500", 'ATP 250') | 
+                tournament %in% c("Atp Cup", "United Cup"))) %>%  
+    filter(
+      (Winner_id == Player_name | Loser_id == Player_name) & Round=="F" & 
+        Date <= Date_match & 
+        Date >= (Date_match - 14) &  
+        MATCH_ID!=ID 
+    ) %>% 
+    mutate(Outcome=ifelse(Winner_id == Player_name,"W",Round)) %>% 
+    arrange(desc(Date)) %>% 
+    head(1)
+  
+  R=ifelse(nrow(finalist)==0,0,
+           ifelse(finalist$Outcome=="F",1,2))
+  
+  return(R)
+}
+
+
+#is_finalist("Nadal Rafael","2011-04-17",ID=125959)
+
+is_qualies = function(Player_name,Date_match,tournoi,Year){
+  
+  Date_match=as.Date(Date_match)
+  
+  qualies = V_MATCH_HIST %>%
+    filter(Phase=="Qualification" &  tournament==tournoi & Season==Year & Date<=Date_match) %>% 
+    filter((Winner_id == Player_name | Loser_id == Player_name)) %>% 
+      summarise(
+        N_wins   = sum(Winner_id == Player_name),
+        N_losses = sum(Loser_id == Player_name)
+      ) %>%
+      mutate(
+        Status = case_when(
+          N_wins > 0 & N_losses == 0 ~ "Q",    # ← que des victoires = Qualifié
+          N_losses > 0               ~ "LL",   # ← au moins une défaite = Lucky Loser
+          TRUE                       ~ "0"     # ← pas de matchs de qualif
+        )
+      ) %>%
+      pull(Status)
+  
+  return(qualies)
+  
+}
+
+
+
