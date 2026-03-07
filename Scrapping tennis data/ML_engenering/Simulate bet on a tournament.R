@@ -1,10 +1,4 @@
 
-conflicts_prefer(dplyr::filter)
-
-tournoi="Rio De Janeiro"
-
-Year=2010
-
 simulate_tournament_strategy <- function(tournoi,Year,Favorite_Side="Market",Diff_Rank=Inf) {
   
   if(Favorite_Side=="Market"){
@@ -133,8 +127,9 @@ simulate_tournament_strategy <- function(tournoi,Year,Favorite_Side="Market",Dif
 }
 
 # Appel :
-result <- simulate_tournament_strategy("Indian Wells",2010,Favorite_Side = "Market")
+result <- simulate_tournament_strategy(list_250,2017,Favorite_Side = "Market",Diff_Rank = 5)
 
 result$summary  # accéder au tableau récap
 
-
+list_250=V_MATCH_t %>% 
+  filter(Categorie=="ATP 250" & Season>=2010 & Surface_tournament=="Grass") %>% pull(tournament) %>% unique()
