@@ -4,8 +4,13 @@ library(dbplyr)
 library(conflicted)
 
 # Définir la priorité explicitement
+
 conflict_prefer("select", "dplyr")
 conflict_prefer("filter", "dplyr")
+conflict_prefer("year", "lubridate")
+conflict_prefer("isoweek", "lubridate")
+conflict_prefer("month", "lubridate")
+
 
 year_lim=2017
 
