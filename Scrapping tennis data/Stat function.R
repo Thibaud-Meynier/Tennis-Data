@@ -360,7 +360,7 @@ match_count <- function(df, player_id, lag_week, surface, Date_match) {
 
 ##### INFO ON PLAYERS #####
 
-get_player_win_rate = function(Player_name,Date_match){
+get_player_win_rate = function(Player_name,Date_match,Categ){
   
   Date_match=as.Date(Date_match)
   
@@ -369,15 +369,19 @@ get_player_win_rate = function(Player_name,Date_match){
              (Categorie %in% c("Grand Slam", "Olympics", "Masters",
                                "ATP 1000", "ATP 500", 'ATP 250') | 
                 tournament %in% c("Atp Cup", "United Cup"))) %>%  
-    filter((Winner_id == Player_name | Loser_id == Player_name) & Date <= Date_match) %>% 
+    filter((Winner_id == Player_name | Loser_id == Player_name) & Date < Date_match & Categorie==Categ) %>% 
     group_by(Categorie) %>% 
     summarise(N=n(),
               PRCT_WIN=mean(Winner_id == Player_name,na.rm=T)*100
-    )
+    ) %>% 
+    pull(PRCT_WIN)
+  
+  return(WR_GLOBAL)
 }
 
+#get_player_win_rate("Djokovic Novak","2025-12-31","Grand Slam")
 
-get_player_best_run = function(Player_name,Date_match,ID){
+get_player_best_run = function(Player_name,Date_match,Categ){
   
   Date_match=as.Date(Date_match)
   
@@ -386,24 +390,24 @@ get_player_best_run = function(Player_name,Date_match,ID){
              (Categorie %in% c("Grand Slam", "Olympics", "Masters",
                                "ATP 1000", "ATP 500", 'ATP 250') | 
                 tournament %in% c("Atp Cup", "United Cup"))) %>%  
-    filter((Winner_id == Player_name | Loser_id == Player_name) & Date <= Date_match & MATCH_ID != ID) %>% 
+    filter((Winner_id == Player_name | Loser_id == Player_name) & Date < Date_match & Categorie==Categ) %>% 
     mutate(
       Round = ifelse(Winner_id == Player_name & Round == "F", "W", Round),
       Round_Factor = factor(Round, levels = c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F", "W"),
                             ordered = TRUE)  # ← ordonné !
     ) %>% 
-    group_by(Categorie) %>% 
     summarise(
       Best_Run = levels(Round_Factor)[max(as.integer(Round_Factor), na.rm = TRUE)]
-    )
+    ) %>% 
+    pull(Best_Run)
   
   return(palmares)
   
 }
 
-#get_player_best_run("Karatsev Aslan","2021-02-18",ID=242578)
+#get_player_best_run("Karatsev Aslan","2021-02-18","Grand Slam")
 
-is_giant_killer = function(Player_name,Date_match,ID){
+is_giant_killer = function(Player_name,Date_match){
   
   Date_match=as.Date(Date_match)
   
@@ -414,8 +418,7 @@ is_giant_killer = function(Player_name,Date_match,ID){
                 tournament %in% c("Atp Cup", "United Cup"))) %>%  
     filter(
       (Winner_id == Player_name | Loser_id == Player_name) &  # ← tous les matchs
-        Date <= Date_match &
-        MATCH_ID != ID
+        Date < Date_match 
     ) %>% 
     arrange(desc(Date)) %>% 
     slice(1)                                                   # ← dernier match
@@ -425,17 +428,23 @@ is_giant_killer = function(Player_name,Date_match,ID){
     filter(
       Winner_id == Player_name &   # ← a gagné
         Odd_W >= 5                   # ← en tant qu'outsider
-    ) %>%
-    nrow() > 0                     # ← retourne TRUE/FALSE
+    ) 
   
-  return(giant_kill)
+  is_giant_kill = ifelse(nrow(giant_kill)==0,0,1) %>% as.numeric()
+  
+  return(is_giant_kill)
   
 }
 
 
-#is_giant_killer("Cecchinato Marco","2018-06-05",ID=217810)
+#is_giant_killer("Cecchinato Marco","2018-06-05")
 
-is_finalist = function(Player_name,Date_match,ID){
+
+#V_MATCH_t %>% 
+#  filter(Winner_id=="Cecchinato Marco" & tournament=="French Open" & Season==2018) %>% 
+#  select(Winner_id,Loser_id,Date,MATCH_ID,Odd_W,Odd_L)
+
+is_finalist = function(Player_name,Date_match){
   
   Date_match=as.Date(Date_match)
   
@@ -447,8 +456,7 @@ is_finalist = function(Player_name,Date_match,ID){
     filter(
       (Winner_id == Player_name | Loser_id == Player_name) & Round=="F" & 
         Date <= Date_match & 
-        Date >= (Date_match - 14) &  
-        MATCH_ID!=ID 
+        Date >= (Date_match - 14) 
     ) %>% 
     mutate(Outcome=ifelse(Winner_id == Player_name,"W",Round)) %>% 
     arrange(desc(Date)) %>% 
@@ -486,6 +494,5 @@ is_qualies = function(Player_name,Date_match,tournoi,Year){
   return(qualies)
   
 }
-
 
 
