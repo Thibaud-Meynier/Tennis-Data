@@ -2,7 +2,11 @@ library(data.table)
 library(tidyverse)
 library(here)
 
-surface=c("Hard")
+s="Clay"
+
+surface=c(s)
+
+year=2026
 
 load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING_",toupper(surface),".RData"))
 
@@ -10,20 +14,19 @@ ELO_RATING=get(paste0("ELO_RATING_",toupper(surface)))
 
 rm(list=paste0("ELO_RATING_",toupper(surface)))
 
-load(paste0(getwd(),"/Scrapping tennis data/Extraction/ATP_2025_Extraction.RData"))
+load(paste0(getwd(),"/Scrapping tennis data/Extraction/ATP_",year,"_Extraction.RData"))
 
-V_MATCH_2025=table_stock
+V_MATCH=table_stock
 
-V_MATCH_2025 = V_MATCH_2025 %>% 
+V_MATCH = V_MATCH %>% 
   rename(Winner_id=P1,
          Loser_id=P2) %>% 
-  mutate(Season=2025)
+  mutate(Season=year)
 
-load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2025.RData"))
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_",year,".RData"))
 
-V_TOURNAMENT_2025=V_TOURNAMENT_F
 
-V_TOURNAMENT_INFO=V_TOURNAMENT_2025 %>% 
+V_TOURNAMENT_INFO=V_TOURNAMENT_F %>% 
   select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) %>% 
   unique() %>% 
   mutate(Categorie=case_when(Categorie=="ATP 2000"~"Grand Slam",
@@ -31,7 +34,7 @@ V_TOURNAMENT_INFO=V_TOURNAMENT_2025 %>%
   mutate(CLE_TOURNAMENT=toupper(tournament))
 
 
-V_MATCH_2025=V_MATCH_2025 %>% 
+V_MATCH=V_MATCH %>% 
   mutate(CLE_TOURNAMENT=toupper(tournament)) %>% 
   left_join(V_TOURNAMENT_INFO %>% select(-tournament),by=c("CLE_TOURNAMENT","Season"="Year")) %>% 
   select(-CLE_TOURNAMENT) %>% 
@@ -52,9 +55,14 @@ V_MATCH_2025=V_MATCH_2025 %>%
                                       Surface_tournament=="indoors"~"Indoors",
                                       TRUE~Surface_tournament))
 
-surface=c("Hard","Indoors","Various")
+if (s=="Hard"){
+  surface=c("Hard","Indoors","Various")
+}else{
+  surface=s
+}
 
-tournament=V_MATCH_2025 %>% 
+
+tournament=V_MATCH %>% 
   filter(Phase=="Main Draw") %>% 
   filter(if(length(surface) == 1 && surface == "all") TRUE else Surface_tournament %in% surface) %>% 
   arrange(Date,tournament,desc(N_match),Season)
@@ -249,7 +257,7 @@ for (i in first_row:nrow(tournament)){
 
 tournament=tournament %>% select(-ETAT)
 
-surface=c("Hard")
+surface=s
 
 assign(paste0("ELO_RATING_",toupper(surface)),tournament)
 
