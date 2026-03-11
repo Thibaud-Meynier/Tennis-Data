@@ -2,23 +2,28 @@ library(data.table)
 library(tidyverse)
 library(here)
 
+conflicts_prefer(dplyr::between)
+
+conflicts_prefer(sjmisc::is_empty)
+
+year=2026
+
 load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING.RData"))
 
+load(paste0(getwd(),"/Scrapping tennis data/Extraction/ATP_",year,"_Extraction.RData"))
 
-load(paste0(getwd(),"/Scrapping tennis data/Extraction/ATP_2025_Extraction.RData"))
+V_MATCH=table_stock
 
-V_MATCH_2025=table_stock
-
-V_MATCH_2025 = V_MATCH_2025 %>% 
+V_MATCH = V_MATCH %>% 
   rename(Winner_id=P1,
          Loser_id=P2) %>% 
-  mutate(Season=2025)
+  mutate(Season=year)
 
-load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2025.RData"))
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_",year,".RData"))
 
-V_TOURNAMENT_2025=V_TOURNAMENT_F
+#V_TOURNAMENT_F
 
-V_TOURNAMENT_INFO=V_TOURNAMENT_2025 %>% 
+V_TOURNAMENT_INFO=V_TOURNAMENT_F %>% 
   select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) %>% 
   unique() %>% 
   mutate(Categorie=case_when(Categorie=="ATP 2000"~"Grand Slam",
@@ -26,7 +31,7 @@ V_TOURNAMENT_INFO=V_TOURNAMENT_2025 %>%
   mutate(CLE_TOURNAMENT=toupper(tournament))
 
 
-V_MATCH_2025=V_MATCH_2025 %>% 
+V_MATCH=V_MATCH %>% 
   mutate(CLE_TOURNAMENT=toupper(tournament)) %>% 
   left_join(V_TOURNAMENT_INFO %>% select(-tournament),by=c("CLE_TOURNAMENT","Season"="Year")) %>% 
   select(-CLE_TOURNAMENT) %>% 
@@ -49,7 +54,7 @@ V_MATCH_2025=V_MATCH_2025 %>%
 
 
 
-tournament=V_MATCH_2025 %>% 
+tournament=V_MATCH %>% 
   filter(Phase=="Main Draw") %>% 
   arrange(Date,tournament,desc(N_match),Season)
 
