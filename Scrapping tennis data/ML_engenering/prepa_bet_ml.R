@@ -116,6 +116,7 @@ V_TOURNAMENT_INFO=V_TOURNAMENT_F %>%
 
 rm(V_TOURNAMENT_F)
 
+V_MATCH=as.data.table(V_MATCH)
 
 V_MATCH_t=V_MATCH %>% 
   mutate(CLE_TOURNAMENT=toupper(tournament)) %>% 
@@ -198,6 +199,8 @@ for (i in (year_lim-1):2025){
   
 }
 
+V_RANK = as.data.table(V_RANK)
+
 V_RANK=V_RANK %>% 
   select(-Move) %>% 
   rename("Player_name"="Player name") %>% 
@@ -224,6 +227,12 @@ V_MATCH_HIST=V_MATCH_HIST %>%
          Points_W=case_when(is.na(Points_W)~10,TRUE~Points_W),
          Rank_L=case_when(is.na(Rank_L)~1000,TRUE~Rank_L),
          Points_L=case_when(is.na(Points_L)~10,TRUE~Points_L))
+
+V_MATCH_HIST=V_MATCH_HIST %>%  
+  group_by(tournament,Country_tournament,Season,Phase,Round,Date,Week_tournament,Winner_id,Loser_id) %>% 
+  mutate(CLE_LIGNE=row_number()) %>% 
+  filter(CLE_LIGNE==1) %>% 
+  select(-CLE_LIGNE)
 
 V_MATCH_t=V_MATCH_t %>% 
   mutate(Match_week=sapply(Date, get_tennis_week)) %>% 
@@ -265,6 +274,14 @@ V_MATCH_t=V_MATCH_t %>%
             by=c("Loser_id"="Player_name"))
 
 V_MATCH_HIST=as.data.table(V_MATCH_HIST)
+
+V_MATCH_t = V_MATCH_t %>% 
+  group_by(tournament,Country_tournament,Season,Round,Date,Week_tournament,Winner_id,Loser_id) %>% 
+  mutate(CLE_LIGNE=row_number()) %>% 
+  filter(CLE_LIGNE==1) %>% 
+  select(-CLE_LIGNE)
+
+V_MATCH_t = as.data.table(V_MATCH_t)
 
 ##### Stats players #####
 
@@ -418,13 +435,15 @@ for (i in 1:nrow(V_MATCH_t)){
   
   result=get_h2h(winner_url,loser_url)
   
+  result = as.data.table(result)
+  
   stat_g=get_stat_h2h(result,"all",Season,tournoi,W,L,R)
   
-  stat_g_3y=get_stat_h2h(result,"all",Season,tournoi,W,L,R,YB=Season-3)
+  stat_g_3y=get_stat_h2h(result,"all",Season,tournoi,W,L,R,YB=3)
   
   stat_s=get_stat_h2h(result,surface,Season,tournoi,W,L,R)
   
-  stat_s_3y=get_stat_h2h(result,surface,Season,tournoi,W,L,R,YB=Season-3)
+  stat_s_3y=get_stat_h2h(result,surface,Season,tournoi,W,L,R,YB=3)
   
   # global
   
