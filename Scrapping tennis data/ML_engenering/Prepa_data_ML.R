@@ -657,3 +657,166 @@ TABLE_MOMENTUM = TABLE_ML_DIFF %>%
     Grass = ifelse(Surface_tournament=="Grass",1,0),
     Indoors = ifelse(Surface_tournament=="Indoors",1,0)
   )
+
+##### DATA COMPLEMENTAIRES #####
+
+load(paste0(getwd(),"/Scrapping tennis data/ML_engenering/V_MATCH_HIST.RData"))
+
+plan(multisession, workers = 25)
+
+# rm(list=setdiff(ls(),c("V_MATCH_HIST","TABLE_MOMENTUM")))
+
+source(paste0(getwd(),"/Scrapping tennis data/Stat function.R"))
+
+Start=Sys.time()
+
+Test = TABLE_MOMENTUM %>% 
+  mutate(
+    Fav_Q = future_pmap_chr(
+      list(
+        Player_name = Favori,
+        Date_match  = Date,
+        tournoi     = tournament,
+        Year        = Season
+      ),
+      is_qualies
+    ),
+    
+    Out_Q = future_pmap_chr(
+      list(
+        Player_name = Outsider,
+        Date_match  = Date,
+        tournoi     = tournament,
+        Year        = Season
+      ),
+      is_qualies
+    ) ,
+    
+    Fav_Giant_Killer = future_pmap_int(
+      list(
+        Player_name = Favori,
+        Date_match  = Date
+      ),
+      is_giant_killer
+    ),
+    
+    Out_Giant_Killer = future_pmap_int(
+      list(
+        Player_name = Outsider,
+        Date_match  = Date
+      ),
+      is_giant_killer
+    ),
+    
+    Fav_is_finalist = future_pmap_int(
+      list(
+        Player_name = Favori,
+        Date_match  = Date
+      ),
+      is_finalist
+    ),
+    
+    Out_is_finalist = future_pmap_dbl(
+      list(
+        Player_name = Outsider,
+        Date_match  = Date
+      ),
+      is_finalist
+    ) ,
+    
+    Fav_WR_career = future_pmap_dbl(
+      list(
+        Player_name = Favori,
+        Date_match  = Date,
+        Categ = Categorie
+      ),
+      get_player_win_rate
+    ) ,
+    
+    Out_WR_career = future_pmap_dbl(
+      list(
+        Player_name = Outsider,
+        Date_match  = Date,
+        Categ = Categorie
+      ),
+      get_player_win_rate
+    ) ,
+    
+    Fav_WR_career_surface = future_pmap_dbl(
+      list(
+        Player_name = Favori,
+        Date_match  = Date,
+        Surf = Surface_tournament
+      ),
+      get_player_win_rate_surface
+    ) ,
+    
+    Out_WR_career_surface = future_pmap_dbl(
+      list(
+        Player_name = Outsider,
+        Date_match  = Date,
+        Surf = Surface_tournament
+      ),
+      get_player_win_rate_surface
+    ) ,
+    
+    Fav_best_run = future_pmap_chr(
+      list(
+        Player_name = Favori,
+        Date_match  = Date,
+        Categ     = Categorie
+      ),
+      get_player_best_run
+    ),
+    
+    Out_best_run = future_pmap_chr(
+      list(
+        Player_name = Outsider,
+        Date_match  = Date,
+        Categ     = Categorie
+      ),
+      get_player_best_run
+    )
+    
+  )
+
+End=Sys.time()-Start
+
+End
+
+score_map <- c("0" = 0, "LL" = 1, "Q" = 2)
+
+score_map_round <- c(
+  "-"  = 1,  
+  "1R" = 1,
+  "2R" = 2,
+  "3R" = 3,
+  "R16"= 4,
+  "QF" = 5,
+  "SF" = 6,
+  "F"  = 7,
+  "W"  = 8
+)
+
+TABLE_MOMENTUM=Test %>% 
+  mutate(Diff_Q = score_map[Fav_Q] - score_map[Out_Q],
+         Diff_Giant_Kill = Fav_Giant_Killer - Out_Giant_Killer,
+         Diff_Final=Fav_is_finalist - Out_is_finalist,
+         Diff_Run = coalesce(score_map_round[Fav_best_run],0)-coalesce(score_map_round[Out_best_run],0),
+         Diff_WR = coalesce(Fav_WR_career,0) - coalesce(Out_WR_career,0),
+         Diff_WR_Surface = coalesce(Fav_WR_career_surface,0) - coalesce(Out_WR_career_surface,0),
+         
+         Mom_Q = sign(Diff_Q),
+         Mom_Giant_Kill = sign(Diff_Giant_Kill),
+         Mom_Final=sign(Diff_Final),
+         Mom_Run = sign(Diff_Run),
+         Mom_WR = sign(Diff_WR),
+         Mom_WR_surface = sign(Diff_WR_Surface)) %>% 
+  select(-c("Fav_WR_career","Out_WR_career",        
+            "Fav_WR_career_surface","Out_WR_career_surface",
+            "Fav_best_run" ,"Out_best_run",
+            "Fav_Q","Out_Q",
+            "Fav_Giant_Killer","Out_Giant_Killer",
+            "Fav_is_finalist","Out_is_finalist"))
+
+closeAllConnections()
