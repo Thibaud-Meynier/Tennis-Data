@@ -10,16 +10,17 @@ conflict_prefer("filter", "dplyr")
 conflict_prefer("year", "lubridate")
 conflict_prefer("isoweek", "lubridate")
 conflict_prefer("month", "lubridate")
+conflicts_prefer(dplyr::between)
+conflicts_prefer(sjmisc::is_empty)
 
+year_lim=2010
 
-year_lim=2017
+load(paste0(getwd(),"/Scrapping tennis data/ML_engenering/MATCH_STATS.RData"))
 
-load(paste0(getwd(),"/Scrapping tennis data/MATCH_STATS.RData"))
+V_MATCH_t = V_MATCH_final %>% filter(Season>=year_lim)
 
-V_MATCH_t=V_MATCH_t %>% 
-  mutate(Country_tournament = case_when(Categorie=="Masters" & Season==2021~"Italy",
-                                        Categorie=="Team"~"Australia",
-                                        TRUE~Country_tournament))
+rm(V_MATCH_final)
+
 p=0.5
 
 proba_calcul=function(elo_p1,elo_p2){
@@ -29,65 +30,9 @@ proba_calcul=function(elo_p1,elo_p2){
   return(proba)
 }
 
-get_tennis_week <- function(date) {
-  year <- year(date)
-  week_num <- isoweek(date)
-  
-  # Gérer le cas des premiers jours de janvier qui appartiennent 
-  # à la dernière semaine de l'année précédente
-  if (month(date) == 1 && week_num >= 52) {
-    year <- year - 1
-  }
-  
-  # Gérer le cas de fin décembre appartenant à la semaine 1 de l'année suivante
-  if (month(date) == 12 && week_num == 1) {
-    year <- year + 1
-  }
-  
-  return(paste0(year, "-", sprintf("%02d", week_num)))
-}
-
-V_RANK=data.frame()
-
-for (i in (year_lim-1):2025){
-  
-  load(file = paste0(getwd(),"/Scrapping tennis data/Rank/RANK_ATP_",i,".RData"))
-  
-  V_RANK=rbind(V_RANK,rank)
-  
-  print(i)  
-  
-}
-
-V_RANK=V_RANK %>% 
-  select(-Move) %>% 
-  rename("Player_name"="Player name") %>% 
-  mutate(Week_Rank = sapply(Date, get_tennis_week))
-
-rm(rank)
-
-V_MATCH_t=V_MATCH_t %>% 
-select(-c(Rank_W,Rank_L,Points_W,Points_L)) %>% 
-  mutate(Match_week=sapply(Date, get_tennis_week)) %>% 
-  left_join(V_RANK %>% select(Rank,Player_name,Points,Week_Rank) %>% 
-              rename(Rank_W=Rank,Points_W=Points) %>% 
-              mutate(Rank_W=as.numeric(Rank_W),
-                     Points_W=as.numeric(Points_W)),
-            by=c("Winner_id"="Player_name","Match_week"="Week_Rank")) %>% 
-  left_join(V_RANK %>% select(Rank,Player_name,Points,Week_Rank) %>% 
-              rename(Rank_L=Rank,Points_L=Points) %>% 
-              mutate(Rank_L=as.numeric(Rank_L),
-                     Points_L=as.numeric(Points_L)),
-            by=c("Loser_id"="Player_name","Match_week"="Week_Rank")) %>% 
-  mutate(Rank_W=case_when(is.na(Rank_W)~1000,TRUE~Rank_W),
-         Points_W=case_when(is.na(Points_W)~10,TRUE~Points_W),
-         Rank_L=case_when(is.na(Rank_L)~1000,TRUE~Rank_L),
-         Points_L=case_when(is.na(Points_L)~10,TRUE~Points_L))
-
-rm(V_RANK)
-
 TABLE = V_MATCH_t %>% 
   mutate(
+    Categorie2 = case_when(Categorie %in% c("Team","Olympics")~"Country",TRUE~Categorie),
     Favori = case_when(Rank_W < Rank_L ~ Winner_id, TRUE ~ Loser_id),
     Outsider = case_when(Rank_L < Rank_W ~ Winner_id, TRUE ~ Loser_id),
     Issue = case_when(Favori == Winner_id ~ "Fav_W", TRUE ~ "Out_W"),
@@ -171,7 +116,7 @@ TABLE = V_MATCH_t %>%
     H2H_O_Set_Win_Rate = ifelse((H2H_F_Set_Won + H2H_O_Set_Won) > 0, (H2H_O_Set_Won / (H2H_F_Set_Won + H2H_O_Set_Won)) * 100, 0),
     H2H_F_Games_Win_Rate = ifelse((H2H_F_Games_Won + H2H_O_Games_Won) > 0, (H2H_F_Games_Won / (H2H_F_Games_Won + H2H_O_Games_Won)) * 100, 0),
     H2H_O_Games_Win_Rate = ifelse((H2H_F_Games_Won + H2H_O_Games_Won) > 0, (H2H_O_Games_Won / (H2H_F_Games_Won + H2H_O_Games_Won)) * 100, 0),
-
+    
     # H2H - Même surface
     
     H2H_s_F_W = case_when(Rank_W < Rank_L ~ H2H_s_Winner_W, TRUE ~ H2H_s_Loser_W),
@@ -218,7 +163,7 @@ TABLE = V_MATCH_t %>%
     H2H_s_F_Games_Win_Rate_3Y = ifelse((H2H_s_F_Games_Won_3Y + H2H_s_O_Games_Won_3Y) > 0, (H2H_s_F_Games_Won_3Y / (H2H_s_F_Games_Won_3Y + H2H_s_O_Games_Won_3Y)) * 100, 0),
     H2H_s_O_Games_Win_Rate_3Y = ifelse((H2H_s_F_Games_Won_3Y + H2H_s_O_Games_Won_3Y) > 0, (H2H_s_O_Games_Won_3Y / (H2H_s_F_Games_Won_3Y + H2H_s_O_Games_Won_3Y)) * 100, 0),
     
-     # Forme récente - 4 derniers matchs
+    # Forme récente - 4 derniers matchs
     F_N_Win_4 = case_when(Rank_W < Rank_L ~ Winner_N_Win_4, TRUE ~ Loser_N_Win_4),
     O_N_Win_4 = case_when(Rank_L < Rank_W ~ Winner_N_Win_4, TRUE ~ Loser_N_Win_4),
     F_N_Loss_4 = case_when(Rank_W < Rank_L ~ Winner_N_Loss_4, TRUE ~ Loser_N_Loss_4),
@@ -227,50 +172,50 @@ TABLE = V_MATCH_t %>%
     F_Win_Rate_4 = ifelse(is.na(F_Win_Rate_4),0,F_Win_Rate_4)*100,
     O_Win_Rate_4 = (O_N_Win_4/(O_N_Win_4+O_N_Loss_4)),
     O_Win_Rate_4 = ifelse(is.na(O_Win_Rate_4),0,O_Win_Rate_4)*100,
-
-  #  Performance as Favoris (Joueurs mieux classés) 
+    
+    #  Performance as Favoris (Joueurs mieux classés) 
     F_N_Win_as_Fav_12  = case_when(Rank_W < Rank_L ~ Winner_N_Win_Fav_Rank_12,  TRUE ~ Loser_N_Win_Fav_Rank_12),
     O_N_Win_as_Fav_12  = case_when(Rank_L < Rank_W ~ Winner_N_Win_Fav_Rank_12,  TRUE ~ Loser_N_Win_Fav_Rank_12),
     F_N_Loss_as_Fav_12 = case_when(Rank_W < Rank_L ~ Winner_N_Loss_Fav_Rank_12, TRUE ~ Loser_N_Loss_Fav_Rank_12),
     O_N_Loss_as_Fav_12 = case_when(Rank_L < Rank_W ~ Winner_N_Loss_Fav_Rank_12, TRUE ~ Loser_N_Loss_Fav_Rank_12),
-        
-  #  Performance as Outsiders (Joueurs moins bien classés) 
+    
+    #  Performance as Outsiders (Joueurs moins bien classés) 
     F_N_Win_as_Out_12  = case_when(Rank_W < Rank_L ~ Winner_N_Win_Out_Rank_12,  TRUE ~ Loser_N_Win_Out_Rank_12),
     O_N_Win_as_Out_12  = case_when(Rank_L < Rank_W ~ Winner_N_Win_Out_Rank_12,  TRUE ~ Loser_N_Win_Out_Rank_12),
     F_N_Loss_as_Out_12 = case_when(Rank_W < Rank_L ~ Winner_N_Loss_Out_Rank_12, TRUE ~ Loser_N_Loss_Out_Rank_12),
     O_N_Loss_as_Out_12 = case_when(Rank_L < Rank_W ~ Winner_N_Loss_Out_Rank_12, TRUE ~ Loser_N_Loss_Out_Rank_12),
-        
-  #  Calcul des Win Rates Specifiques 
+    
+    #  Calcul des Win Rates Specifiques 
     F_as_Fav_12_Win_rate = ifelse((F_N_Win_as_Fav_12 + F_N_Loss_as_Fav_12) == 0, 0, (F_N_Win_as_Fav_12 / (F_N_Win_as_Fav_12 + F_N_Loss_as_Fav_12)) * 100),
     O_as_Fav_12_Win_rate = ifelse((O_N_Win_as_Fav_12 + O_N_Loss_as_Fav_12) == 0, 0, (O_N_Win_as_Fav_12 / (O_N_Win_as_Fav_12 + O_N_Loss_as_Fav_12)) * 100),
     
     F_as_Out_12_Win_rate = ifelse((F_N_Win_as_Out_12 + F_N_Loss_as_Out_12) == 0, 0, (F_N_Win_as_Out_12 / (F_N_Win_as_Out_12 + F_N_Loss_as_Out_12)) * 100),
     O_as_Out_12_Win_rate = ifelse((O_N_Win_as_Out_12 + O_N_Loss_as_Out_12) == 0, 0, (O_N_Win_as_Out_12 / (O_N_Win_as_Out_12 + O_N_Loss_as_Out_12)) * 100),
-
-  #  Performance en tant que Favori (Statut basé sur le Rank) - 4 
+    
+    #  Performance en tant que Favori (Statut basé sur le Rank) - 4 
     F_N_Win_as_Fav_4  = case_when(Rank_W < Rank_L ~ Winner_N_Win_Fav_Rank_4,  TRUE ~ Loser_N_Win_Fav_Rank_4),
     O_N_Win_as_Fav_4  = case_when(Rank_L < Rank_W ~ Winner_N_Win_Fav_Rank_4,  TRUE ~ Loser_N_Win_Fav_Rank_4),
     F_N_Loss_as_Fav_4 = case_when(Rank_W < Rank_L ~ Winner_N_Loss_Fav_Rank_4, TRUE ~ Loser_N_Loss_Fav_Rank_4),
     O_N_Loss_as_Fav_4 = case_when(Rank_L < Rank_W ~ Winner_N_Loss_Fav_Rank_4, TRUE ~ Loser_N_Loss_Fav_Rank_4),
-      
+    
     #  Performance en tant qu'Outsider (Statut basé sur le Rank) - 4 
     F_N_Win_as_Out_4  = case_when(Rank_W < Rank_L ~ Winner_N_Win_Out_Rank_4,  TRUE ~ Loser_N_Win_Out_Rank_4),
     O_N_Win_as_Out_4  = case_when(Rank_L < Rank_W ~ Winner_N_Win_Out_Rank_4,  TRUE ~ Loser_N_Win_Out_Rank_4),
     F_N_Loss_as_Out_4 = case_when(Rank_W < Rank_L ~ Winner_N_Loss_Out_Rank_4, TRUE ~ Loser_N_Loss_Out_Rank_4),
     O_N_Loss_as_Out_4 = case_when(Rank_L < Rank_W ~ Winner_N_Loss_Out_Rank_4, TRUE ~ Loser_N_Loss_Out_Rank_4),
-      
+    
     #  Calcul des Win Rates Spécifiques - 4 
     F_as_Fav_4_Win_rate = ifelse((F_N_Win_as_Fav_4 + F_N_Loss_as_Fav_4) == 0, 0, 
-                                   (F_N_Win_as_Fav_4 / (F_N_Win_as_Fav_4 + F_N_Loss_as_Fav_4)) * 100),
-      
+                                 (F_N_Win_as_Fav_4 / (F_N_Win_as_Fav_4 + F_N_Loss_as_Fav_4)) * 100),
+    
     O_as_Fav_4_Win_rate = ifelse((O_N_Win_as_Fav_4 + O_N_Loss_as_Fav_4) == 0, 0, 
-                                   (O_N_Win_as_Fav_4 / (O_N_Win_as_Fav_4 + O_N_Loss_as_Fav_4)) * 100),
-      
+                                 (O_N_Win_as_Fav_4 / (O_N_Win_as_Fav_4 + O_N_Loss_as_Fav_4)) * 100),
+    
     F_as_Out_4_Win_rate = ifelse((F_N_Win_as_Out_4 + F_N_Loss_as_Out_4) == 0, 0, 
-                                   (F_N_Win_as_Out_4 / (F_N_Win_as_Out_4 + F_N_Loss_as_Out_4)) * 100),
-      
+                                 (F_N_Win_as_Out_4 / (F_N_Win_as_Out_4 + F_N_Loss_as_Out_4)) * 100),
+    
     O_as_Out_4_Win_rate = ifelse((O_N_Win_as_Out_4 + O_N_Loss_as_Out_4) == 0, 0, 
-                                   (O_N_Win_as_Out_4 / (O_N_Win_as_Out_4 + O_N_Loss_as_Out_4)) * 100),
+                                 (O_N_Win_as_Out_4 / (O_N_Win_as_Out_4 + O_N_Loss_as_Out_4)) * 100),
     
     # Forme récente sur surface - 4 derniers matchs
     F_N_Win_s_4 = case_when(Rank_W < Rank_L ~ Winner_N_Win_s_4, TRUE ~ Loser_N_Win_s_4),
@@ -301,7 +246,7 @@ TABLE = V_MATCH_t %>%
     F_Win_Rate_s_12 = ifelse(is.na(F_Win_Rate_s_12),0,F_Win_Rate_s_12)*100,
     O_Win_Rate_s_12 = (O_N_Win_s_12/(O_N_Win_s_12+O_N_Loss_s_12)),
     O_Win_Rate_s_12 = ifelse(is.na(O_Win_Rate_s_12),0,O_Win_Rate_s_12)*100,
-
+    
     # Indice de fatigue 
     F_N_match_12 = F_N_Win_12+F_N_Loss_12,
     O_N_match_12 = O_N_Win_12+O_N_Loss_12,
@@ -310,7 +255,7 @@ TABLE = V_MATCH_t %>%
     
     P4_P12_F = ifelse(is.na(F_N_match_4/F_N_match_12),0,F_N_match_4/F_N_match_12),
     P4_P12_O = ifelse(is.na(O_N_match_4/O_N_match_12),0,O_N_match_4/O_N_match_12),
-
+    
     F_Fatigue_index = F_N_match_12/21*(1+P4_P12_F),
     O_Fatigue_index = O_N_match_12/21*(1+P4_P12_O),
     
@@ -330,12 +275,13 @@ TABLE = V_MATCH_t %>%
     Round_QF = case_when(Round=="QF"~1,TRUE~0),
     Round_SF = case_when(Round=="SF"~1,TRUE~0),
     Round_F = case_when(Round=="F"~1,TRUE~0)
-
+    
   ) %>% 
   filter(info=="Completed") %>% 
   select(
     tournament,
     Categorie,
+    Categorie2,
     Round,
     Season,
     Date,
@@ -501,9 +447,6 @@ TABLE = V_MATCH_t %>%
     O_Fatigue_index
   )
 
-# save(TABLE,file="TABLE_RAW.RData",compress="xz")
-# write.csv(TABLE, "TABLE_RAW.csv", row.names = FALSE,sep = ";")
-
 ##### TABLE DIFF 
 
 TABLE_ML_DIFF=TABLE %>% 
@@ -537,19 +480,22 @@ TABLE_ML_DIFF=TABLE %>%
     #P_F_comb,  # Déjà une probabilité relative
     
     # --- DIFFÉRENCES - H2H (Historique Face à Face) ---
-    
+    Diff_H2H = H2H_F_W - H2H_O_W,
     Diff_H2H_Win_Rate = H2H_F_Win_Rate - H2H_O_Win_Rate,
     Diff_H2H_Set_Win_Rate = H2H_F_Set_Win_Rate - H2H_O_Set_Win_Rate,
     Diff_H2H_Games_Win_Rate = H2H_F_Games_Win_Rate - H2H_O_Games_Win_Rate,
     
+    Diff_H2H_s = H2H_s_F_W - H2H_s_O_W,
     Diff_H2H_s_Win_Rate = H2H_s_F_Win_Rate - H2H_s_O_Win_Rate,
     Diff_H2H_s_Set_Win_Rate = H2H_s_F_Set_Win_Rate - H2H_s_O_Set_Win_Rate,
     Diff_H2H_s_Games_Win_Rate = H2H_s_F_Games_Win_Rate - H2H_s_O_Games_Win_Rate,
     
+    Diff_H2H_3Y = H2H_s_F_W_3Y - H2H_s_O_W_3Y,
     Diff_H2H_Win_Rate_3Y = H2H_F_Win_Rate_3Y - H2H_O_Win_Rate_3Y,
     Diff_H2H_Set_Win_Rate_3Y = H2H_F_Set_Win_Rate_3Y - H2H_O_Set_Win_Rate_3Y,
     Diff_H2H_Games_Win_Rate_3Y = H2H_F_Games_Win_Rate_3Y - H2H_O_Games_Win_Rate_3Y,
     
+    Diff_H2H_s_3Y = H2H_F_W_3Y - H2H_O_W_3Y,
     Diff_H2H_s_Win_Rate_3Y = H2H_s_F_Win_Rate_3Y - H2H_s_O_Win_Rate_3Y,
     Diff_H2H_s_Set_Win_Rate_3Y = H2H_s_F_Set_Win_Rate_3Y - H2H_s_O_Set_Win_Rate_3Y,
     Diff_H2H_s_Games_Win_Rate_3Y = H2H_s_F_Games_Win_Rate_3Y - H2H_s_O_Games_Win_Rate_3Y,
@@ -573,7 +519,7 @@ TABLE_ML_DIFF=TABLE %>%
     
     # --- DIFFÉRENCES - Performance As Out (4 mois) ---
     Diff_as_Out_4_Win_rate = F_as_Out_4_Win_rate - O_as_Out_4_Win_rate,
-   
+    
     # --- DIFFERENCE - Fatigue
     Diff_Fatigue = F_Fatigue_index - O_Fatigue_index
   ) %>% 
@@ -586,7 +532,7 @@ TABLE_ML_DIFF=TABLE %>%
     Issue, 
     
     # --- Caractéristiques du Match ---
-    Categorie, Surface_tournament, Round,
+    Categorie, Categorie2, Surface_tournament, Round,
     Grand_Slam,
     Country_Champ,
     Masters,
@@ -615,6 +561,12 @@ TABLE_ML_DIFF=TABLE %>%
     Diff_Elo_s,
     
     # --- DIFFÉRENCES - H2H (Historique Face à Face) ---
+    
+    Diff_H2H,
+    Diff_H2H_s,
+    Diff_H2H_3Y,
+    Diff_H2H_s_3Y,
+    
     Diff_H2H_Win_Rate,
     Diff_H2H_Set_Win_Rate,
     Diff_H2H_Games_Win_Rate,
@@ -651,7 +603,7 @@ TABLE_ML_DIFF=TABLE %>%
     
     # --- DIFFÉRENCES - Performance As Out (4 mois) ---
     Diff_as_Out_4_Win_rate,
-
+    
     # --- DIFFERENCE - Fatigue
     Diff_Fatigue 
   )
@@ -659,7 +611,7 @@ TABLE_ML_DIFF=TABLE %>%
 
 #### TABLE MOMENTUM #####
 
-  TABLE_MOMENTUM = TABLE_ML_DIFF %>%
+TABLE_MOMENTUM = TABLE_ML_DIFF %>%
   mutate(
     # --- Momentum H2H (Matchs, Sets, Games) ---
     Mom_H2H               = sign(Diff_H2H_Win_Rate),
@@ -689,30 +641,19 @@ TABLE_ML_DIFF=TABLE %>%
     Mom_as_Out_12         = sign(Diff_as_Out_12_Win_rate),
     Mom_as_Fav_4          = sign(Diff_as_Fav_4_Win_rate),
     Mom_as_Out_4          = sign(Diff_as_Out_4_Win_rate),
-
+    
     Mom_Fatigue = sign(Diff_Fatigue),
     
     # --- Score Global ---
     Global_Momentum_Score = rowSums(across(starts_with("Mom_")), na.rm = TRUE)
   ) %>%
-mutate(
-  Mom_H2H_global = Mom_H2H+Mom_H2H_s+Mom_H2H_3Y+Mom_H2H_s_3Y,
-  Mom_WR_global = Mom_WR_4+Mom_WR_s_4+Mom_WR_12+Mom_WR_s_12,
-  Mom_as_Fav = Mom_as_Fav_12+Mom_as_Fav_4,
-  Mom_as_Out = Mom_as_Out_4+Mom_as_Out_12,  
+  mutate(
+    Mom_H2H_global = Mom_H2H+Mom_H2H_s+Mom_H2H_3Y+Mom_H2H_s_3Y,
+    Mom_WR_global = Mom_WR_4+Mom_WR_s_4+Mom_WR_12+Mom_WR_s_12,
+    Mom_as_Fav = Mom_as_Fav_12+Mom_as_Fav_4,
+    Mom_as_Out = Mom_as_Out_4+Mom_as_Out_12,  
+    Clay = ifelse(Surface_tournament=="Clay",1,0),
+    Hard = ifelse(Surface_tournament=="Hard",1,0),
+    Grass = ifelse(Surface_tournament=="Grass",1,0),
+    Indoors = ifelse(Surface_tournament=="Indoors",1,0)
   )
-
-load("~/work/Tennis-Data/Scrapping tennis data/ML_engenering/INDEX_SURFACE.RData")
-
-TABLE_MOMENTUM=TABLE_MOMENTUM %>% 
-  left_join(INDEX_SURFACE %>% select(-Surface_tournament),by=c("tournament","Season"))
-
-TABLE_MOMENTUM=TABLE_MOMENTUM %>% 
- mutate(Speed_Category=factor(Speed_Category, 
-                              levels = c("Ultra-Slow", "Slow-Medium", "Medium","Medium-Fast", "Fast"), 
-                              ordered = TRUE),
-      Clay = case_when(Surface_tournament=="Clay"~1,TRUE~0),
-      Hard = case_when(Surface_tournament=="Hard"~1,TRUE~0),
-      Grass = case_when(Surface_tournament=="Grass"~1,TRUE~0),
-      Indoors = case_when(Surface_tournament %in% c("Indoors","Various")~1,TRUE~0)
-)
