@@ -44,13 +44,115 @@ is_value=function(pred,margin=0,U=1){
   
 }
 
-model_list=c("KNN","Naive_Bayes","NN1","Random_Forest","Ridge","LASSO","Elastic","LDA","XGB","LGB","GBM","P_F_comb","Ensemble_Pred")
+value_performance <- function(pred, margin = 0, U = 1,
+                              min_bets = 10,
+                              ratio_breaks = c(0, 1.05, 1.10, 1.25, Inf),
+                              ratio_labels = c("Faible (0-5%)", "Moyen (5-10%)",
+                                               "Intéressant (10-25%)", "Fort (25%+)"),
+                              focus=TRUE) {
+  
+  # Récupérer les données via is_value
+  data <- is_value(pred, margin, U) %>%
+    filter(!is.na(Value)) %>%
+    filter(between(Odd_played,1.35,4.5)) %>% 
+    mutate(
+      Ratio_Bin = cut(
+        Ratio_Value,
+        breaks         = ratio_breaks,
+        labels         = ratio_labels,
+        right          = FALSE,
+        include.lowest = TRUE
+      )
+    )
+  
+  # ── 5. Par type de Value x Catégorie x Ratio_Bin (le plus fin) ───────────────
+  
+  if (focus==FALSE){
+    
+    by_value_cat_ratio <- data %>%
+      group_by(Value, Categorie, Ratio_Bin) %>%
+      summarise(
+        N          = n(),
+        N_Win      = sum(Bet_W, na.rm = TRUE),
+        WinRate    = round(N_Win / N * 100, 1),
+        Profit     = round(sum(Result, na.rm = TRUE), 2),
+        ROI        = round(sum(Result, na.rm = TRUE) / N * 100, 1),
+        Odd_Median = round(median(Odd_played, na.rm = TRUE), 2),
+        .groups    = "drop"
+      ) %>%
+      rename(Value_Type = Value)
+    
+    heatmap_cat_ratio_facet <- by_value_cat_ratio %>%
+      ggplot(aes(x = Ratio_Bin, y = Categorie, fill = Profit)) +
+      geom_tile(color = "white", linewidth = 0.8) +
+      geom_text(aes(label = paste0(Profit, "U\nn=", N)), size = 2.8) +
+      scale_fill_gradient2(low = "red", mid = "white", high = "green", midpoint = 0) +
+      facet_wrap(~ Value_Type, ncol = 2) +
+      labs(title = paste("Profit Catégorie x Ratio x Value —", pred),
+           x     = "Niveau de Value",
+           y     = "Catégorie") +
+      theme_classic() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1),
+            strip.background = element_rect(fill = "grey90"))
+    
+    print(heatmap_cat_ratio_facet)
+    
+    list(
+      data = by_value_cat_ratio
+    )
+    
+  }else{
+    
+    by_value_ratio <- data %>%
+      group_by(Value, Ratio_Bin) %>%
+      summarise(
+        N          = n(),
+        N_Win      = sum(Bet_W, na.rm = TRUE),
+        WinRate    = round(N_Win / N * 100, 1),
+        Profit     = round(sum(Result, na.rm = TRUE), 2),
+        ROI        = round(sum(Result, na.rm = TRUE) / N * 100, 1),
+        Odd_Median = round(median(Odd_played, na.rm = TRUE), 2),
+        .groups    = "drop"
+      ) %>%
+      rename(Value_Type = Value)
+    
+    heatmap_ratio_facet <- by_value_ratio %>%
+      ggplot(aes(x = Ratio_Bin, y = Value_Type, fill = Profit)) +
+      geom_tile(color = "white", linewidth = 0.8) +
+      geom_text(aes(label = paste0(Profit, "U\nn=", N)), size = 2.8) +
+      scale_fill_gradient2(low = "red", mid = "white", high = "green", midpoint = 0) +
+      labs(title = paste("Profit Catégorie x Ratio x Value —", pred),
+           x     = "Niveau de Value",
+           y     = "Catégorie") +
+      theme_classic() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1),
+            strip.background = element_rect(fill = "grey90"))
+    
+    print(heatmap_ratio_facet)
+    
+    list(
+      data = by_value_ratio
+    )
+    
+  }
+  
+
+
+}
+
+model_diag=value_performance("NN1", margin = 0,focus = F)
+
+model_diag$by_value_cat_ratio
+
+model_list=c("NN1","Random_Forest","Naive_Bayes",
+             "Ridge","LASSO","Elastic","LDA","KNN",
+             "XGB","LGB","GBM","P_F_comb","Ensemble_Pred","Naive_Bayes")
 
 value=data.frame()
 
 for (i in model_list){
   
-  temp=is_value(i,margin=5) %>% 
+  temp=is_value(i,margin=0) %>% 
     select(-c(P_F_pred,P_F_market,Ratio_Odd_O,Ratio_Odd_F,Signal)) %>% 
     filter(!is.na(Value)) %>% 
     filter(between(Odd_played,1.35,4.5)) %>% 
@@ -74,7 +176,7 @@ for (i in model_list){
         right          = FALSE,
         include.lowest = TRUE
       )) %>% 
-    group_by(Value,Ratio_Bin) %>% 
+    group_by(Value,Categorie,Ratio_Bin) %>% 
     mutate(
       n_bet=row_number(),
       
@@ -90,13 +192,14 @@ for (i in model_list){
 
 
 p=ggplot(value %>% 
-           filter(Value=="Value Fav1"),aes(x = n_bet, y = BK, group = Pred, color = Pred)) +
+           filter(Categorie=="Grand Slam" & Value=="Value Out1"),
+         aes(x = n_bet, y = BK, group = Pred, color = Pred)) +
   geom_line(linewidth = 0.8) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
   facet_wrap(~ Ratio_Bin, scales = "free") +       # "free" = axes adaptés par catégorie
   scale_color_viridis_d(option = "turbo") +         # rouge→vert naturel pour les tranches de value
   labs(
-    title  = glue("Bankroll cumulée par catégorie et tranche de ratio de value"),
+    title  = "Bankroll cumulée par catégorie et tranche de ratio de value",
     x      = "Nombre de paris",
     y      = "Bankroll cumulée (u.)",
     color  = "Ratio Value"
@@ -105,7 +208,6 @@ p=ggplot(value %>%
   theme(legend.position = "bottom")
 
 ggplotly(p)
-
 
 
 ##### ANALYSE DES DIVERGENCES PAR MODELES #####
@@ -117,7 +219,7 @@ for (i in model_list){
   print(i)
   
   diverge_model <- test_pred %>% 
-    filter((P_F_market > 0.5 & get(i) <= 0.5) | (P_F_market <= 0.5 & get(i) > 0.5)) %>% 
+    filter((P_F_market >= 0.5 & get(i) < 0.5) | (P_F_market < 0.5 & get(i) >= 0.5)) %>% 
     select(tournament, Surface_tournament, Categorie, Season, Round, Favori, Outsider,
            Odd_F, Odd_O, Issue, all_of(i),Vote_F) %>%   # ← fix ici
     rename(Prob_Pred = all_of(i)) %>%  
@@ -143,8 +245,8 @@ for (i in model_list){
 
   }
 
-divergence <- divergence %>%
-  group_by(Pred) %>%
+divergence_plot <- divergence %>% filter(Prob_Pred<0.5) %>% 
+  group_by(Pred,Categorie) %>%
   mutate(
     n_bet  = row_number(),        # Recrée n_bet par modèle
     BK     = cumsum(Result),
@@ -152,17 +254,11 @@ divergence <- divergence %>%
   ) %>%
   ungroup()
 
-p <- ggplot(divergence, aes(x = n_bet, y = BK, group = Pred, color = Pred)) +
+p <- ggplot(divergence_plot, aes(x = n_bet, y = BK, group = Pred, color = Pred)) +
   geom_line()+ 
+  facet_wrap(~Categorie,scale="free")+
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
   theme_classic()
 
 ggplotly(p)
-
-
-divergence %>% 
-  filter(Pred=="NN1") %>% 
-  group_by(Issue,ifelse(Prob_Pred>=0.5,"Fav_W_Pred","Out_W_Pred")) %>% 
-  summarise(N=n())
-
 
