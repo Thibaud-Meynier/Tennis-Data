@@ -1,13 +1,12 @@
 library(tidyverse)
 library(caret)
-library(glmnet)      # lasso, ridge, elastic net
+library(glmnet)    
 library(randomForest)
 library(e1071)
 library(scales)
-library(rpart)       # CART
-library(class)       # KNN
-library(gbm)         # Gradient Boosting
-library(lightgbm)    # LightGBM
+library(class)       
+library(gbm)         
+library(lightgbm)    
 library(pROC)
 library(plotly)
 library(nnet)
@@ -18,44 +17,17 @@ library(NeuralNetTools)
 library(ranger)
 library(kknn)
 
-features_mix <- c(
-  #"INDEX",
-  "Grass","Clay","Hard","Indoors",
-  "Grand_Slam",
-  #"Country_Champ",
-  "Masters",
-  "ATP_1000",
-  "ATP_500",
-  "ATP_250",
-  #"Round_RR", "Round_R2",   #"Round_R3", "Round_R16", 
-  "Round_R1","Round_QF","Round_SF", "Round_F",
-  #"Diff_Score_Rank",
-  #"Diff_Rank_Class",
-  "Diff_Rank",
-  "Diff_Age",
-  "Diff_IMC",
-  "Diff_Size",
-  "Diff_Weight",
-  # "Diff_Hand_Score", # "Diff_Country_score",
-  "Diff_Fatigue",
-  "P_F",
-  "P_s_F",
-  "Diff_H2H",  "Diff_H2H_s",  "Diff_H2H_3Y",  "Diff_H2H_s_3Y",
-  "Diff_Win_Rate_12",   "Diff_Win_Rate_s_12",  
-  "Diff_Win_Rate_4",   "Diff_Win_Rate_s_4",
-  #"Diff_Elo", #"Diff_Elo_s",
-  #"Mom_H2H_global",
-  #"Mom_WR_global",
-  "Mom_as_Fav",
-  "Mom_as_Out",
-  #"Mom_Fatigue",
-  "Global_Momentum_Score",
-  "Diff_Q",
-  "Diff_Giant_Kill",
-  "Diff_Final",
-  "Diff_Run",
-  "Diff_WR",
-  "Diff_WR_Surface")
+features_mix <- c("P_F","P_s_F",
+                  "Grass","Clay","Hard",
+                  "Indoors",
+                  "ATP_1000",
+                  "ATP_250",
+                  "ATP_500",
+                  #"Grand_Slam",
+                  "Diff_Rank",
+                  "Diff_Age",
+                  "Diff_Country_score","Diff_Hand_Score"
+                  )
 
 
 formule <- as.formula(paste0("Issue ~ ", paste0(features_mix, collapse = " + ")))
@@ -64,13 +36,15 @@ formule <- as.formula(paste0("Issue ~ ", paste0(features_mix, collapse = " + "))
 set.seed(456) 
 TABLE_MOMENTUM = na.omit(TABLE_MOMENTUM)
 
-#TABLE_MOMENTUM=TABLE_MOMENTUM %>% filter(Categ_low==1)
+TABLE_MOMENTUM = TABLE_MOMENTUM %>% filter(Season>=2017)
+
+#TABLE_MOMENTUM=TABLE_MOMENTUM %>% filter(Grand_Slam!=1)
 
 index_train <- which(TABLE_MOMENTUM$Season < 2024) #createDataPartition(TABLE_MOMENTUM$Issue, p = 0.8, list = FALSE) 
 train <- TABLE_MOMENTUM[index_train, ]
 test <- TABLE_MOMENTUM[-index_train, ]
 test_pred=TABLE_MOMENTUM[-index_train, ]
-test_pred=test_pred %>% select(tournament,Surface_tournament,Categorie,Season,Round,Favori,Outsider,Odd_F,Odd_O,Issue,P_F_comb)
+test_pred=test_pred %>% select(tournament,Surface_tournament,Categorie,Season,Round,Favori,Outsider,Odd_F,Odd_O,Issue,Diff_Rank,P_F_comb)
 
 # Préparation des matrices pour glmnet
 X_train <- model.matrix(formule, train %>% select(all_of(c(features_mix, "Issue"))))[, -1]
@@ -224,7 +198,7 @@ train$Issue=as.factor(train$Issue)
 
 test$Issue=as.factor(test$Issue)
 
-ntrees_grid <- c(750, 1000, 1250, 1500, 2000, 2500)
+ntrees_grid <- c(750, 1000, 1250, 1500)
 
 # Entraîner les 3 séquentiellement — ranger utilise tous les cores sur chaque modèle
 results <- lapply(ntrees_grid, function(n) {
@@ -267,7 +241,7 @@ pred_rf <- predict(best_model$model,
 
 test_pred$Random_Forest <- pred_rf
 
-model_metrics(test_pred[["Random_Forest"]], test$Issue)
+model_metrics(test_pred[["Random_Forest"]], test_pred$Issue)
 
 # ============================================
 # 6. GRADIENT BOOSTING
@@ -285,11 +259,11 @@ model_gbm <- gbm(formule,
                  shrinkage = 0.05,
                  cv.folds = 5,
                  verbose=T,
-                 n.cores = 5)
+                 n.cores = 10)
 
 best_iter <- gbm.perf(model_gbm, method = "cv", plot.it = FALSE)
 
-importance_gbm <- summary(model_gbm)
+importance_gbm <- summary(model_gbm, plot = FALSE)
 
 # Affiche le top 10 des variables
 print(importance_gbm[1:10, ])
@@ -383,10 +357,12 @@ importance_matrix <- xgb.importance(
   model = xgb_model
 )
 
-xgb.plot.importance(
-  importance_matrix = importance_matrix[1:10],
-  main = "Top 20 Features - XGBoost"
-)
+importance_matrix[1:10]
+
+# xgb.plot.importance(
+#   importance_matrix = importance_matrix[1:10],
+#   main = "Top 20 Features - XGBoost"
+# )
 
 # Prédictions
 pred_xgb <- predict(xgb_model, dtest)
@@ -410,7 +386,7 @@ test_scaled <- test %>%
 nn_1layer <- nnet(
   formule, 
   data = train_scaled, 
-  size = 1,       # Un peu moins que 15 pour éviter de capturer du "bruit"
+  size = 3,       # Un peu moins que 15 pour éviter de capturer du "bruit"
   decay = 0.05,      # Augmente le decay (pénalité) pour forcer des poids plus lisses
   maxit = 1000,      # Souvent suffisant pour converger sur une couche
   MaxNWts = 5000,   # Sécurité pour autoriser plus de connexions si besoin
@@ -473,14 +449,15 @@ trControl <- trainControl(
 )
 
 grid_knn <- expand.grid(
-  kmax     = c(15, 25, 50),   # Nombre de voisins
-  distance = c(1, 2),        # 1=Manhattan, 2=Euclidienne, 3=Minkowski
-  kernel   = c(#"rectangular",   # KNN classique — tous les voisins égaux
+  kmax     = c(10,25,35),   # Nombre de voisins
+  distance = c(2),        # 1=Manhattan, 2=Euclidienne, 3=Minkowski
+  kernel   = c("rectangular"   # KNN classique — tous les voisins égaux
                #"triangular",    # Poids linéaire selon distance
                #"epanechnikov",  # Poids quadratique
-               "gaussian",      # Poids gaussien
+               #"gaussian",      # Poids gaussien
                #"cos",           # Distance cosinus
-               "optimal")       # Poids optimisés automatiquement
+               #"optimal"
+               )       # Poids optimisés automatiquement
 )
 
 model_knn <- train(
@@ -505,8 +482,8 @@ model_metrics(test_pred[["KNN"]], test_pred$Issue)
 # 12. Aggrégation des prédictions 
 # ============================================
 
-model_list=c("Ridge","LASSO","Elastic","LDA"
-             ,"XGB","GBM","LGB","Random_Forest","KNN","NN1","Naive_Bayes")
+model_list=c("Ridge","LASSO","Elastic","LDA","Naive_Bayes","P_F_comb",
+             "NN1","Random_Forest","XGB","LGB","GBM")
 
 test_pred=test_pred %>% 
   mutate(Ensemble_Pred=rowMeans(across(all_of(model_list)))
@@ -527,7 +504,7 @@ test_pred=test_pred %>%
 
 
 # ============================================
-# 12. Le marché 
+# 13. Le marché 
 # ============================================
 
 test_pred=test_pred %>% 
@@ -558,9 +535,9 @@ all_metrics <- bind_rows(lapply(model_list, function(m) {
   res$metrics %>% 
     pivot_wider(names_from = Metric, values_from = Value) %>%
     mutate(Modele = m)
-})) %>% arrange(LogLoss)
+})) %>% arrange(desc(Accuracy))
 
-print(all_metrics)
+print(all_metrics %>% arrange(LogLoss))
 
 # ============================================
 # CALIBRATION
