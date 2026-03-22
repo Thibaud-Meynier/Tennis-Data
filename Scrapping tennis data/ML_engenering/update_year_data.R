@@ -11,6 +11,8 @@ load(file = paste0(getwd(),"/Scrapping tennis data/Rank/RANK_ATP_",year,".RData"
 
 load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_",year,".RData"))
 
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_INFO.RData"))
+
 table_stock_new=data.frame()
 
 list_new=list_tournament(year)
@@ -89,7 +91,10 @@ table_stock=rbind(table_stock,table_stock_new)
 
 Sys.time()-Start
 
+save(table_stock,file = paste0(getwd(),"/Scrapping tennis data/Extraction/ATP_",year,"_Extraction.RData"))
+
 ##### RANK #####
+
 year_start <- floor_date(Sys.Date(), "year")
 
 today <- Sys.Date()
@@ -105,6 +110,8 @@ date=floor_date(as.Date(paste0(year, "-01-01")) + (week_to_scrap - 1) * 7, unit 
 rank_new=rank_scrap(date)
 
 rank=rbind(rank,rank_new)
+
+save(rank, file=paste0(getwd(),"/Scrapping tennis data/Rank/RANK_ATP_",year,".RData"))
 
 ##### TOURNAMENT #####
 
@@ -197,3 +204,11 @@ list_scrap= list_scrap %>%
 V_TOURNAMENT=rbind(list_old,list_scrap)
 
 save(V_TOURNAMENT,file=paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2026.RData"))
+
+V_TOURNAMENT_INFO=V_TOURNAMENT_INFO %>% filter(Year<year)
+
+V_TOURNAMENT_INFO=rbind(V_TOURNAMENT_INFO,V_TOURNAMENT %>% 
+                          mutate(CLE_TOURNAMENT=toupper(tournament)) %>% 
+                          select(colnames(V_TOURNAMENT_INFO)))
+
+save(V_TOURNAMENT,file=paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_INFO.RData"))
