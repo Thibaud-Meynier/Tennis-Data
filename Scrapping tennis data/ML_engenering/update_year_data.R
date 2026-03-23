@@ -1,3 +1,4 @@
+conflicts_prefer(dplyr::filter)
 
 year=2026
 
@@ -17,33 +18,33 @@ table_stock_new=data.frame()
 
 list_new=list_tournament(year)
 
-list_old=V_TOURNAMENT %>% filter(isoweek(Date)<isoweek(Sys.Date()))
+# on prend que les tournois joués la semaine précédente 
 
-# list=list %>% filter(isoweek(Date)<isoweek(Sys.Date()))
+list_new2=list_new %>% filter(isoweek(Date)<isoweek(Sys.Date()))
 
-list_all_upper <- toupper(list_new$tournament)
+list_all_upper <- toupper(list_new2$tournament)
 
-list_old_upper <- toupper(unique(list_old$tournament))
+list_old_upper <- toupper(unique(table_stock$tournament))
 
 diff_upper <- setdiff(list_all_upper, list_old_upper)
 
-to_scrap <- list_new$tournament[list_all_upper %in% diff_upper]
+to_scrap <- list_new2$tournament[list_all_upper %in% diff_upper]
 
 to_scrap <- unique(to_scrap)
 
 to_scrap <- to_scrap[to_scrap != "Fujairah 2 chall."]
 
-list_scrap=list_new %>% filter(tournament %in% to_scrap)
+match_scrap=list_new2 %>% filter(tournament %in% to_scrap)
 
 Start=Sys.time()
 
-for (a in 1:nrow(list_scrap)){
+for (a in 1:nrow(match_scrap)){
   
-  tournament_name=list_scrap[a,1]
+  tournament_name=match_scrap[a,1]
   
   print(paste0(tournament_name," ",a))
   
-  url_tournament=list_scrap[a,2]
+  url_tournament=match_scrap[a,2]
   
   # year=i
   
@@ -97,24 +98,39 @@ save(table_stock,file = paste0(getwd(),"/Scrapping tennis data/Extraction/ATP_",
 
 year_start <- floor_date(Sys.Date(), "year")
 
-today <- Sys.Date()
+last_monday <- floor_date(Sys.Date(), unit = "week", week_start = 1)
 
-week_pass <- unique(isoweek(seq(year_start, today, by = "week")))
+# Premier lundi de l'année
+first_monday <- floor_date(year_start, unit = "week", week_start = 1)
+# Si floor ramène à fin décembre, on avance d'une semaine
 
-week_to_scrap=setdiff(week_pass,unique(isoweek(rank$Date)))
+if (first_monday < year_start) first_monday <- first_monday + 7
 
-week_to_scrap=week_to_scrap[week_to_scrap != 1]
+# Tous les lundis depuis le premier lundi de l'année
+all_mondays <- seq(first_monday, last_monday, by = "week")
 
-date=floor_date(as.Date(paste0(year, "-01-01")) + (week_to_scrap - 1) * 7, unit = "weeks", week_start = 1)
+# Lundis déjà présents dans la table
+mondays_in_rank <- unique(floor_date(rank$Date, unit = "week", week_start = 1))
 
-rank_new=rank_scrap(date)
+# Lundis manquants
+date <- as.Date(setdiff(all_mondays, mondays_in_rank))
 
-rank=rbind(rank,rank_new)
+rank_new <- rank_scrap(date)
+
+rank_new=rank_new %>% 
+  mutate(Date=date,
+         Year=year,
+         Week=week(date))
+
+rank <- rbind(rank, rank_new)
 
 save(rank, file=paste0(getwd(),"/Scrapping tennis data/Rank/RANK_ATP_",year,".RData"))
 
 ##### TOURNAMENT #####
 
+v_tournament_scrap=setdiff(toupper(list_new$tournament), toupper(V_TOURNAMENT$tournament))
+
+list_scrap=list_new %>% filter(toupper(tournament) %in% v_tournament_scrap)
 
 list_scrap$Country_tournament=NA
 list_scrap$Surface_tournament=NA
@@ -145,8 +161,6 @@ for (i in 1:nrow(list_scrap)){
     as.data.frame()
   
   if(ncol(ranking_points_tournament)<=4 & ncol(ranking_points_tournament)>0 & nrow(ranking_points_tournament)<=9){
-    
-    
     
     names(ranking_points_tournament)=ranking_points_tournament[1,]
     ranking_points_tournament=ranking_points_tournament[-1,]
@@ -201,7 +215,7 @@ list_scrap=list_scrap %>%
 list_scrap= list_scrap %>%  
   mutate(tournament = gsub("chall", "Chall", tournament, ignore.case = TRUE))
 
-V_TOURNAMENT=rbind(list_old,list_scrap)
+V_TOURNAMENT=rbind(V_TOURNAMENT,list_scrap)
 
 save(V_TOURNAMENT,file=paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2026.RData"))
 
@@ -212,3 +226,8 @@ V_TOURNAMENT_INFO=rbind(V_TOURNAMENT_INFO,V_TOURNAMENT %>%
                           select(colnames(V_TOURNAMENT_INFO)))
 
 save(V_TOURNAMENT,file=paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_INFO.RData"))
+
+
+##### ELO ######
+
+
