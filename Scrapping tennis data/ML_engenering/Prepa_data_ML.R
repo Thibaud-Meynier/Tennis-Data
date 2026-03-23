@@ -2,6 +2,8 @@ library(tidyverse)
 library(progress)
 library(dbplyr)
 library(conflicted)
+library(furrr)
+library(here)
 
 # Définir la priorité explicitement
 
@@ -13,7 +15,7 @@ conflict_prefer("month", "lubridate")
 conflicts_prefer(dplyr::between)
 conflicts_prefer(sjmisc::is_empty)
 
-year_lim=2010
+year_lim=2017
 
 load(paste0(getwd(),"/Scrapping tennis data/ML_engenering/MATCH_STATS.RData"))
 
@@ -21,14 +23,14 @@ V_MATCH_t = V_MATCH_final %>% filter(Season>=year_lim)
 
 rm(V_MATCH_final)
 
-p=0.5
-
 proba_calcul=function(elo_p1,elo_p2){
   
   proba=1 / (1 + 10 ^ ((elo_p2 - elo_p1)/400))
   
   return(proba)
 }
+
+p=0.5
 
 TABLE = V_MATCH_t %>% 
   mutate(
@@ -162,17 +164,7 @@ TABLE = V_MATCH_t %>%
     H2H_s_O_Set_Win_Rate_3Y = ifelse((H2H_s_F_Set_Won_3Y + H2H_s_O_Set_Won_3Y) > 0, (H2H_s_O_Set_Won_3Y / (H2H_s_F_Set_Won_3Y + H2H_s_O_Set_Won_3Y)) * 100, 0),
     H2H_s_F_Games_Win_Rate_3Y = ifelse((H2H_s_F_Games_Won_3Y + H2H_s_O_Games_Won_3Y) > 0, (H2H_s_F_Games_Won_3Y / (H2H_s_F_Games_Won_3Y + H2H_s_O_Games_Won_3Y)) * 100, 0),
     H2H_s_O_Games_Win_Rate_3Y = ifelse((H2H_s_F_Games_Won_3Y + H2H_s_O_Games_Won_3Y) > 0, (H2H_s_O_Games_Won_3Y / (H2H_s_F_Games_Won_3Y + H2H_s_O_Games_Won_3Y)) * 100, 0),
-    
-    # Forme récente - 4 derniers matchs
-    F_N_Win_4 = case_when(Rank_W < Rank_L ~ Winner_N_Win_4, TRUE ~ Loser_N_Win_4),
-    O_N_Win_4 = case_when(Rank_L < Rank_W ~ Winner_N_Win_4, TRUE ~ Loser_N_Win_4),
-    F_N_Loss_4 = case_when(Rank_W < Rank_L ~ Winner_N_Loss_4, TRUE ~ Loser_N_Loss_4),
-    O_N_Loss_4 = case_when(Rank_L < Rank_W ~ Winner_N_Loss_4, TRUE ~ Loser_N_Loss_4),
-    F_Win_Rate_4 = (F_N_Win_4/(F_N_Win_4+F_N_Loss_4)),
-    F_Win_Rate_4 = ifelse(is.na(F_Win_Rate_4),0,F_Win_Rate_4)*100,
-    O_Win_Rate_4 = (O_N_Win_4/(O_N_Win_4+O_N_Loss_4)),
-    O_Win_Rate_4 = ifelse(is.na(O_Win_Rate_4),0,O_Win_Rate_4)*100,
-    
+
     #  Performance as Favoris (Joueurs mieux classés) 
     F_N_Win_as_Fav_12  = case_when(Rank_W < Rank_L ~ Winner_N_Win_Fav_Rank_12,  TRUE ~ Loser_N_Win_Fav_Rank_12),
     O_N_Win_as_Fav_12  = case_when(Rank_L < Rank_W ~ Winner_N_Win_Fav_Rank_12,  TRUE ~ Loser_N_Win_Fav_Rank_12),
@@ -216,6 +208,17 @@ TABLE = V_MATCH_t %>%
     
     O_as_Out_4_Win_rate = ifelse((O_N_Win_as_Out_4 + O_N_Loss_as_Out_4) == 0, 0, 
                                  (O_N_Win_as_Out_4 / (O_N_Win_as_Out_4 + O_N_Loss_as_Out_4)) * 100),
+    
+    
+    # Forme récente - 4 derniers matchs
+    F_N_Win_4 = case_when(Rank_W < Rank_L ~ Winner_N_Win_4, TRUE ~ Loser_N_Win_4),
+    O_N_Win_4 = case_when(Rank_L < Rank_W ~ Winner_N_Win_4, TRUE ~ Loser_N_Win_4),
+    F_N_Loss_4 = case_when(Rank_W < Rank_L ~ Winner_N_Loss_4, TRUE ~ Loser_N_Loss_4),
+    O_N_Loss_4 = case_when(Rank_L < Rank_W ~ Winner_N_Loss_4, TRUE ~ Loser_N_Loss_4),
+    F_Win_Rate_4 = (F_N_Win_4/(F_N_Win_4+F_N_Loss_4)),
+    F_Win_Rate_4 = ifelse(is.na(F_Win_Rate_4),0,F_Win_Rate_4)*100,
+    O_Win_Rate_4 = (O_N_Win_4/(O_N_Win_4+O_N_Loss_4)),
+    O_Win_Rate_4 = ifelse(is.na(O_Win_Rate_4),0,O_Win_Rate_4)*100,
     
     # Forme récente sur surface - 4 derniers matchs
     F_N_Win_s_4 = case_when(Rank_W < Rank_L ~ Winner_N_Win_s_4, TRUE ~ Loser_N_Win_s_4),
@@ -481,21 +484,33 @@ TABLE_ML_DIFF=TABLE %>%
     
     # --- DIFFÉRENCES - H2H (Historique Face à Face) ---
     Diff_H2H = H2H_F_W - H2H_O_W,
+    Diff_H2H_set = H2H_F_Set_Won - H2H_O_Set_Won,
+    Diff_H2H_games = H2H_F_Games_Won - H2H_O_Games_Won,
+    
     Diff_H2H_Win_Rate = H2H_F_Win_Rate - H2H_O_Win_Rate,
     Diff_H2H_Set_Win_Rate = H2H_F_Set_Win_Rate - H2H_O_Set_Win_Rate,
     Diff_H2H_Games_Win_Rate = H2H_F_Games_Win_Rate - H2H_O_Games_Win_Rate,
     
     Diff_H2H_s = H2H_s_F_W - H2H_s_O_W,
+    Diff_H2H_set_s = H2H_s_F_Set_Won - H2H_s_O_Set_Won,
+    Diff_H2H_games_s = H2H_s_F_Games_Won - H2H_s_O_Games_Won,
+    
     Diff_H2H_s_Win_Rate = H2H_s_F_Win_Rate - H2H_s_O_Win_Rate,
     Diff_H2H_s_Set_Win_Rate = H2H_s_F_Set_Win_Rate - H2H_s_O_Set_Win_Rate,
     Diff_H2H_s_Games_Win_Rate = H2H_s_F_Games_Win_Rate - H2H_s_O_Games_Win_Rate,
     
-    Diff_H2H_3Y = H2H_s_F_W_3Y - H2H_s_O_W_3Y,
+    Diff_H2H_3Y = H2H_F_W_3Y - H2H_O_W_3Y,
+    Diff_H2H_set_3Y = H2H_F_Set_Won_3Y - H2H_O_Set_Won_3Y,
+    Diff_H2H_games_3Y = H2H_F_Games_Won_3Y - H2H_O_Games_Won_3Y,
+    
     Diff_H2H_Win_Rate_3Y = H2H_F_Win_Rate_3Y - H2H_O_Win_Rate_3Y,
     Diff_H2H_Set_Win_Rate_3Y = H2H_F_Set_Win_Rate_3Y - H2H_O_Set_Win_Rate_3Y,
     Diff_H2H_Games_Win_Rate_3Y = H2H_F_Games_Win_Rate_3Y - H2H_O_Games_Win_Rate_3Y,
     
-    Diff_H2H_s_3Y = H2H_F_W_3Y - H2H_O_W_3Y,
+    Diff_H2H_s_3Y =H2H_s_F_W_3Y - H2H_s_O_W_3Y,
+    Diff_H2H_s_set_3Y = H2H_s_F_Set_Won_3Y - H2H_s_O_Set_Won_3Y,
+    Diff_H2H_s_games_3Y = H2H_s_F_Games_Won_3Y - H2H_s_O_Games_Won_3Y,
+    
     Diff_H2H_s_Win_Rate_3Y = H2H_s_F_Win_Rate_3Y - H2H_s_O_Win_Rate_3Y,
     Diff_H2H_s_Set_Win_Rate_3Y = H2H_s_F_Set_Win_Rate_3Y - H2H_s_O_Set_Win_Rate_3Y,
     Diff_H2H_s_Games_Win_Rate_3Y = H2H_s_F_Games_Win_Rate_3Y - H2H_s_O_Games_Win_Rate_3Y,
@@ -521,7 +536,20 @@ TABLE_ML_DIFF=TABLE %>%
     Diff_as_Out_4_Win_rate = F_as_Out_4_Win_rate - O_as_Out_4_Win_rate,
     
     # --- DIFFERENCE - Fatigue
-    Diff_Fatigue = F_Fatigue_index - O_Fatigue_index
+    Diff_Fatigue = F_Fatigue_index - O_Fatigue_index,
+    
+    # --- DIFFERENCE - en match
+    
+    Diff_N_Win_4 = F_N_Win_4-O_N_Win_4,
+    Diff_N_Win_s_4 = F_N_Win_s_4-O_N_Win_s_4,
+    Diff_N_Win_12 = F_N_Win_12-O_N_Win_12,
+    Diff_N_Win_s_12 = F_N_Win_s_12-O_N_Win_s_12,
+    
+    Diff_N_Loss_4 = F_N_Loss_4-O_N_Loss_4,
+    Diff_N_Loss_s_4 = F_N_Loss_s_4-O_N_Loss_s_4,
+    Diff_N_Loss_12 = F_N_Loss_12-O_N_Loss_12,
+    Diff_N_Loss_s_12 = F_N_Loss_s_12-O_N_Loss_s_12
+    
   ) %>% 
   select(
     # --- Identification & Backtest (non-features) ---
@@ -566,6 +594,14 @@ TABLE_ML_DIFF=TABLE %>%
     Diff_H2H_s,
     Diff_H2H_3Y,
     Diff_H2H_s_3Y,
+    Diff_H2H_s_set_3Y,
+    Diff_H2H_s_games_3Y,
+    Diff_H2H_set_3Y,
+    Diff_H2H_games_3Y,
+    Diff_H2H_set_s,
+    Diff_H2H_games_s,
+    Diff_H2H_set,
+    Diff_H2H_games,
     
     Diff_H2H_Win_Rate,
     Diff_H2H_Set_Win_Rate,
@@ -605,7 +641,17 @@ TABLE_ML_DIFF=TABLE %>%
     Diff_as_Out_4_Win_rate,
     
     # --- DIFFERENCE - Fatigue
-    Diff_Fatigue 
+    Diff_Fatigue ,
+    
+    Diff_N_Win_4,
+    Diff_N_Win_s_4,
+    Diff_N_Win_12,
+    Diff_N_Win_s_12 ,
+    
+    Diff_N_Loss_4,
+    Diff_N_Loss_s_4,
+    Diff_N_Loss_12,
+    Diff_N_Loss_s_12
   )
 
 
@@ -643,9 +689,6 @@ TABLE_MOMENTUM = TABLE_ML_DIFF %>%
     Mom_as_Out_4          = sign(Diff_as_Out_4_Win_rate),
     
     Mom_Fatigue = sign(Diff_Fatigue),
-    
-    # --- Score Global ---
-    Global_Momentum_Score = rowSums(across(starts_with("Mom_")), na.rm = TRUE)
   ) %>%
   mutate(
     Mom_H2H_global = Mom_H2H+Mom_H2H_s+Mom_H2H_3Y+Mom_H2H_s_3Y,
@@ -664,7 +707,7 @@ load(paste0(getwd(),"/Scrapping tennis data/ML_engenering/V_MATCH_HIST.RData"))
 
 plan(multisession, workers = 25)
 
-# rm(list=setdiff(ls(),c("V_MATCH_HIST","TABLE_MOMENTUM")))
+rm(list=setdiff(ls(),c("V_MATCH_HIST","TABLE_MOMENTUM")))
 
 source(paste0(getwd(),"/Scrapping tennis data/Stat function.R"))
 
@@ -780,6 +823,7 @@ Test = TABLE_MOMENTUM %>%
     
   )
 
+
 End=Sys.time()-Start
 
 End
@@ -798,6 +842,7 @@ score_map_round <- c(
   "W"  = 8
 )
 
+
 TABLE_MOMENTUM=Test %>% 
   mutate(Diff_Q = score_map[Fav_Q] - score_map[Out_Q],
          Diff_Giant_Kill = Fav_Giant_Killer - Out_Giant_Killer,
@@ -811,7 +856,12 @@ TABLE_MOMENTUM=Test %>%
          Mom_Final=sign(Diff_Final),
          Mom_Run = sign(Diff_Run),
          Mom_WR = sign(Diff_WR),
-         Mom_WR_surface = sign(Diff_WR_Surface)) %>% 
+         Mom_WR_surface = sign(Diff_WR_Surface),
+         Odd_S = ifelse(Odd_F>=Odd_O,1,0),
+         Mom_Physical=sign(Diff_Size)+sign(Diff_Age)+sign(Diff_Weight),
+         Mom_Form=sign(Diff_Win_Rate_4)+sign(Diff_Win_Rate_12)+sign(Diff_Final)+sign(Diff_Fatigue),
+         Mom_Career=sign(Diff_Run)+sign(Diff_WR)+sign(Diff_WR_Surface),
+         Mom_Mental=sign(Diff_H2H)+sign(Diff_H2H_3Y)+sign(Diff_as_Out_12_Win_rate)+sign(Diff_as_Fav_12_Win_rate)) %>% 
   select(-c("Fav_WR_career","Out_WR_career",        
             "Fav_WR_career_surface","Out_WR_career_surface",
             "Fav_best_run" ,"Out_best_run",
