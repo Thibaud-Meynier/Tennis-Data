@@ -1,27 +1,3 @@
-# list_calendar=data.frame()
-# 
-# for (i in seq(2017,2023,by=1)){
-#   
-#   list=list_tournament(i)
-#   list$Annee=i
-#   list_calendar=rbind(list_calendar,list)
-#   print(i)
-# }
-# 
-# library(openxlsx)
-# 
-# wb <- createWorkbook()
-# 
-# # Ajouter une feuille et écrire les données
-# addWorksheet(wb, "List_Tournament")
-# writeData(wb, sheet = "List_Tournament", x = list_calendar)
-# 
-# # Sauvegarder le fichier
-# saveWorkbook(wb, file = "list_tournament.xlsx", overwrite = TRUE)
-# 
-# getwd()
-
-
 exclusion=c("International Tennis Series",
             "Tennis Point Exhibition Series",
             "Marbello Exhibition Series",
@@ -246,12 +222,7 @@ exclusion=c("International Tennis Series",
             "Six Kings Slam",
             "Atlanta - exhibition",
             "A Racquet at The Rock",
-            "Miami Invitational"
+            "Miami Invitational",
+            "Incheon - exhibition"
             
 )
-
-# list_tournament(2020) %>% filter(Categorie=="ATP")
-# 
-# start=Sys.time()
-# data_rank=rank_scrap(date)
-# Sys.time()-start
