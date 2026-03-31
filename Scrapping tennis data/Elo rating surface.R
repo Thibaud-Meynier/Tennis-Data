@@ -1,16 +1,137 @@
-#ranking de base
+library(tidyverse)
+library(data.table)
+library(here)
 
-#ranking nouveau
+year_lim=2003
 
-# le facteur K
+load(paste0(getwd(),"/Scrapping tennis data/Extraction/V_MATCH_2009_2016.RData"))
 
-# les probas induites
+V_MATCH_2009_2016=V_MATCH
 
-# l'issue du match
+V_MATCH_2009_2016=V_MATCH_2009_2016 %>% 
+  rename(Winner_id=P1,
+         Loser_id=P2)
 
-#i=1
-# & Categorie %in% c("ATP 1000","Grand Slam","ATP 500","ATP 250","Team","Masters","Olympics")
+colnames=colnames(V_MATCH_2009_2016)
 
+rm(V_MATCH)
+rm(V_MATCH_2009_2016)
+
+V_MATCH=data.frame()
+
+#i=2016
+
+for (i in (year_lim):2025){
+  
+  load(file = paste0(getwd(),"/Scrapping tennis data/Extraction/ATP_",i,"_Extraction.RData"))
+  
+  table_stock$Season=i
+  
+  if ("P1" %in% names(table_stock)==T){
+    
+    table_stock=table_stock %>% 
+      rename(Winner_id=P1,
+             Loser_id=P2)
+  }else{
+    
+    table_stock=table_stock=table_stock %>% select(colnames)
+  }
+  
+  V_MATCH=rbind(V_MATCH,table_stock)
+  
+  print(i)  
+  
+}
+
+rm(table_stock)
+
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT4_2002_2008.RData"))
+
+V_TOURNAMENT_F = V_TOURNAMENT_4 %>% 
+  mutate(Categorie=Categorie_new) %>% 
+  select(-Categorie_new)
+
+rm(V_TOURNAMENT_4)
+
+V_TOURNAMENT_2002_2008=V_TOURNAMENT_F 
+
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2009.RData"))
+
+V_TOURNAMENT_2009=V_TOURNAMENT_F 
+
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2010.RData"))
+
+V_TOURNAMENT_2010=V_TOURNAMENT_F 
+
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2011.RData"))
+
+V_TOURNAMENT_2011=V_TOURNAMENT_F 
+
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2012_2016.RData"))
+
+V_TOURNAMENT_2012_2016=V_TOURNAMENT_F 
+
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2017_2023.RData"))
+
+V_TOURNAMENT_2017_2023=V_TOURNAMENT_F 
+
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2024.RData"))
+
+V_TOURNAMENT_2024=V_TOURNAMENT_F
+
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2025.RData"))
+
+V_TOURNAMENT_2025=V_TOURNAMENT_F
+
+V_TOURNAMENT_F=rbind(V_TOURNAMENT_2002_2008,V_TOURNAMENT_2009,V_TOURNAMENT_2010,V_TOURNAMENT_2011,V_TOURNAMENT_2012_2016,V_TOURNAMENT_2017_2023,V_TOURNAMENT_2024,V_TOURNAMENT_2025)
+
+rm(V_TOURNAMENT_2017_2023,V_TOURNAMENT_2024,V_TOURNAMENT_2025,V_TOURNAMENT_2002_2008,
+   V_TOURNAMENT_2012_2016,V_TOURNAMENT_2009,V_TOURNAMENT_2010,V_TOURNAMENT_2011)
+
+
+V_TOURNAMENT_INFO=V_TOURNAMENT_F %>% 
+  select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) %>% 
+  unique() %>% 
+  mutate(Categorie=case_when(Categorie=="ATP 2000"~"Grand Slam",
+                             TRUE~Categorie)) %>% 
+  mutate(CLE_TOURNAMENT=toupper(tournament)) %>% 
+  filter(Year>=(year_lim-1))
+
+
+V_MATCH_t=V_MATCH %>% 
+  mutate(CLE_TOURNAMENT=toupper(tournament)) %>% 
+  left_join(V_TOURNAMENT_INFO %>% select(-tournament),by=c("CLE_TOURNAMENT","Season"="Year")) %>% 
+  select(-CLE_TOURNAMENT) %>% 
+  filter(!tournament %in% c("Riyadh - Exhibition","Next Gen Atp Finals")) %>% 
+  mutate(Categorie=case_when(tournament %in% c("United Cup","Atp Cup","Davis Cup")~"Team",
+                             tournament=="Masters Cup Atp"~"Masters",
+                             tournament %like% "Olympics"~"Olympics",
+                             tournament=="Reunion Challenger" & Season==2011~"Challenger 80",
+                             TRUE~Categorie)) %>% 
+  mutate(Surface_tournament=case_when(is.na(Surface_tournament)~Surface,
+                                      Categorie=="Masters" & Season %in% c(2005,2006,2007,2008)~"Indoors",
+                                      tournament=="Madrid" & Season %in% c(2003:2008)~"Indoors",
+                                      tournament=="Bangkok" & Season %in% c(2003:2004)~"Indoors",
+                                      TRUE~Surface_tournament)) %>% 
+  mutate(Surface_tournament=case_when(Surface_tournament=="clay"~"Clay",
+                                      Surface_tournament=="hard"~"Hard",
+                                      Surface_tournament=="grass"~"Grass",
+                                      Surface_tournament=="indoors"~"Indoors",
+                                      TRUE~Surface_tournament)) %>% 
+  mutate(Week_tournament=isoweek(Date),
+         Country_tournament=case_when(tournament=="Olympics - Paris"~"France",
+                                      tournament=="Olympics - Tokyo"~"Japan",
+                                      tournament=="Masters Cup Atp" & Season>=2021~"Italy",
+                                      tournament=="Masters Cup Atp" & Season %in% c(2009:2020)~"Great Britain",
+                                      TRUE~Country_tournament)) 
+
+V_MATCH_t=V_MATCH_t %>% 
+  group_by(tournament,Country_tournament,Season,Phase,Round,Date,Week_tournament,Winner_id,Loser_id) %>% 
+  mutate(CLE_LIGNE=row_number()) %>% 
+  filter(CLE_LIGNE==1) %>% 
+  select(-CLE_LIGNE)
+
+surface="Hard"
 
 tournament=V_MATCH_t %>% 
   filter(Phase=="Main Draw") %>% 
@@ -26,6 +147,8 @@ tournament$Elo_L=NA
 tournament$Elo_W_NEW=NA
 
 tournament$Elo_L_NEW=NA
+
+tournament=as.data.table(tournament)
 
 for (i in 1:nrow(tournament)){
   
@@ -191,3 +314,24 @@ for (i in 1:nrow(tournament)){
   
   print(i)
 }
+
+if (surface!="Indoors"){
+  
+  surface=surface
+  
+}else{
+  
+  surface="Indoors"
+  
+}
+
+
+tournament=tournament %>% 
+  select(Categorie,Season,Week_tournament,tournament,Round,Date,N_match,Surface_tournament,info,
+         Winner_id,Loser_id,Elo_W_NEW,Elo_L_NEW)
+
+assign(paste0("ELO_RATING_",toupper(surface)),tournament)
+
+save(list = paste0("ELO_RATING_", toupper(surface)),
+     file=paste0(here(),"/Scrapping tennis data/Rank/ELO_RATING_",toupper(surface),".RData"),
+     compress = "xz")
