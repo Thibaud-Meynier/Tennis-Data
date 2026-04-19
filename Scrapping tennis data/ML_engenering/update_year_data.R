@@ -1,4 +1,7 @@
 conflicts_prefer(dplyr::filter)
+conflicts_prefer(lubridate::month)
+conflicts_prefer(lubridate::isoweek)
+conflicts_prefer(lubridate::year)
 
 year=2026
 
@@ -12,7 +15,7 @@ load(file = paste0(getwd(),"/Scrapping tennis data/Rank/RANK_ATP_",year,".RData"
 
 load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_",year,".RData"))
 
-load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_INFO.RData"))
+load(paste0(getwd(),"/Scrapping tennis data/Tournament/INFO_TOURNAMENT_2002_2025.RData"))
 
 table_stock_new=data.frame()
 
@@ -32,7 +35,7 @@ to_scrap <- list_new2$tournament[list_all_upper %in% diff_upper]
 
 to_scrap <- unique(to_scrap)
 
-to_scrap <- to_scrap[to_scrap != "Fujairah 2 chall."]
+to_scrap <- to_scrap[!to_scrap %in% c("Fujairah 2 chall.")]
 
 match_scrap=list_new2 %>% filter(tournament %in% to_scrap)
 
@@ -88,6 +91,12 @@ for (a in 1:nrow(match_scrap)){
   
 }
 
+# table_stock=table_stock %>% filter(ETAT=="OLD")
+
+table_stock$ETAT="OLD"
+
+table_stock_new$ETAT="NEW"
+
 table_stock=rbind(table_stock,table_stock_new)
 
 Sys.time()-Start
@@ -102,6 +111,7 @@ last_monday <- floor_date(Sys.Date(), unit = "week", week_start = 1)
 
 # Premier lundi de l'année
 first_monday <- floor_date(year_start, unit = "week", week_start = 1)
+
 # Si floor ramène à fin décembre, on avance d'une semaine
 
 if (first_monday < year_start) first_monday <- first_monday + 7
@@ -128,9 +138,11 @@ save(rank, file=paste0(getwd(),"/Scrapping tennis data/Rank/RANK_ATP_",year,".RD
 
 ##### TOURNAMENT #####
 
-v_tournament_scrap=setdiff(toupper(list_new$tournament), toupper(V_TOURNAMENT$tournament))
+v_tournament_scrap=setdiff(toupper(list_new$tournament), toupper(V_TOURNAMENT_F$tournament))
 
 list_scrap=list_new %>% filter(toupper(tournament) %in% v_tournament_scrap)
+
+list_scrap=list_new
 
 list_scrap$Country_tournament=NA
 list_scrap$Surface_tournament=NA
@@ -215,19 +227,46 @@ list_scrap=list_scrap %>%
 list_scrap= list_scrap %>%  
   mutate(tournament = gsub("chall", "Chall", tournament, ignore.case = TRUE))
 
-V_TOURNAMENT=rbind(V_TOURNAMENT,list_scrap)
+#V_TOURNAMENT_F=list_scrap
 
-save(V_TOURNAMENT,file=paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2026.RData"))
+V_TOURNAMENT_F=rbind(V_TOURNAMENT_F,list_scrap)
 
-V_TOURNAMENT_INFO=V_TOURNAMENT_INFO %>% filter(Year<year)
+V_TOURNAMENT=rbind(V_TOURNAMENT,V_TOURNAMENT_F)
 
-V_TOURNAMENT_INFO=rbind(V_TOURNAMENT_INFO,V_TOURNAMENT %>% 
-                          mutate(CLE_TOURNAMENT=toupper(tournament)) %>% 
-                          select(colnames(V_TOURNAMENT_INFO)))
+save(V_TOURNAMENT_F,file=paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2026.RData"))
 
-save(V_TOURNAMENT,file=paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_INFO.RData"))
-
+save(V_TOURNAMENT,file=paste0(getwd(),"/Scrapping tennis data/Tournament/INFO_TOURNAMENT_2002_2026.RData"))
 
 ##### ELO ######
 
+# Update du ELO global 
 
+source("./Scrapping tennis data/update_elo_rate.R")
+
+# Update du ELO hard
+
+s="Hard"
+
+source("./Scrapping tennis data/update_elo_rate_surface.R")
+
+# Update du ELO Clay
+
+s="Clay"
+
+source("./Scrapping tennis data/update_elo_rate_surface.R")
+
+# Update du ELO Grass
+
+s="Grass"
+
+source("./Scrapping tennis data/update_elo_rate_surface.R")
+
+# Update du ELO Indoors
+
+s="Indoors"
+
+source("./Scrapping tennis data/update_elo_rate_surface.R")
+
+# Update ELO Rating G 
+
+source("./Scrapping tennis data/update_elo_rank.R")
