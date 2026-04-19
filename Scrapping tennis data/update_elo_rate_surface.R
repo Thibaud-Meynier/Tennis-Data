@@ -1,8 +1,11 @@
 library(data.table)
 library(tidyverse)
 library(here)
+library(conflicted)
 
-s="Clay"
+conflicts_prefer(dplyr::between)
+conflicts_prefer(dplyr::filter)
+conflicts_prefer(sjmisc::is_empty)
 
 surface=c(s)
 
@@ -25,6 +28,7 @@ V_MATCH = V_MATCH %>%
 
 load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_",year,".RData"))
 
+V_TOURNAMENT_F=V_TOURNAMENT_F
 
 V_TOURNAMENT_INFO=V_TOURNAMENT_F %>% 
   select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) %>% 
@@ -55,28 +59,32 @@ V_MATCH=V_MATCH %>%
                                       Surface_tournament=="indoors"~"Indoors",
                                       TRUE~Surface_tournament))
 
-if (s=="Hard"){
-  surface=c("Hard","Indoors","Various")
+if (s=="Indoors"){
+  surface=c("Indoors","Various")
 }else{
   surface=s
 }
 
 
+# Def du périmètre pour MAJ 
+
+max_date=max(ELO_RATING$Date)
+
 tournament=V_MATCH %>% 
-  filter(Phase=="Main Draw") %>% 
+  filter(Phase=="Main Draw" & Date>max_date) %>% 
   filter(if(length(surface) == 1 && surface == "all") TRUE else Surface_tournament %in% surface) %>% 
   arrange(Date,tournament,desc(N_match),Season)
 
-#tournament$Elo_W=NA
-
-#tournament$Elo_L=NA
-
+if (nrow(tournament)>0){
+  
 tournament$Elo_W_NEW=NA
 
 tournament$Elo_L_NEW=NA
 
 tournament=tournament %>% 
   select(colnames(ELO_RATING))
+
+#ELO_RATING=ELO_RATING %>% filter(Season<=2025)
 
 ELO_RATING=ELO_RATING %>% 
   mutate(ETAT="CALCULATED")
@@ -264,3 +272,9 @@ assign(paste0("ELO_RATING_",toupper(surface)),tournament)
 save(list = paste0("ELO_RATING_", toupper(surface)),
      file=paste0(here(),"/Scrapping tennis data/Rank/ELO_RATING_",toupper(surface),".RData"),
      compress = "xz")
+
+}else{
+  
+  print("Pas de nouvelles données")
+  
+}
