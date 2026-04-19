@@ -1,8 +1,7 @@
-library(stringdist)
 
 ##### RED V TOURNAMENT F
 
-load(paste0(here(),"/Scrapping tennis data/Tournament/INFO_TOURNAMENT_2002_2025.RData"))
+load(paste0(here(),"/Scrapping tennis data/Tournament/INFO_TOURNAMENT_2002_2026.RData"))
 
 V_TOURNAMENT=V_TOURNAMENT %>% 
   mutate(Surface_tournament=case_when(tournament=="Madrid" & Year<=2008~"indoors",
@@ -269,21 +268,39 @@ get_stat_h2h=function(data_set,surface,Season,tournoi,W,L,R,YB=NULL){
   
 }
 
-match_count <- function(df, player_id, lag_week, surface, Date_match) {
+match_count <- function(df, player_id, lag_week, surface, Date_match,tournoi,Categ,Saison) {
   
-  Date_min <- Date_match - lag_week * 7
+  
+  # Date du premier match du joueur dans ce tournoi
+  first_match_tournament <- df[
+    (Winner_id == player_id | Loser_id == player_id) & 
+      tournament == tournoi & Season==Saison,
+    min(Date)
+  ]
+  
+  # Sécuriser si aucun match trouvé
+  if(length(first_match_tournament) == 0 || is.infinite(first_match_tournament)) {
+    first_match_tournament <- Date_match-1
+  }
+  
+  cutoff_date <- first_match_tournament - 1
+  
+  # Grand Chelem : reculer au lundi de la semaine précédente
+  if(Categ == "Grand Slam") {
+    cutoff_date <- floor_date(first_match_tournament, unit = "week", week_start = 1) - 7
+  }
+  
+  Date_min <- cutoff_date - lag_week * 7
   
   if(surface == "all") {
-    
     df_filtered <- df[(Winner_id == player_id | Loser_id == player_id) & 
-                        Date < Date_match & 
+                        Date <= cutoff_date & 
                         Date >= Date_min]
   } else {
-    
-    surface=ifelse(surface %in% c("Indoors","Various"),"Hard",surface)
+    surface <- ifelse(surface %in% c("Indoors", "Various"), "Indoors", surface)
     
     df_filtered <- df[(Winner_id == player_id | Loser_id == player_id) & 
-                        Date < Date_match & 
+                        Date <= cutoff_date & 
                         Date >= Date_min & 
                         Surface_tournament == surface]
   }
@@ -376,10 +393,36 @@ get_player_win_rate = function(Player_name,Date_match,Categ){
     ) %>% 
     pull(PRCT_WIN)
   
+  WR_GLOBAL = ifelse(is.null(WR_GLOBAL),0,WR_GLOBAL)
+  
   return(WR_GLOBAL)
 }
 
 #get_player_win_rate("Djokovic Novak","2025-12-31","Grand Slam")
+
+
+get_player_win_rate_surface = function(Player_name,Date_match,Surf){
+  
+  Date_match=as.Date(Date_match)
+  
+  Surf=ifelse(Surf=="Various","Indoors",Surf)
+  
+  WR_Surface=V_MATCH_HIST %>% 
+    filter(Phase == "Main Draw" & 
+             (Categorie %in% c("Grand Slam", "Olympics", "Masters",
+                               "ATP 1000", "ATP 500", 'ATP 250') | 
+                tournament %in% c("Atp Cup", "United Cup"))) %>%  
+    filter((Winner_id == Player_name | Loser_id == Player_name) & Date < Date_match & Surface_tournament==Surf) %>% 
+    group_by(Surface_tournament) %>% 
+    summarise(N=n(),
+              PRCT_WIN=mean(Winner_id == Player_name,na.rm=T)*100
+    ) %>% 
+    pull(PRCT_WIN)
+  
+  WR_Surface = ifelse(is.null(WR_Surface),0,WR_Surface)
+  
+  return(WR_Surface)
+}
 
 get_player_best_run = function(Player_name,Date_match,Categ){
   
@@ -449,13 +492,14 @@ is_finalist = function(Player_name,Date_match){
   Date_match=as.Date(Date_match)
   
   finalist = V_MATCH_HIST %>% 
-    filter(Phase == "Main Draw" & 
-             (Categorie %in% c("Grand Slam", "Olympics", "Masters",
-                               "ATP 1000", "ATP 500", 'ATP 250') | 
-                tournament %in% c("Atp Cup", "United Cup"))) %>%  
+    filter(Phase == "Main Draw" 
+             # (Categorie %in% c("Grand Slam", "Olympics", "Masters",
+             #                   "ATP 1000", "ATP 500", 'ATP 250') | 
+             #    tournament %in% c("Atp Cup", "United Cup"))
+           ) %>%  
     filter(
       (Winner_id == Player_name | Loser_id == Player_name) & Round=="F" & 
-        Date <= Date_match & 
+        Date < Date_match & 
         Date >= (Date_match - 14) 
     ) %>% 
     mutate(Outcome=ifelse(Winner_id == Player_name,"W",Round)) %>% 
@@ -496,3 +540,198 @@ is_qualies = function(Player_name,Date_match,tournoi,Year){
 }
 
 
+last_elo=function(base,player_name,surface="all",Date_match,tournoi){
+
+  if (surface=="all"){
+
+
+    elo_player=base %>%
+      filter(Player_name==player_name & Date<Date_match & tournament!=tournoi) %>%
+      mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>%
+      arrange(desc(Date),desc(Round)) %>%
+      mutate(ORDRE_ELO=row_number()) %>%
+      filter(ORDRE_ELO==1) %>%
+      select(Player_name,tournament,Date,Elo_player)
+
+    return(elo_player)
+
+  }else if (surface=="Grass"){
+
+    elo_player=base %>%
+      filter(Player_name==player_name & !is.na(Elo_player_grass) & Date<Date_match & tournament!=tournoi) %>%
+      mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>%
+      arrange(desc(Date),desc(Round)) %>%
+      mutate(ORDRE_ELO=row_number()) %>%
+      filter(ORDRE_ELO==1) %>%
+      select(Player_name,tournament,Date,Elo_player_grass)
+
+    return(elo_player)
+
+  }else if (surface=="Clay"){
+
+    elo_player=base %>%
+      filter(Player_name==player_name & !is.na(Elo_player_clay) & Date<Date_match & tournament!=tournoi) %>%
+      mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>%
+      arrange(desc(Date),desc(Round)) %>%
+      mutate(ORDRE_ELO=row_number()) %>%
+      filter(ORDRE_ELO==1) %>%
+      select(Player_name,tournament,Date,Elo_player_clay)
+
+    return(elo_player)
+
+  }else if (surface=="Hard"){
+
+    elo_player=base %>%
+      filter(Player_name==player_name & !is.na(Elo_player_hard) & Date<Date_match & tournament!=tournoi) %>%
+      mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>%
+      arrange(desc(Date),desc(Round)) %>%
+      mutate(ORDRE_ELO=row_number()) %>%
+      filter(ORDRE_ELO==1) %>%
+      select(Player_name,tournament,Date,Elo_player_hard)
+
+
+  }
+  else{
+
+    elo_player=base %>%
+      filter(Player_name==player_name & !is.na(Elo_player_indoors) & Date<Date_match & tournament!=tournoi) %>%
+      mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>%
+      arrange(desc(Date),desc(Round)) %>%
+      mutate(ORDRE_ELO=row_number()) %>%
+      filter(ORDRE_ELO==1) %>%
+      select(Player_name,tournament,Date,Elo_player_indoors)
+
+    return(elo_player)
+
+  }
+}
+
+last_elo2=function(base,player_name,categorie="all",Date_match,tournoi){
+  
+  if (categorie=="all"){
+    
+    elo_player=base %>%
+      filter(Player_name==player_name & Date<Date_match & tournament!=tournoi) %>%
+      mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>%
+      arrange(desc(Date),desc(Round)) %>%
+      mutate(ORDRE_ELO=row_number()) %>%
+      filter(ORDRE_ELO==1) %>%
+      select(Player_name,tournament,Date,Elo_player)
+    
+    return(elo_player)
+    
+  }else if (categorie %in% c("Grand Slam","Olympics","Masters")){
+    
+    elo_player=base %>%
+      filter(Player_name==player_name & !is.na(Elo_player_major) & Date<Date_match & tournament!=tournoi) %>%
+      mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>%
+      arrange(desc(Date),desc(Round)) %>%
+      mutate(ORDRE_ELO=row_number()) %>%
+      filter(ORDRE_ELO==1) %>%
+      select(Player_name,tournament,Date,Elo_player_major)
+    
+    return(elo_player)
+    
+  }else if (categorie=="ATP 1000"){
+    
+    elo_player=base %>%
+      filter(Player_name==player_name & !is.na(Elo_player_atp_1000) & Date<Date_match & tournament!=tournoi) %>%
+      mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>%
+      arrange(desc(Date),desc(Round)) %>%
+      mutate(ORDRE_ELO=row_number()) %>%
+      filter(ORDRE_ELO==1) %>%
+      select(Player_name,tournament,Date,Elo_player_atp_1000)
+    
+    return(elo_player)
+    
+    return(elo_player)
+    
+  }else if (categorie %in% c("ATP 500","Team")){
+    
+    elo_player=base %>%
+      filter(Player_name==player_name & !is.na(Elo_player_atp_500) & Date<Date_match & tournament!=tournoi) %>%
+      mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>%
+      arrange(desc(Date),desc(Round)) %>%
+      mutate(ORDRE_ELO=row_number()) %>%
+      filter(ORDRE_ELO==1) %>%
+      select(Player_name,tournament,Date,Elo_player_atp_500)
+    
+    
+  }
+  else{
+    
+    elo_player=base %>%
+      filter(Player_name==player_name & !is.na(Elo_player_atp_250) & Date<Date_match & tournament!=tournoi) %>%
+      mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>%
+      arrange(desc(Date),desc(Round)) %>%
+      mutate(ORDRE_ELO=row_number()) %>%
+      filter(ORDRE_ELO==1) %>%
+      select(Player_name,tournament,Date,Elo_player_atp_250)
+    
+    return(elo_player)
+    
+  }
+}
+
+
+penalty=function(diff_date){
+  
+  penalty=ifelse(between(diff_date,60,80),0.7,
+                 ifelse(between(diff_date,81,180),0.85,
+                        ifelse(diff_date>180,1,0)))
+  
+  return(penalty)
+}
+
+
+get_tennis_week <- function(date) {
+  year <- year(date)
+  week_num <- isoweek(date)
+  
+  # Gérer le cas des premiers jours de janvier qui appartiennent 
+  # à la dernière semaine de l'année précédente
+  if (month(date) == 1 && week_num >= 52) {
+    year <- year - 1
+  }
+  
+  # Gérer le cas de fin décembre appartenant à la semaine 1 de l'année suivante
+  if (month(date) == 12 && week_num == 1) {
+    year <- year + 1
+  }
+  
+  return(paste0(year, "-", sprintf("%02d", week_num)))
+}
+
+evol_rank=function(Player,Date_match,lag){
+  
+  date_lag=Date_match-lag
+  
+  week_lag=get_tennis_week(date_lag)
+
+  Rank_player_lag=V_RANK %>% 
+    filter(Player_name==Player & Week_Rank==week_lag)
+  
+  if(nrow(Rank_player_lag)>=1){
+    Rank_player_lag=Rank_player_lag$Rank
+  }else{
+    Rank_player_lag=1000
+  }
+  
+  week=get_tennis_week(Date_match)
+  
+  Rank_player=V_RANK %>% 
+    filter(Player_name==Player & Week_Rank==week)
+  
+  if(nrow(Rank_player)>=1){
+    Rank_player=Rank_player$Rank
+  }else{
+    Rank_player=1000
+  }
+  
+  Diff_Rank=as.numeric(Rank_player_lag)-as.numeric(Rank_player)
+  
+  return(Diff_Rank)
+  
+}
+
+# evol_rank("Tsitsipas Stefanos",as.Date("2026-03-30"),365)
