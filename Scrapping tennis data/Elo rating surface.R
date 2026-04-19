@@ -1,10 +1,58 @@
-library(tidyverse)
-library(data.table)
-library(here)
+
+invisible(capture.output(suppressPackageStartupMessages({
+  suppressWarnings({
+    library(tidyverse)
+    library(data.table)
+    library(here)
+    library(progress)
+    library(conflicted)
+    library(zoo)
+    library(rvest)
+    library(dplyr)
+    library(stringr)
+    library(lubridate)
+    library(xml2)
+    library(sjmisc)
+    library(stringdist)
+    library(caret)
+    library(glmnet)    
+    library(randomForest)
+    library(e1071)
+    library(scales)
+    library(class)       
+    library(gbm)         
+    library(lightgbm)    
+    library(pROC)
+    library(plotly)
+    library(nnet)
+    library(MASS)
+    library(MLmetrics)
+    library(xgboost)
+    library(NeuralNetTools)
+    library(ranger)
+    library(kknn)
+    library(progressr)
+    library(foreach)
+    library(doParallel)
+    library(parallel)
+    library(furrr)
+    library(future)
+  })
+}))
+)
+
+
+conflicts_prefer(dplyr::filter)
+conflicts_prefer(lubridate::month)
+conflicts_prefer(lubridate::isoweek)
+conflicts_prefer(lubridate::year)
+conflicts_prefer(dplyr::select)
+conflicts_prefer(dplyr::between)
+conflicts_prefer(sjmisc::is_empty)
 
 year_lim=2003
 
-load(paste0(getwd(),"/Scrapping tennis data/Extraction/V_MATCH_2009_2016.RData"))
+load(paste0(here(),"/Scrapping tennis data/Extraction/V_MATCH_2009_2016.RData"))
 
 V_MATCH_2009_2016=V_MATCH
 
@@ -21,9 +69,9 @@ V_MATCH=data.frame()
 
 #i=2016
 
-for (i in (year_lim):2025){
+for (i in (year_lim):2026){
   
-  load(file = paste0(getwd(),"/Scrapping tennis data/Extraction/ATP_",i,"_Extraction.RData"))
+  load(file = paste0(here(),"/Scrapping tennis data/Extraction/ATP_",i,"_Extraction.RData"))
   
   table_stock$Season=i
   
@@ -31,7 +79,8 @@ for (i in (year_lim):2025){
     
     table_stock=table_stock %>% 
       rename(Winner_id=P1,
-             Loser_id=P2)
+             Loser_id=P2) %>% 
+      select(colnames)
   }else{
     
     table_stock=table_stock=table_stock %>% select(colnames)
@@ -45,7 +94,7 @@ for (i in (year_lim):2025){
 
 rm(table_stock)
 
-load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT4_2002_2008.RData"))
+load(paste0(here(),"/Scrapping tennis data/Tournament/V_TOURNAMENT4_2002_2008.RData"))
 
 V_TOURNAMENT_F = V_TOURNAMENT_4 %>% 
   mutate(Categorie=Categorie_new) %>% 
@@ -55,39 +104,59 @@ rm(V_TOURNAMENT_4)
 
 V_TOURNAMENT_2002_2008=V_TOURNAMENT_F 
 
-load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2009.RData"))
+load(paste0(here(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2009.RData"))
 
 V_TOURNAMENT_2009=V_TOURNAMENT_F 
 
-load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2010.RData"))
+load(paste0(here(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2010.RData"))
 
 V_TOURNAMENT_2010=V_TOURNAMENT_F 
 
-load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2011.RData"))
+load(paste0(here(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2011.RData"))
 
 V_TOURNAMENT_2011=V_TOURNAMENT_F 
 
-load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2012_2016.RData"))
+load(paste0(here(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2012_2016.RData"))
 
 V_TOURNAMENT_2012_2016=V_TOURNAMENT_F 
 
-load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2017_2023.RData"))
+load(paste0(here(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2017_2023.RData"))
 
 V_TOURNAMENT_2017_2023=V_TOURNAMENT_F 
 
-load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2024.RData"))
+load(paste0(here(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2024.RData"))
 
 V_TOURNAMENT_2024=V_TOURNAMENT_F
 
-load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2025.RData"))
+load(paste0(here(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2025.RData"))
 
 V_TOURNAMENT_2025=V_TOURNAMENT_F
 
-V_TOURNAMENT_F=rbind(V_TOURNAMENT_2002_2008,V_TOURNAMENT_2009,V_TOURNAMENT_2010,V_TOURNAMENT_2011,V_TOURNAMENT_2012_2016,V_TOURNAMENT_2017_2023,V_TOURNAMENT_2024,V_TOURNAMENT_2025)
+load(paste0(here(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2026.RData"))
+
+V_TOURNAMENT_2026=V_TOURNAMENT_F
+
+V_TOURNAMENT_F=rbind(V_TOURNAMENT_2002_2008 %>% 
+                       select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) ,
+                     V_TOURNAMENT_2009 %>% 
+                       select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) ,
+                     V_TOURNAMENT_2010 %>% 
+                       select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) ,
+                     V_TOURNAMENT_2011 %>% 
+                       select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) ,
+                     V_TOURNAMENT_2012_2016 %>% 
+                       select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) ,
+                     V_TOURNAMENT_2017_2023 %>% 
+                       select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) ,
+                     V_TOURNAMENT_2024 %>% 
+                       select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) ,
+                     V_TOURNAMENT_2025 %>% 
+                       select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) ,
+                     V_TOURNAMENT_2026 %>% 
+                       select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) )
 
 rm(V_TOURNAMENT_2017_2023,V_TOURNAMENT_2024,V_TOURNAMENT_2025,V_TOURNAMENT_2002_2008,
-   V_TOURNAMENT_2012_2016,V_TOURNAMENT_2009,V_TOURNAMENT_2010,V_TOURNAMENT_2011)
-
+   V_TOURNAMENT_2012_2016,V_TOURNAMENT_2009,V_TOURNAMENT_2010,V_TOURNAMENT_2011,V_TOURNAMENT_2026)
 
 V_TOURNAMENT_INFO=V_TOURNAMENT_F %>% 
   select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) %>% 
@@ -118,8 +187,7 @@ V_MATCH_t=V_MATCH %>%
                                       Surface_tournament=="grass"~"Grass",
                                       Surface_tournament=="indoors"~"Indoors",
                                       TRUE~Surface_tournament)) %>% 
-  mutate(Week_tournament=isoweek(Date),
-         Country_tournament=case_when(tournament=="Olympics - Paris"~"France",
+  mutate(Country_tournament=case_when(tournament=="Olympics - Paris"~"France",
                                       tournament=="Olympics - Tokyo"~"Japan",
                                       tournament=="Masters Cup Atp" & Season>=2021~"Italy",
                                       tournament=="Masters Cup Atp" & Season %in% c(2009:2020)~"Great Britain",
@@ -130,8 +198,6 @@ V_MATCH_t=V_MATCH_t %>%
   mutate(CLE_LIGNE=row_number()) %>% 
   filter(CLE_LIGNE==1) %>% 
   select(-CLE_LIGNE)
-
-surface="Hard"
 
 tournament=V_MATCH_t %>% 
   filter(Phase=="Main Draw") %>% 
@@ -149,6 +215,14 @@ tournament$Elo_W_NEW=NA
 tournament$Elo_L_NEW=NA
 
 tournament=as.data.table(tournament)
+
+pb= progress_bar$new(
+  format = "[:bar] :current/:total (:percent) ETA: :eta",
+  total = nrow(tournament),
+  clear = FALSE,
+  width = 60,
+  force = TRUE
+)
 
 for (i in 1:nrow(tournament)){
   
@@ -312,10 +386,13 @@ for (i in 1:nrow(tournament)){
   
   tournament$Elo_L_NEW[i]=round(elo_p2_new,1)
   
-  print(i)
+  # cat(sprintf("\r %d / %d", i, nrow(tournament)))
+  # flush.console()
+  #print(i)
+  pb$tick()
 }
 
-if (surface!="Indoors"){
+if (!"Indoors" %in% surface){
   
   surface=surface
   
