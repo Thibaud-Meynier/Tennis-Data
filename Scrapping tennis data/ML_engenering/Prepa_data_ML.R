@@ -30,7 +30,11 @@ proba_calcul=function(elo_p1,elo_p2){
   return(proba)
 }
 
-p=0.5
+p1=0.34
+
+p2=0.33
+
+p3=0.33
 
 TABLE = V_MATCH_t %>% 
   mutate(
@@ -95,13 +99,16 @@ TABLE = V_MATCH_t %>%
     
     Elo_F = case_when(Rank_W < Rank_L ~ Elo_W, TRUE ~ Elo_L),
     Elo_s_F = case_when(Rank_W < Rank_L ~ Elo_W_surface, TRUE ~ Elo_L_surface),
+    Elo_c_F = case_when(Rank_W < Rank_L ~ Elo_W_categorie, TRUE ~ Elo_L_categorie),
     Elo_O = case_when(Rank_L < Rank_W ~ Elo_W, TRUE ~ Elo_L),
     Elo_s_O = case_when(Rank_L < Rank_W ~  Elo_W_surface, TRUE ~ Elo_L_surface),
+    Elo_c_O = case_when(Rank_L < Rank_W ~ Elo_W_categorie, TRUE ~ Elo_L_categorie),
     P_F = proba_calcul(Elo_F,Elo_O),
     P_s_F = proba_calcul(Elo_s_F,Elo_s_O),
+    P_c_F = proba_calcul(Elo_c_F,Elo_c_O),
     P_O = 1-P_F,
     P_s_O = 1-P_s_F,
-    P_F_comb=(p * P_s_F) + ((1-p) * P_F),
+    P_F_comb=(p1 * P_s_F) + (p2 * P_F) + (p3 * P_c_F),
     
     # H2H - Historique complet
     
@@ -130,7 +137,7 @@ TABLE = V_MATCH_t %>%
     
     H2H_s_F_Win_Rate = ifelse((H2H_s_F_W + H2H_s_O_W) > 0, (H2H_s_F_W / (H2H_s_F_W + H2H_s_O_W)) * 100, 0),
     H2H_s_O_Win_Rate = ifelse((H2H_s_F_W + H2H_s_O_W) > 0, (H2H_s_O_W / (H2H_s_F_W + H2H_s_O_W)) * 100, 0),
-    H2H_s_F_Set_Win_Rate = ifelse((H2H_s_F_Set_Won + H2H_s_O_Set_Won) > 0, (H2H_s_F_Set_Won / (H2H_F_Set_Won + H2H_s_O_Set_Won)) * 100, 0),
+    H2H_s_F_Set_Win_Rate = ifelse((H2H_s_F_Set_Won + H2H_s_O_Set_Won) > 0, (H2H_s_F_Set_Won / (H2H_s_F_Set_Won + H2H_s_O_Set_Won)) * 100, 0),
     H2H_s_O_Set_Win_Rate = ifelse((H2H_s_F_Set_Won + H2H_s_O_Set_Won) > 0, (H2H_s_O_Set_Won / (H2H_s_F_Set_Won + H2H_s_O_Set_Won)) * 100, 0),
     H2H_s_F_Games_Win_Rate = ifelse((H2H_s_F_Games_Won + H2H_s_O_Games_Won) > 0, (H2H_s_F_Games_Won / (H2H_s_F_Games_Won + H2H_s_O_Games_Won)) * 100, 0),
     H2H_s_O_Games_Win_Rate = ifelse((H2H_s_F_Games_Won + H2H_s_O_Games_Won) > 0, (H2H_s_O_Games_Won / (H2H_s_F_Games_Won + H2H_s_O_Games_Won)) * 100, 0),
@@ -321,6 +328,7 @@ TABLE = V_MATCH_t %>%
     Elo_s_O,
     P_F,
     P_s_F,
+    P_c_F,
     P_O,
     P_s_O,
     P_F_comb,
@@ -584,6 +592,7 @@ TABLE_ML_DIFF=TABLE %>%
     # --- DIFFÉRENCES - ELO & Probabilités ---
     P_F,
     P_s_F,
+    P_c_F,
     P_F_comb,
     Diff_Elo,
     Diff_Elo_s,
@@ -705,9 +714,11 @@ TABLE_MOMENTUM = TABLE_ML_DIFF %>%
 
 load(paste0(getwd(),"/Scrapping tennis data/ML_engenering/V_MATCH_HIST.RData"))
 
+load(paste0(getwd(),"/Scrapping tennis data/ML_engenering/V_RANK.RData"))
+
 plan(multisession, workers = 25)
 
-rm(list=setdiff(ls(),c("V_MATCH_HIST","TABLE_MOMENTUM")))
+rm(list=setdiff(ls(),c("V_MATCH_HIST","TABLE_MOMENTUM","V_RANK")))
 
 source(paste0(getwd(),"/Scrapping tennis data/Stat function.R"))
 
@@ -819,6 +830,24 @@ Test = TABLE_MOMENTUM %>%
         Categ     = Categorie
       ),
       get_player_best_run
+    ),
+    
+    Fav_rank_progression = future_pmap_dbl(
+      list(
+        Player = Favori,
+        Date_match  = Date,
+        lag     = 365
+      ),
+      evol_rank
+    ),
+    
+    Out_rank_progression = future_pmap_dbl(
+      list(
+        Player = Outsider,
+        Date_match  = Date,
+        lag     = 365
+      ),
+      evol_rank
     )
     
   )
@@ -850,6 +879,7 @@ TABLE_MOMENTUM=Test %>%
          Diff_Run = coalesce(score_map_round[Fav_best_run],0)-coalesce(score_map_round[Out_best_run],0),
          Diff_WR = coalesce(Fav_WR_career,0) - coalesce(Out_WR_career,0),
          Diff_WR_Surface = coalesce(Fav_WR_career_surface,0) - coalesce(Out_WR_career_surface,0),
+         Diff_Rank_evol = coalesce(Fav_rank_progression,0) - coalesce(Out_rank_progression,0),
          
          Mom_Q = sign(Diff_Q),
          Mom_Giant_Kill = sign(Diff_Giant_Kill),
@@ -870,3 +900,6 @@ TABLE_MOMENTUM=Test %>%
             "Fav_is_finalist","Out_is_finalist"))
 
 closeAllConnections()
+
+save(TABLE_MOMENTUM,file=paste0(here(),"/Scrapping tennis data/ML_engenering/TABLE_MOMENTUM.RData"),
+     compress ="xz" )
