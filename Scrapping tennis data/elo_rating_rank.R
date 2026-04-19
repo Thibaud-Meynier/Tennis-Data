@@ -1,12 +1,14 @@
-library(tidyverse)
-library(zoo)
-library(progress)
 
 load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING_CLAY.RData"))
 load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING_GRASS.RData"))
 load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING_HARD.RData"))
+load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING_INDOORS.RData"))
 load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING.RData"))
-
+load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING_MAJOR.RData"))
+load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING_ATP_1000.RData"))
+load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING_ATP_500.RData"))
+load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING_ATP_250.RData"))
+load("~/work/Tennis-Data/Scrapping tennis data/Rank/ELO_RATING_PLAYERS.RData")
 
 ELO_RATING_G=ELO_RATING %>% 
   left_join(ELO_RATING_HARD %>% 
@@ -22,6 +24,31 @@ ELO_RATING_G=ELO_RATING %>%
   left_join(ELO_RATING_GRASS %>% 
               rename(Elo_W_NEW_GRASS=Elo_W_NEW,
                      Elo_L_NEW_GRASS=Elo_L_NEW) %>% 
+              select(-c(Categorie,Surface_tournament,N_match,info)),
+            by=c("tournament","Round","Week_tournament","Date","Season","Winner_id","Loser_id")) %>% 
+  left_join(ELO_RATING_INDOORS %>% 
+              rename(Elo_W_NEW_INDOORS=Elo_W_NEW,
+                     Elo_L_NEW_INDOORS=Elo_L_NEW) %>% 
+              select(-c(Categorie,Surface_tournament,N_match,info)),
+            by=c("tournament","Round","Week_tournament","Date","Season","Winner_id","Loser_id")) %>% 
+  left_join(ELO_RATING_MAJOR %>% 
+              rename(Elo_W_NEW_MAJOR=Elo_W_NEW,
+                     Elo_L_NEW_MAJOR=Elo_L_NEW) %>% 
+              select(-c(Categorie,Surface_tournament,N_match,info)),
+            by=c("tournament","Round","Week_tournament","Date","Season","Winner_id","Loser_id")) %>% 
+  left_join(ELO_RATING_ATP_1000 %>% 
+              rename(Elo_W_NEW_ATP_1000=Elo_W_NEW,
+                     Elo_L_NEW_ATP_1000=Elo_L_NEW) %>% 
+              select(-c(Categorie,Surface_tournament,N_match,info)),
+            by=c("tournament","Round","Week_tournament","Date","Season","Winner_id","Loser_id")) %>% 
+  left_join(ELO_RATING_ATP_500 %>% 
+              rename(Elo_W_NEW_ATP_500=Elo_W_NEW,
+                     Elo_L_NEW_ATP_500=Elo_L_NEW) %>% 
+              select(-c(Categorie,Surface_tournament,N_match,info)),
+            by=c("tournament","Round","Week_tournament","Date","Season","Winner_id","Loser_id")) %>% 
+  left_join(ELO_RATING_ATP_250 %>% 
+              rename(Elo_W_NEW_ATP_250=Elo_W_NEW,
+                     Elo_L_NEW_ATP_250=Elo_L_NEW) %>% 
               select(-c(Categorie,Surface_tournament,N_match,info)),
             by=c("tournament","Round","Week_tournament","Date","Season","Winner_id","Loser_id")) %>% 
   group_by(tournament,Round,Week_tournament,Date,Season,Winner_id,Loser_id) %>% 
@@ -71,12 +98,23 @@ elo_players=function(player_name){
            Elo_player_clay=case_when(Winner_id==player_name~Elo_W_NEW_CLAY,
                                      TRUE~Elo_L_NEW_CLAY),
            Elo_player_grass=case_when(Winner_id==player_name~Elo_W_NEW_GRASS,
-                                      TRUE~Elo_L_NEW_GRASS)) %>% 
+                                      TRUE~Elo_L_NEW_GRASS),
+           Elo_player_indoors=case_when(Winner_id==player_name~Elo_W_NEW_INDOORS,
+                                      TRUE~Elo_L_NEW_INDOORS),
+           Elo_player_major=case_when(Winner_id==player_name~Elo_W_NEW_MAJOR,
+                                        TRUE~Elo_L_NEW_MAJOR),
+           Elo_player_atp_1000=case_when(Winner_id==player_name~Elo_W_NEW_ATP_1000,
+                                        TRUE~Elo_L_NEW_ATP_1000),
+           Elo_player_atp_500=case_when(Winner_id==player_name~Elo_W_NEW_ATP_500,
+                                        TRUE~Elo_L_NEW_ATP_500),
+           Elo_player_atp_250=case_when(Winner_id==player_name~Elo_W_NEW_ATP_250,
+                                        TRUE~Elo_L_NEW_ATP_250)) %>% 
     
     mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>% 
     ungroup() %>% 
     select(Player_name,Season,tournament,Date,Week_tournament,Round,
-           Elo_player,Elo_player_hard,Elo_player_clay,Elo_player_grass) %>% 
+           Elo_player,Elo_player_hard,Elo_player_clay,Elo_player_grass,Elo_player_indoors,
+           Elo_player_major,Elo_player_atp_1000,Elo_player_atp_500,Elo_player_atp_250) %>% 
     group_by(Player_name,Season,tournament) %>% 
     arrange(desc(Date), desc(Round)) %>%
     mutate(ORDRE_DESC_ELO = row_number()) %>% 
@@ -104,6 +142,8 @@ Start=Sys.time()
 
 ELO_RATING_PLAYERS=data.frame()
 
+ELO_RATING_G=as.data.table(ELO_RATING_G)
+
 for (i in all_players){
   
   ELO=elo_players(i)
@@ -119,61 +159,72 @@ Sys.time()-Start
 save(ELO_RATING_PLAYERS,file=paste0(here(),"/Scrapping tennis data/Rank/ELO_RATING_PLAYERS.RData"),
      compress = "xz")
 
-
-
-last_elo=function(base,player_name,surface="all",Date_match,tournoi){
-  
-  if (surface=="all"){
-    
-    
-    elo_player=base %>% 
-      filter(Player_name==player_name & Date<Date_match & tournament!=tournoi) %>% 
-      mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>% 
-      arrange(desc(Date),desc(Round)) %>% 
-      mutate(ORDRE_ELO=row_number()) %>% 
-      filter(ORDRE_ELO==1) %>% 
-      select(Player_name,tournament,Date,Elo_player)
-    
-    return(elo_player)
-    
-  }else if (surface=="Grass"){
-    
-    elo_player=base %>% 
-      filter(Player_name==player_name & !is.na(Elo_player_grass) & Date<Date_match & tournament!=tournoi) %>% 
-      mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>% 
-      arrange(desc(Date),desc(Round)) %>% 
-      mutate(ORDRE_ELO=row_number()) %>% 
-      filter(ORDRE_ELO==1) %>% 
-      select(Player_name,tournament,Date,Elo_player_grass)
-    
-    return(elo_player)
-    
-  }else if (surface=="Clay"){
-    
-    elo_player=base %>% 
-      filter(Player_name==player_name & !is.na(Elo_player_clay) & Date<Date_match & tournament!=tournoi) %>% 
-      mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>% 
-      arrange(desc(Date),desc(Round)) %>% 
-      mutate(ORDRE_ELO=row_number()) %>% 
-      filter(ORDRE_ELO==1) %>% 
-      select(Player_name,tournament,Date,Elo_player_clay)
-    
-    return(elo_player)
-    
-  }else{
-    
-    elo_player=base %>% 
-      filter(Player_name==player_name & !is.na(Elo_player_hard) & Date<Date_match & tournament!=tournoi) %>% 
-      mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>% 
-      arrange(desc(Date),desc(Round)) %>% 
-      mutate(ORDRE_ELO=row_number()) %>% 
-      filter(ORDRE_ELO==1) %>% 
-      select(Player_name,tournament,Date,Elo_player_hard)
-    
-    return(elo_player)
-    
-  }
-}
+# 
+# last_elo=function(base,player_name,surface="all",Date_match,tournoi){
+#   
+#   if (surface=="all"){
+#     
+#     
+#     elo_player=base %>% 
+#       filter(Player_name==player_name & Date<Date_match & tournament!=tournoi) %>% 
+#       mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>% 
+#       arrange(desc(Date),desc(Round)) %>% 
+#       mutate(ORDRE_ELO=row_number()) %>% 
+#       filter(ORDRE_ELO==1) %>% 
+#       select(Player_name,tournament,Date,Elo_player)
+#     
+#     return(elo_player)
+#     
+#   }else if (surface=="Grass"){
+#     
+#     elo_player=base %>% 
+#       filter(Player_name==player_name & !is.na(Elo_player_grass) & Date<Date_match & tournament!=tournoi) %>% 
+#       mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>% 
+#       arrange(desc(Date),desc(Round)) %>% 
+#       mutate(ORDRE_ELO=row_number()) %>% 
+#       filter(ORDRE_ELO==1) %>% 
+#       select(Player_name,tournament,Date,Elo_player_grass)
+#     
+#     return(elo_player)
+#     
+#   }else if (surface=="Clay"){
+#     
+#     elo_player=base %>% 
+#       filter(Player_name==player_name & !is.na(Elo_player_clay) & Date<Date_match & tournament!=tournoi) %>% 
+#       mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>% 
+#       arrange(desc(Date),desc(Round)) %>% 
+#       mutate(ORDRE_ELO=row_number()) %>% 
+#       filter(ORDRE_ELO==1) %>% 
+#       select(Player_name,tournament,Date,Elo_player_clay)
+#     
+#     return(elo_player)
+#     
+#   }else if (surface=="Hard"){
+#     
+#     elo_player=base %>% 
+#       filter(Player_name==player_name & !is.na(Elo_player_hard) & Date<Date_match & tournament!=tournoi) %>% 
+#       mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>% 
+#       arrange(desc(Date),desc(Round)) %>% 
+#       mutate(ORDRE_ELO=row_number()) %>% 
+#       filter(ORDRE_ELO==1) %>% 
+#       select(Player_name,tournament,Date,Elo_player_hard)
+#     
+#     
+#   }
+#   else{
+#     
+#     elo_player=base %>% 
+#       filter(Player_name==player_name & !is.na(Elo_player_indoors) & Date<Date_match & tournament!=tournoi) %>% 
+#       mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>% 
+#       arrange(desc(Date),desc(Round)) %>% 
+#       mutate(ORDRE_ELO=row_number()) %>% 
+#       filter(ORDRE_ELO==1) %>% 
+#       select(Player_name,tournament,Date,Elo_player_indoors)
+#     
+#     return(elo_player)
+#     
+#   }
+# }
 
 # player_name="Alcaraz Carlos"
 # 
