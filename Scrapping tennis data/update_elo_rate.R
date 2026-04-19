@@ -1,9 +1,6 @@
-library(data.table)
-library(tidyverse)
-library(here)
 
 conflicts_prefer(dplyr::between)
-
+conflicts_prefer(dplyr::filter)
 conflicts_prefer(sjmisc::is_empty)
 
 year=2026
@@ -21,7 +18,7 @@ V_MATCH = V_MATCH %>%
 
 load(paste0(getwd(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_",year,".RData"))
 
-#V_TOURNAMENT_F
+V_TOURNAMENT_F=V_TOURNAMENT_F
 
 V_TOURNAMENT_INFO=V_TOURNAMENT_F %>% 
   select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) %>% 
@@ -53,9 +50,12 @@ V_MATCH=V_MATCH %>%
                                       TRUE~Surface_tournament))
 
 
+# def des lignes à prendre en compte pour le raffraichissement du ELO
+
+max_date=max(ELO_RATING$Date)
 
 tournament=V_MATCH %>% 
-  filter(Phase=="Main Draw") %>% 
+  filter(Phase=="Main Draw" & Date>max_date) %>% 
   arrange(Date,tournament,desc(N_match),Season)
 
 #tournament$Elo_W=NA
@@ -69,6 +69,9 @@ tournament$Elo_L_NEW=NA
 tournament=tournament %>% 
   select(colnames(ELO_RATING))
 
+
+#ELO_RATING=ELO_RATING %>% filter(Season<=2025)
+
 ELO_RATING=ELO_RATING %>% 
   mutate(ETAT="CALCULATED")
 
@@ -78,6 +81,13 @@ tournament=tournament %>%
 tournament=ELO_RATING %>% bind_rows(tournament)
 
 first_row <- which(tournament$ETAT == "UPDATE")[1]
+
+pb= progress_bar$new(
+  format = "[:bar] :current/:total (:percent) ETA: :eta",
+  total = (nrow(tournament)-first_row+1),
+  clear = FALSE,
+  width = 60
+)
 
 ##### ELO_RATING_UPDATE #####
 
@@ -236,7 +246,7 @@ for (i in first_row:nrow(tournament)){
   
   tournament$Elo_L_NEW[i]=round(elo_p2_new,1)
   
-  print(i)
+  pb$tick()
 }
 
 ELO_RATING=tournament %>% select(-ETAT)
