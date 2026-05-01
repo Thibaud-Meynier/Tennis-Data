@@ -17,6 +17,8 @@ list$Week=isoweek(list$Date)
 
 list=list %>% filter(Categorie %like% "ATP")
 
+list=list %>% filter(between(isoweek(Date),isoweek(Sys.Date()-7),isoweek(Sys.Date())))
+                     
 MATCH_TO_PLAY=data.frame()
 
 for (i in 1:nrow(list)){
@@ -54,7 +56,7 @@ for (i in 1:nrow(list)){
     
     
     
-    ranking_points_tournament$tournament=V_TOURNAMENT$tournament[i]
+    ranking_points_tournament$tournament=list$tournament[i]
     
     ranking_points_tournament=ranking_points_tournament %>%
       mutate(Round=case_when(Round=="1. round"~"1R",
@@ -101,13 +103,13 @@ for (i in 1:nrow(list)){
   
   table_match=table_match[[1]] %>% 
     as.data.frame() %>% 
-    select(2,3,5,6,7)
+    select(1,2,3,5,6,7)
   
   names(table_match)=table_match[1,]
   
   table_match=table_match[-1,]
   
-  colnames(table_match)=c("Round","Match","H2H","H", "A")
+  colnames(table_match)=c("Date","Round","Match","H2H","H", "A")
   
   table_match$tournament=list$tournament[i]
   
@@ -168,7 +170,7 @@ for (i in 1:nrow(list)){
            "Country P2"="Country.y")
   
   
-  table_match=table_match %>% select(tournament,Country_tournament,Surface_tournament,Round,P1,P2,H2H,H,A,
+  table_match=table_match %>% select(Date,tournament,Country_tournament,Surface_tournament,Round,P1,P2,H2H,H,A,
                                      `Points P1`,`Rank P1`,`Country P1`,
                                      `Rank P2`,`Points P2` ,`Country P2`)
   
@@ -263,6 +265,7 @@ last_elo=function(elo_player,player_name,surface="all",Date_match){
   }
 }
 
+
 for (i in 1:nrow(MATCH_TO_PLAY)){
   
   P1=MATCH_TO_PLAY$P1[i]
@@ -271,7 +274,7 @@ for (i in 1:nrow(MATCH_TO_PLAY)){
   
   surface=MATCH_TO_PLAY$Surface_tournament[i]
   
-  Date_match=as.Date(Sys.time())
+  Date_match=as.Date(Sys.Date())
   
   ##### ELO CLASSIC #####
   
@@ -279,9 +282,9 @@ for (i in 1:nrow(MATCH_TO_PLAY)){
   
   last_elo_p2=last_elo(ELO_RATING_PLAYERS,P2,"all",Date_match)
   
-  diff_date_p1=Date_match-last_elo_p1$Date
+  diff_date_p1=as.numeric(Date_match-last_elo_p1$Date)
   
-  diff_date_p2=Date_match-last_elo_p2$Date
+  diff_date_p2=as.numeric(Date_match-last_elo_p2$Date)
   
   elo_p1=last_elo_p1$Elo_player-(penalty(diff_date_p1)*100)
   
@@ -295,7 +298,8 @@ for (i in 1:nrow(MATCH_TO_PLAY)){
   
   if (surface %in% c("Indoors","Various")){
     
-    surface="Hard"
+    surface="Indoors"
+    
   }else{
     
     surface=surface
@@ -330,16 +334,5 @@ MATCH_TO_PLAY=MATCH_TO_PLAY %>%
   mutate(Odd_P1_ELO=round((100/(Proba_P1_G*100)),2),
          Odd_P2_ELO=round((100/(Proba_P2_G*100)),2))
 
-MATCH_TO_PLAY %>% select(tournament,P1,P2,H,A,Odd_P1_ELO,Odd_P2_ELO) %>% 
-  rename(Odd_P1=H,
-         Odd_P2=A) %>% 
-  mutate(Odd_P1=as.numeric(Odd_P1),
-         Odd_P2=as.numeric(Odd_P2)) %>% 
-  mutate(value_bet=(Odd_P1>Odd_P1_ELO|Odd_P2>Odd_P2_ELO)&
-           ((Odd_P1/Odd_P1_ELO)>=1.05|(Odd_P2/Odd_P2_ELO)>=1.05)) %>% 
-  filter(value_bet==TRUE) %>% 
-  mutate(Odd_to_play=case_when(Odd_P1>Odd_P1_ELO~Odd_P1,TRUE~Odd_P2)) %>% 
-  filter(between(Odd_to_play,1.35,6)) %>% 
-  select(-value_bet)
 
 
