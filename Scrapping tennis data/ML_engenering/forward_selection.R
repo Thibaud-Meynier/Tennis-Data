@@ -2,6 +2,8 @@
 # FORWARD SELECTION GÉNÉRIQUE - MULTI-MODÈLE
 # ============================================================
 
+scope="Global"
+
 load(paste0(here(),"/Scrapping tennis data/ML_engenering/TABLE_MOMENTUM.RData"))
 
 candidates <- c( "P_F",
@@ -9,17 +11,32 @@ candidates <- c( "P_F",
                  "P_c_F",
                  "Diff_Age",
                  "Diff_IMC",
+                 "Diff_Size",
+                 "Diff_Weight",
+                 "Diff_Age_log",
+                 "Diff_IMC_log",
+                 "Diff_Size_log",
+                 "Diff_Weight_log",
+                 "Diff_Hand_Score",
+                 "Diff_Country_score",
                  "Diff_Q",
                  "Diff_Giant_Kill",
                  "Diff_Run",
                  "Diff_Final",
                  "Diff_Points",
+                 "Diff_Points_log",
                  "Diff_Rank",
                  "Diff_Rank_Class",
                  "Diff_Score_Rank",
                  "Diff_From_Max",
                  "Diff_Rank_evol",
                  "Mom_Statut",
+                 "Diff_as_Fav_4_Win_rate",
+                 "Diff_as_Fav_12_Win_rate",
+                 "Diff_as_Fav_52_Win_rate",
+                 "Diff_as_Out_4_Win_rate",
+                 "Diff_as_Out_12_Win_rate",
+                 "Diff_as_Out_52_Win_rate",
                  "Diff_H2H_Win_Rate",
                  "Diff_H2H_Games_Win_Rate",
                  "Diff_H2H_s_Win_Rate",
@@ -30,7 +47,7 @@ candidates <- c( "P_F",
                  "Diff_Win_Rate_12",
                  "Diff_Win_Rate_52",
                  "Diff_Win_Rate_s_52",
-                 "Grand_Slam",
+                 "Major",
                  "ATP_1000",
                  "ATP_250",
                  "ATP_500",
@@ -54,13 +71,22 @@ TABLE_MOMENTUM = na.omit(TABLE_MOMENTUM)
 
 TABLE_MOMENTUM = TABLE_MOMENTUM %>% filter(Season>=2017)
 
-#TABLE_MOMENTUM=TABLE_MOMENTUM %>% filter(Grand_Slam!=1)
+if (scope!="Global"){
+ 
+  TABLE_MOMENTUM=TABLE_MOMENTUM %>% filter(Categorie2==scope)
+  
+}else{
+  
+  TABLE_MOMENTUM = TABLE_MOMENTUM
+  
+}
+
 
 index_train <- which(TABLE_MOMENTUM$Season < 2024) #createDataPartition(TABLE_MOMENTUM$Issue, p = 0.8, list = FALSE) 
 train <- TABLE_MOMENTUM[index_train, ]
 test <- TABLE_MOMENTUM[-index_train, ]
 test_pred=TABLE_MOMENTUM[-index_train, ]
-test_pred=test_pred %>% select(tournament,Surface_tournament,Categorie,Season,Round,Favori,Outsider,Odd_F,Odd_O,Issue,Diff_Rank,P_F_comb)
+test_pred=test_pred %>% select(tournament,Surface_tournament,Categorie,Categorie2,Season,Round,Favori,Outsider,Odd_F,Odd_O,Issue,Diff_Rank,P_F_comb)
 
 # Préparation des matrices pour glmnet
 X_train <- model.matrix(formule, train %>% select(all_of(c(candidates, "Issue"))))[, -1]
@@ -68,51 +94,118 @@ y_train <- ifelse(train$Issue=="Fav_W",1,0)
 X_test <- model.matrix(formule, test %>% select(all_of(c(candidates, "Issue"))))[, -1]
 y_test <- ifelse(test$Issue=="Fav_W",1,0)
 
-
-model_metrics <- function(prob_pred, truth, positive_class = "Fav_W", threshold = 0.5) {
+model_metrics <- function(data,
+                          prob_col    = "prob_pred",
+                          truth_col   = "truth",
+                          positive_class = "Fav_W",
+                          threshold   = 0.5,
+                          by_category = FALSE) {
   
-  # Préparation
-  pred_class <- as.factor(ifelse(prob_pred >= threshold, positive_class,
-                                 setdiff(unique(truth), positive_class)))
-  truth_fac  <- as.factor(truth)
+  # ── Helpers ────────────────────────────────────────────────────────────────
+  .compute_metrics <- function(prob_pred, truth) {
+    truth_bin  <- as.numeric(truth == positive_class)
+    pred_class <- as.factor(ifelse(prob_pred >= threshold,
+                                   positive_class,
+                                   setdiff(unique(truth), positive_class)))
+    truth_fac  <- factor(truth, levels = c(positive_class,
+                                           setdiff(unique(truth), positive_class)))
+    
+    conf <- confusionMatrix(pred_class, truth_fac, positive = positive_class)
+    auc  <- as.numeric(roc(truth_bin, prob_pred, quiet = TRUE)$auc)
+    
+    c(
+      Accuracy          = unname(conf$overall["Accuracy"]),
+      Sensitivity       = unname(conf$byClass["Sensitivity"]),
+      Specificity       = unname(conf$byClass["Specificity"]),
+      PPV               = unname(conf$byClass["Pos Pred Value"]),
+      NPV               = unname(conf$byClass["Neg Pred Value"]),
+      F1                = unname(conf$byClass["F1"]),
+      Balanced_Accuracy = unname(conf$byClass["Balanced Accuracy"]),
+      AUC               = auc,
+      LogLoss           = LogLoss(prob_pred, truth_bin),
+      Brier             = mean((prob_pred - truth_bin)^2)
+    )
+  }
+  
+  # ── Extraction des vecteurs ────────────────────────────────────────────────
+  prob_pred <- data[[prob_col]]
+  truth     <- data[[truth_col]]
+  
+  # ── Global ─────────────────────────────────────────────────────────────────
   truth_bin  <- as.numeric(truth == positive_class)
+  pred_class <- as.factor(ifelse(prob_pred >= threshold,
+                                 positive_class,
+                                 setdiff(unique(truth), positive_class)))
+  truth_fac  <- factor(truth, levels = c(positive_class,
+                                         setdiff(unique(truth), positive_class)))
   
-  # Confusion matrix
   conf <- confusionMatrix(pred_class, truth_fac, positive = positive_class)
-  auc  <- roc(truth_bin, prob_pred, quiet = TRUE)$auc
   
-  # Affichage matrice
-  cat("=== Matrice de Confusion ===\n")
+  cat("=== Matrice de Confusion (Global) ===\n")
   print(conf$table)
   cat("\n")
   
-  # Métriques
-  metrics <- data.frame(
-    Metric = c("Accuracy", "Sensitivity", "Specificity",
-               "PPV", "NPV", "F1",
-               "Balanced_Accuracy", "AUC", "LogLoss", "Brier"),
-    Value  = round(c(
-      conf$overall["Accuracy"],
-      conf$byClass["Sensitivity"],
-      conf$byClass["Specificity"],
-      conf$byClass["Pos Pred Value"],
-      conf$byClass["Neg Pred Value"],
-      conf$byClass["F1"],
-      conf$byClass["Balanced Accuracy"],
-      as.numeric(auc),
-      LogLoss(prob_pred, truth_bin),
-      mean((prob_pred - truth_bin)^2)
-    ), 4)
+  global_vals <- .compute_metrics(prob_pred, truth)
+  
+  global_row <- data.frame(
+    Scope  = "Global",
+    N      = nrow(data),
+    t(round(global_vals, 4)),
+    check.names = FALSE
   )
   
-  cat("=== Métriques ===\n")
-  print(metrics, row.names = FALSE)
+  cat("=== Métriques Globales ===\n")
+  print(global_row, row.names = FALSE)
+  cat("\n")
   
-  # Retourner invisiblement pour réutilisation
+  # ── Par catégorie ──────────────────────────────────────────────────────────
+  cat_table <- NULL
+  
+  if (by_category) {
+    cat_levels <- c("Major", "ATP 1000", "ATP 500", "ATP 250")
+    # Garder seulement les catégories présentes dans les données
+    cat_levels <- cat_levels[cat_levels %in% unique(data[["Categorie2"]])]
+    
+    cat_rows <- lapply(cat_levels, function(cat) {
+      sub  <- data[data[["Categorie2"]] == cat, ]
+      
+      if (nrow(sub) < 10) {
+        warning(sprintf("Catégorie '%s' : seulement %d observations, métriques peu fiables.", 
+                        cat, nrow(sub)))
+      }
+      
+      vals <- tryCatch(
+        .compute_metrics(sub[[prob_col]], sub[[truth_col]]),
+        error = function(e) {
+          message(sprintf("Erreur pour la catégorie '%s' : %s", cat, e$message))
+          rep(NA_real_, 10)
+        }
+      )
+      
+      data.frame(
+        Scope  = cat,
+        N      = nrow(sub),
+        t(round(vals, 4)),
+        check.names = FALSE
+      )
+    })
+    
+    cat_table <- do.call(rbind, cat_rows)
+    
+    # Tableau récap complet : Global + toutes les catégories
+    recap <- rbind(global_row, cat_table)
+    
+    cat("=== Récapitulatif par Catégorie ===\n")
+    print(recap, row.names = FALSE)
+    cat("\n")
+  }
+  
+  # ── Retour invisible ───────────────────────────────────────────────────────
   invisible(list(
     confusion_matrix = conf$table,
-    metrics          = metrics,
-    conf_full        = conf
+    conf_full        = conf,
+    global           = global_row,
+    by_category      = cat_table          # NULL si by_category = FALSE
   ))
 }
 
@@ -155,7 +248,7 @@ evaluate_model <- function(train, test, features, target = "Issue", model_type =
       fit <- ranger(
         x           = as.data.frame(X_train),
         y           = as.factor(y_train),
-        num.trees   = 500,           # réduit vs prod (500-1500) pour la vitesse
+        num.trees   = 1000,           # réduit vs prod (500-1500) pour la vitesse
         probability = TRUE,
         num.threads = 15
       )
@@ -221,9 +314,9 @@ evaluate_model <- function(train, test, features, target = "Issue", model_type =
         data             = train_gbm,
         distribution     = "bernoulli",
         n.trees          = 500,          # réduit vs prod (1000) pour la vitesse
-        interaction.depth = 3,
-        shrinkage        = 0.05,
-        cv.folds         = 3,            # réduit vs prod (5) pour la vitesse
+        interaction.depth = 2,
+        shrinkage        = 0.1,
+        cv.folds         = 2,            # réduit vs prod (5) pour la vitesse
         verbose          = FALSE,
         n.cores          = 15
       )
@@ -376,25 +469,134 @@ forward_selection <- function(train, test,
   )
 }
 
+# --- 3. Backward Selection ------------------------
+
+backward_elimination <- function(train, test,
+                                 candidates,
+                                 forced_vars = c(),
+                                 target      = "Issue",
+                                 model_type  = "naive_bayes",
+                                 metric      = "logloss",
+                                 min_vars    = 1,
+                                 verbose     = TRUE) {
+  
+  # Initialisation avec tous les candidats + forcées
+  selected   <- union(forced_vars, candidates)
+  removable  <- setdiff(selected, forced_vars)  # on ne peut pas retirer les forcées
+  
+  # Score de départ avec tous les candidats
+  init_scores <- evaluate_model(train, test, selected, target, model_type)
+  best_score  <- init_scores[[metric]]
+  
+  if (verbose) message(sprintf("Score initial (%s) : %.4f | %d vars",
+                               metric, best_score, length(selected)))
+  
+  results <- list()
+  n_steps  <- length(candidates)
+  
+  for (step in seq_len(n_steps)){
+    
+    
+    removable <- setdiff(selected, forced_vars)
+    
+    if (length(removable) == 0) {
+      if (verbose) message("Plus de variables retirables — arrêt.")
+      break
+    }
+    
+    if (length(selected) <= max(min_vars, length(forced_vars))) {
+      if (verbose) message("Nombre minimum de variables atteint — arrêt.")
+      break
+    }
+    
+    step <- step + 1
+    if (verbose) message(sprintf("\n--- Step %d | selected: %d vars ---", step, length(selected)))
+    
+    # Tester le retrait de chaque variable removable
+    step_scores <- lapply(removable, function(var) {
+      vars_without <- setdiff(selected, var)
+      evaluate_model(train, test, vars_without, target, model_type)
+    })
+    names(step_scores) <- removable
+    
+    # Identifier la variable dont le retrait dégrade le moins (ou améliore)
+    metric_vals   <- sapply(step_scores, `[[`, metric)
+    best_removal  <- if (metric == "logloss") names(which.min(metric_vals)) else names(which.max(metric_vals))
+    best_candidate <- step_scores[[best_removal]]
+    best_new_score <- best_candidate[[metric]]
+    
+    improves <- if (metric == "logloss") best_new_score < best_score else best_new_score > best_score
+    
+    if (!improves) {
+      if (verbose) message("Pas d'amélioration — arrêt.")
+      break
+    }
+    
+    selected   <- setdiff(selected, best_removal)
+    best_score <- best_new_score
+    
+    results[[step]] <- data.table(
+      step     = step,
+      variable = best_removal,
+      logloss  = best_candidate$logloss,
+      auc      = best_candidate$auc,
+      accuracy = best_candidate$accuracy,
+      n_vars   = length(selected),
+      vars     = paste(selected, collapse = ", ")
+    )
+    
+    if (verbose) message(sprintf("  - %-35s | LogLoss: %.4f | AUC: %.4f | Acc: %.4f",
+                                 best_removal,
+                                 best_candidate$logloss,
+                                 best_candidate$auc,
+                                 best_candidate$accuracy))
+  }
+  
+  list(
+    best_vars   = selected,
+    forced_vars = forced_vars,
+    best_score  = best_score,
+    history     = rbindlist(results)
+  )
+}
+
+
+# --- 4. TEST --------------------------------------
+
+model = "elasticnet"
+
+metric = "accuracy"
+
+forced_vars =  c("P_F", "P_s_F","Diff_Final","Diff_Run","Diff_Q","Diff_Rank_evol")
+
+forward_selection(train,test,candidates,forced_vars,"Issue",model,metric)
+
+jobRunScript(
+  path      = paste0(here(),"/Scrapping tennis data/ML_engenering/fs_job.R"),
+  name      = paste0("fs_", model,"_",scope),
+  importEnv = TRUE
+)
+
+
+backward_elimination(train,test,candidates,forced_vars,"Issue","random_forest","accuracy")
+
+
+
 # --- 5. Boucle sur la liste de modèles ------------
 
 # ---- Modèles à optimiser ----
 
-models_to_run <- c( "random_forest","xgboost", "lightgbm", "gbm", "knn","nnet",
+models_to_run <- c( "random_forest","xgboost", "lightgbm", "knn","nnet",
                     "lasso", "ridge", "elasticnet","lda","naive_bayes","logistic")
 
-forced_vars <-c("P_F","P_s_F")
 
-model="random_forest"
+#models_to_run= c("elasticnet","xgboost","lightgbm")
+
+forced_vars = c("P_F", "P_s_F","Diff_Rank_evol","Diff_Q") 
+
+#forced_vars = c()
 
 metric="accuracy"
-
-jobRunScript(
-  path      = paste0(here(),"/Scrapping tennis data/ML_engenering/fs_job.R"),
-  name      = paste0("fs_", model),
-  importEnv = TRUE
-)
-
 
 for (model in models_to_run){
   
@@ -402,7 +604,7 @@ for (model in models_to_run){
   
   jobRunScript(
     path      = paste0(here(),"/Scrapping tennis data/ML_engenering/fs_job.R"),
-    name      = paste0("fs_", model),
+    name      = paste0("fs_", model,"_",scope),
     importEnv = TRUE
   )
   
@@ -413,7 +615,7 @@ all_results <- list()
 
 for (model in models_to_run) {
   
-  path <- paste0(here(), "/Scrapping tennis data/ML_engenering/forward_selection/result_", model, ".rds")
+  path <- paste0(here(), "/Scrapping tennis data/ML_engenering/forward_selection/",scope,"/",metric,"/result_", model, ".rds")
   
   if (file.exists(path)) {
     
@@ -445,11 +647,13 @@ test_pred=test_pred %>%
   mutate(Ensemble_Pred=rowMeans(across(all_of(model_list)))
   )
 
-model_metrics(test_pred[["Ensemble_Pred"]], test_pred$Issue)
+model_metrics(test_pred, prob_col = "Ensemble_Pred", truth_col = "Issue", by_category = F)
 
 #Votes 
 
 test_pred=as.data.frame(test_pred)
+
+model_list <- c(paste0("P_F_", toupper(names(all_results))),"P_F_comb","Ensemble_Pred")
 
 votes <- test_pred[, model_list] > 0.5
 
@@ -470,21 +674,45 @@ test_pred=test_pred %>%
   select(-c(P_F_market_raw,P_O_market_raw,Marge))
 
 
-model_metrics(test_pred[["P_F_market"]], test_pred$Issue)
+model_metrics(test_pred, prob_col = "P_F_market", truth_col = "Issue", by_category = F)
 
 # ============================================
 # COMPARAISON DES RÉSULTATS
 # ============================================
 
-model_list=c(model_list,"P_F_market","Ensemble_Pred")
+model_list=c(model_list,"P_F_market")
 
 # Comparer tous les modèles
 all_metrics <- bind_rows(lapply(model_list, function(m) {
-  res <- model_metrics(test_pred[[m]], test_pred$Issue)
-  res$metrics %>% 
-    pivot_wider(names_from = Metric, values_from = Value) %>%
+  res <- model_metrics(test_pred, prob_col = m, truth_col = "Issue", by_category = F)
+  
+  res$global %>%
+    bind_rows(res$by_category) %>%
     mutate(Modele = m)
-})) %>% arrange(desc(Accuracy))
+})) %>%
+  arrange(Modele, Scope)
 
-print(all_metrics %>% arrange(desc(Accuracy)))
+print(all_metrics %>% arrange(Scope,desc(Accuracy)))
 
+save(all_metrics,file=paste0(here(),"/Scrapping tennis data/ML_engenering/forward_selection/",scope,"/Models_Metrics_",scope,".RData"))
+
+save(test_pred,file=paste0(here(),"/Scrapping tennis data/ML_engenering/forward_selection/",scope,"/pred_",scope,".RData"))
+
+# save(all_metrics,file=paste0(here(),"/Scrapping tennis data/ML_engenering/forward_selection/Models_Metrics_global.RData"))
+
+
+all_pred=data.frame()
+
+for (i in c("Major","ATP 1000","ATP 500","ATP 250")){
+  
+  load(paste0("Scrapping tennis data/ML_engenering/forward_selection/",i,"/pred_",i,".RData"))
+  
+  pred=test_pred
+  
+  all_pred=rbind(pred,all_pred)
+  
+  print(i)
+  
+}
+
+save(all_pred,file=paste0(here(),"/Scrapping tennis data/ML_engenering/forward_selection/",scope,"/pred_opti_scope.RData"))
