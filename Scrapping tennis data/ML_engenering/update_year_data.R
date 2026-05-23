@@ -92,7 +92,7 @@ for (a in 1:nrow(match_scrap)){
 }
 
 # table_stock=table_stock %>% filter(ETAT=="OLD")
-
+# 
 table_stock$ETAT="OLD"
 
 table_stock_new$ETAT="NEW"
@@ -125,14 +125,21 @@ mondays_in_rank <- unique(floor_date(rank$Date, unit = "week", week_start = 1))
 # Lundis manquants
 date <- as.Date(setdiff(all_mondays, mondays_in_rank))
 
-rank_new <- rank_scrap(date)
+for (i in date){
+  
+  rank_new <- rank_scrap(as.Date(i))
+  
+  rank_new=rank_new %>% 
+    mutate(Date=as.Date(i),
+           Year=year,
+           Week=week(as.Date(i)))
+  
+  rank <- rbind(rank, rank_new)
+  
+  print(as.Date(i))
+  
+}
 
-rank_new=rank_new %>% 
-  mutate(Date=date,
-         Year=year,
-         Week=week(date))
-
-rank <- rbind(rank, rank_new)
 
 save(rank, file=paste0(getwd(),"/Scrapping tennis data/Rank/RANK_ATP_",year,".RData"))
 
@@ -142,7 +149,7 @@ v_tournament_scrap=setdiff(toupper(list_new$tournament), toupper(V_TOURNAMENT_F$
 
 list_scrap=list_new %>% filter(toupper(tournament) %in% v_tournament_scrap)
 
-list_scrap=list_new
+#list_scrap=list_new
 
 list_scrap$Country_tournament=NA
 list_scrap$Surface_tournament=NA
@@ -221,13 +228,30 @@ list_scrap$Year=case_when(list_scrap$Week_tournament>=52 & month(list_scrap$Date
                           list_scrap$Week_tournament==1 & month(list_scrap$Date)==12 ~ year(list_scrap$Date)+1,
                             TRUE ~ year(list_scrap$Date))
 
-list_scrap=list_scrap %>% 
-  mutate(Categorie=paste(Categorie,ifelse(is.na(Points_tournament)==T,"",Points_tournament)))
-
-list_scrap= list_scrap %>%  
+list_scrap = list_scrap %>%  
   mutate(tournament = gsub("chall", "Chall", tournament, ignore.case = TRUE))
 
-#V_TOURNAMENT_F=list_scrap
+red_categ <- function(Annee, tournoi) {
+  Red_value <- V_TOURNAMENT %>%
+    filter(tournament == tournoi & Year == (Annee - 1)) %>%
+    pull(Points_tournament)
+  
+  # Fallback si aucune valeur trouvée
+  if (length(Red_value) == 0) return(NA_real_)
+  return(Red_value)
+}
+
+# Vectorisation obligatoire pour mutate()
+red_categ_vec <- Vectorize(red_categ)
+
+list_scrap <- list_scrap %>%
+  mutate(Points_tournament = case_when(
+    Points_tournament == 0 ~ red_categ_vec(Year, tournament),
+    TRUE ~ Points_tournament
+  ))
+
+list_scrap=list_scrap %>% 
+  mutate(Categorie=paste(Categorie,ifelse(is.na(Points_tournament)==T,"",Points_tournament)))
 
 V_TOURNAMENT_F=rbind(V_TOURNAMENT_F,list_scrap)
 
@@ -267,6 +291,42 @@ s="Indoors"
 
 source("./Scrapping tennis data/update_elo_rate_surface.R")
 
+# Update du ELO Major
+
+c="major"
+
+source("./Scrapping tennis data/update_elo_rate_categorie.R")
+
+# Update du ELO ATP 1000
+
+c="ATP 1000"
+
+source("./Scrapping tennis data/update_elo_rate_categorie.R")
+
+# Update du ELO ATP 500
+
+c="ATP 500"
+
+source("./Scrapping tennis data/update_elo_rate_categorie.R")
+
+# Update du ELO ATP 250
+
+c="ATP 250"
+
+source("./Scrapping tennis data/update_elo_rate_categorie.R")
+
 # Update ELO Rating G 
 
 source("./Scrapping tennis data/update_elo_rank.R")
+
+# Update V_MATCH_HSIT 
+
+source("./Scrapping tennis data/update_match_hist.R")
+
+# Update MATCHS_STATS
+
+source("./Scrapping tennis data/update_match_stats.R")
+
+# Update TABLE_ML
+
+source("./Scrapping tennis data/update_match_stats2.R")
