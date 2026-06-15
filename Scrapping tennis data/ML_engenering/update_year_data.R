@@ -39,6 +39,8 @@ to_scrap <- to_scrap[!to_scrap %in% c("Fujairah 2 chall.")]
 
 match_scrap=list_new2 %>% filter(tournament %in% to_scrap)
 
+match_scrap=match_scrap %>% filter(Date<Sys.Date()-1) # On ne scrap pas les tournois qui commencent le dimanche
+
 Start=Sys.time()
 
 for (a in 1:nrow(match_scrap)){
