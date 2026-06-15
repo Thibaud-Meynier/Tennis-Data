@@ -230,7 +230,7 @@ closeAllConnections()
 
 showConnections(all=T)
 
-plan(multisession, workers = 20)
+plan(multisession, workers = 10)
 
 with_progress({
   
@@ -258,7 +258,8 @@ plan(sequential)
 
 closeAllConnections()
 
-V_MATCH_final = rbind(V_MATCH_final,V_MATCH_final_new)
+V_MATCH_final = rbind(V_MATCH_final %>% select(colnames(V_MATCH_final_new)),
+                      V_MATCH_final_new)
 
 save(V_MATCH_final,file = paste0(here(),"/Scrapping tennis data/ML_engenering/MATCH_STATS.RData"),compress = "xz")
 

@@ -1,6 +1,7 @@
 
 # Activer la progress bar
 handlers(global = TRUE)
+
 handlers("progress")  # ou "cli" pour un rendu plus joli
 
 # Fonction qui traite UNE année
@@ -36,6 +37,10 @@ process_year <- function(year_data,prog=NULL) {
     match_count_l_g_12 <- match_count(V_MATCH_HIST, loser_id,   12, "all",   Date_match, tournoi, Categ, Season)
     match_count_w_s_12 <- match_count(V_MATCH_HIST, winner_id,  12, surface, Date_match, tournoi, Categ, Season)
     match_count_l_s_12 <- match_count(V_MATCH_HIST, loser_id,   12, surface, Date_match, tournoi, Categ, Season)
+    match_count_w_g_52 <- match_count(V_MATCH_HIST, winner_id,  52, "all",   Date_match, tournoi, Categ, Season)
+    match_count_l_g_52 <- match_count(V_MATCH_HIST, loser_id,   52, "all",   Date_match, tournoi, Categ, Season)
+    match_count_w_s_52 <- match_count(V_MATCH_HIST, winner_id,  52, surface, Date_match, tournoi, Categ, Season)
+    match_count_l_s_52 <- match_count(V_MATCH_HIST, loser_id,   52, surface, Date_match, tournoi, Categ, Season)
     
     ##### ELO CLASSIC #####
     
@@ -142,31 +147,50 @@ process_year <- function(year_data,prog=NULL) {
     
     year_data$Winner_N_Win_s_4[i]           = match_count_w_s_4$N_Win
     year_data$Winner_N_Loss_s_4[i]          = match_count_w_s_4$N_Loss
-    year_data$Winner_N_Win_Fav_Rank_s_4[i]  = match_count_w_s_4$N_Win_Fav_Rank
-    year_data$Winner_N_Win_Out_Rank_s_4[i]  = match_count_w_s_4$N_Win_Out_Rank
-    year_data$Winner_N_Loss_Fav_Rank_s_4[i] = match_count_w_s_4$N_Loss_Fav_Rank
-    year_data$Winner_N_Loss_Out_Rank_s_4[i] = match_count_w_s_4$N_Loss_Out_Rank
+    # year_data$Winner_N_Win_Fav_Rank_s_4[i]  = match_count_w_s_4$N_Win_Fav_Rank
+    # year_data$Winner_N_Win_Out_Rank_s_4[i]  = match_count_w_s_4$N_Win_Out_Rank
+    # year_data$Winner_N_Loss_Fav_Rank_s_4[i] = match_count_w_s_4$N_Loss_Fav_Rank
+    # year_data$Winner_N_Loss_Out_Rank_s_4[i] = match_count_w_s_4$N_Loss_Out_Rank
     
     year_data$Loser_N_Win_s_4[i]            = match_count_l_s_4$N_Win
     year_data$Loser_N_Loss_s_4[i]           = match_count_l_s_4$N_Loss
-    year_data$Loser_N_Win_Fav_Rank_s_4[i]   = match_count_l_s_4$N_Win_Fav_Rank
-    year_data$Loser_N_Win_Out_Rank_s_4[i]   = match_count_l_s_4$N_Win_Out_Rank
-    year_data$Loser_N_Loss_Fav_Rank_s_4[i]  = match_count_l_s_4$N_Loss_Fav_Rank
-    year_data$Loser_N_Loss_Out_Rank_s_4[i]  = match_count_l_s_4$N_Loss_Out_Rank
+    # year_data$Loser_N_Win_Fav_Rank_s_4[i]   = match_count_l_s_4$N_Win_Fav_Rank
+    # year_data$Loser_N_Win_Out_Rank_s_4[i]   = match_count_l_s_4$N_Win_Out_Rank
+    # year_data$Loser_N_Loss_Fav_Rank_s_4[i]  = match_count_l_s_4$N_Loss_Fav_Rank
+    # year_data$Loser_N_Loss_Out_Rank_s_4[i]  = match_count_l_s_4$N_Loss_Out_Rank
     
     year_data$Winner_N_Win_s_12[i]           = match_count_w_s_12$N_Win
     year_data$Winner_N_Loss_s_12[i]          = match_count_w_s_12$N_Loss
-    year_data$Winner_N_Win_Fav_Rank_s_12[i]  = match_count_w_s_12$N_Win_Fav_Rank
-    year_data$Winner_N_Win_Out_Rank_s_12[i]  = match_count_w_s_12$N_Win_Out_Rank
-    year_data$Winner_N_Loss_Fav_Rank_s_12[i] = match_count_w_s_12$N_Loss_Fav_Rank
-    year_data$Winner_N_Loss_Out_Rank_s_12[i] = match_count_w_s_12$N_Loss_Out_Rank
+    # year_data$Winner_N_Win_Fav_Rank_s_12[i]  = match_count_w_s_12$N_Win_Fav_Rank
+    # year_data$Winner_N_Win_Out_Rank_s_12[i]  = match_count_w_s_12$N_Win_Out_Rank
+    # year_data$Winner_N_Loss_Fav_Rank_s_12[i] = match_count_w_s_12$N_Loss_Fav_Rank
+    # year_data$Winner_N_Loss_Out_Rank_s_12[i] = match_count_w_s_12$N_Loss_Out_Rank
     
     year_data$Loser_N_Win_s_12[i]            = match_count_l_s_12$N_Win
     year_data$Loser_N_Loss_s_12[i]           = match_count_l_s_12$N_Loss
-    year_data$Loser_N_Win_Fav_Rank_s_12[i]   = match_count_l_s_12$N_Win_Fav_Rank
-    year_data$Loser_N_Win_Out_Rank_s_12[i]   = match_count_l_s_12$N_Win_Out_Rank
-    year_data$Loser_N_Loss_Fav_Rank_s_12[i]  = match_count_l_s_12$N_Loss_Fav_Rank
-    year_data$Loser_N_Loss_Out_Rank_s_12[i]  = match_count_l_s_12$N_Loss_Out_Rank
+    # year_data$Loser_N_Win_Fav_Rank_s_12[i]   = match_count_l_s_12$N_Win_Fav_Rank
+    # year_data$Loser_N_Win_Out_Rank_s_12[i]   = match_count_l_s_12$N_Win_Out_Rank
+    # year_data$Loser_N_Loss_Fav_Rank_s_12[i]  = match_count_l_s_12$N_Loss_Fav_Rank
+    # year_data$Loser_N_Loss_Out_Rank_s_12[i]  = match_count_l_s_12$N_Loss_Out_Rank
+    
+    year_data$Winner_N_Win_52[i]           = match_count_w_g_52$N_Win
+    year_data$Winner_N_Loss_52[i]          = match_count_w_g_52$N_Loss
+    year_data$Winner_N_Win_Fav_Rank_52[i]  = match_count_w_g_52$N_Win_Fav_Rank
+    year_data$Winner_N_Win_Out_Rank_52[i]  = match_count_w_g_52$N_Win_Out_Rank
+    year_data$Winner_N_Loss_Fav_Rank_52[i] = match_count_w_g_52$N_Loss_Fav_Rank
+    year_data$Winner_N_Loss_Out_Rank_52[i] = match_count_w_g_52$N_Loss_Out_Rank
+    
+    year_data$Loser_N_Win_52[i]            = match_count_l_g_52$N_Win
+    year_data$Loser_N_Loss_52[i]           = match_count_l_g_52$N_Loss
+    year_data$Loser_N_Win_Fav_Rank_52[i]   = match_count_l_g_52$N_Win_Fav_Rank
+    year_data$Loser_N_Win_Out_Rank_52[i]   = match_count_l_g_52$N_Win_Out_Rank
+    year_data$Loser_N_Loss_Fav_Rank_52[i]  = match_count_l_g_52$N_Loss_Fav_Rank
+    year_data$Loser_N_Loss_Out_Rank_52[i]  = match_count_l_g_52$N_Loss_Out_Rank
+    
+    year_data$Winner_N_Win_s_52[i]           = match_count_w_s_52$N_Win
+    year_data$Winner_N_Loss_s_52[i]          = match_count_w_s_52$N_Loss
+    year_data$Loser_N_Win_s_52[i]            = match_count_l_s_52$N_Win
+    year_data$Loser_N_Loss_s_52[i]           = match_count_l_s_52$N_Loss
     
     year_data$Elo_W[i]=elo_p1
     year_data$Elo_L[i]=elo_p2
@@ -181,8 +205,9 @@ process_year <- function(year_data,prog=NULL) {
                             " — Match ", i, "/", nrow(year_data),
                             " — ", year_data$Winner[i], " vs ", year_data$Loser[i]))
     }
-  
+    
   }
+  
   
   return(year_data)  # Retourne le df complet de l'année
   
