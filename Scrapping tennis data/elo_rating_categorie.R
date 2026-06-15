@@ -1,0 +1,422 @@
+
+invisible(capture.output(suppressPackageStartupMessages({
+  suppressWarnings({
+    library(tidyverse)
+    library(data.table)
+    library(here)
+    library(progress)
+    library(conflicted)
+    library(zoo)
+    library(rvest)
+    library(dplyr)
+    library(stringr)
+    library(lubridate)
+    library(xml2)
+    library(sjmisc)
+    library(stringdist)
+    library(caret)
+    library(glmnet)    
+    library(randomForest)
+    library(e1071)
+    library(scales)
+    library(class)       
+    library(gbm)         
+    library(lightgbm)    
+    library(pROC)
+    library(plotly)
+    library(nnet)
+    library(MASS)
+    library(MLmetrics)
+    library(xgboost)
+    library(NeuralNetTools)
+    library(ranger)
+    library(kknn)
+    library(progressr)
+    library(foreach)
+    library(doParallel)
+    library(parallel)
+    library(furrr)
+    library(future)
+  })
+}))
+)
+
+
+conflicts_prefer(dplyr::filter)
+conflicts_prefer(lubridate::month)
+conflicts_prefer(lubridate::isoweek)
+conflicts_prefer(lubridate::year)
+conflicts_prefer(dplyr::select)
+conflicts_prefer(dplyr::between)
+conflicts_prefer(sjmisc::is_empty)
+
+year_lim=2003
+
+load(paste0(here(),"/Scrapping tennis data/Extraction/V_MATCH_2009_2016.RData"))
+
+V_MATCH_2009_2016=V_MATCH
+
+V_MATCH_2009_2016=V_MATCH_2009_2016 %>% 
+  rename(Winner_id=P1,
+         Loser_id=P2)
+
+colnames=colnames(V_MATCH_2009_2016)
+
+rm(V_MATCH)
+rm(V_MATCH_2009_2016)
+
+V_MATCH=data.frame()
+
+#i=2016
+
+for (i in (year_lim):2026){
+  
+  load(file = paste0(here(),"/Scrapping tennis data/Extraction/ATP_",i,"_Extraction.RData"))
+  
+  table_stock$Season=i
+  
+  if ("P1" %in% names(table_stock)==T){
+    
+    table_stock=table_stock %>% 
+      rename(Winner_id=P1,
+             Loser_id=P2) %>% 
+      select(colnames)
+  }else{
+    
+    table_stock=table_stock=table_stock %>% select(colnames)
+  }
+  
+  V_MATCH=rbind(V_MATCH,table_stock)
+  
+  print(i)  
+  
+}
+
+rm(table_stock)
+
+load(paste0(here(),"/Scrapping tennis data/Tournament/V_TOURNAMENT4_2002_2008.RData"))
+
+V_TOURNAMENT_F = V_TOURNAMENT_4 %>% 
+  mutate(Categorie=Categorie_new) %>% 
+  select(-Categorie_new)
+
+rm(V_TOURNAMENT_4)
+
+V_TOURNAMENT_2002_2008=V_TOURNAMENT_F 
+
+load(paste0(here(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2009.RData"))
+
+V_TOURNAMENT_2009=V_TOURNAMENT_F 
+
+load(paste0(here(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2010.RData"))
+
+V_TOURNAMENT_2010=V_TOURNAMENT_F 
+
+load(paste0(here(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2011.RData"))
+
+V_TOURNAMENT_2011=V_TOURNAMENT_F 
+
+load(paste0(here(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2012_2016.RData"))
+
+V_TOURNAMENT_2012_2016=V_TOURNAMENT_F 
+
+load(paste0(here(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2017_2023.RData"))
+
+V_TOURNAMENT_2017_2023=V_TOURNAMENT_F 
+
+load(paste0(here(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2024.RData"))
+
+V_TOURNAMENT_2024=V_TOURNAMENT_F
+
+load(paste0(here(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2025.RData"))
+
+V_TOURNAMENT_2025=V_TOURNAMENT_F
+
+load(paste0(here(),"/Scrapping tennis data/Tournament/V_TOURNAMENT_F_2026.RData"))
+
+V_TOURNAMENT_2026=V_TOURNAMENT_F
+
+V_TOURNAMENT_F=rbind(V_TOURNAMENT_2002_2008 %>% 
+                       select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) ,
+                     V_TOURNAMENT_2009 %>% 
+                       select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) ,
+                     V_TOURNAMENT_2010 %>% 
+                       select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) ,
+                     V_TOURNAMENT_2011 %>% 
+                       select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) ,
+                     V_TOURNAMENT_2012_2016 %>% 
+                       select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) ,
+                     V_TOURNAMENT_2017_2023 %>% 
+                       select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) ,
+                     V_TOURNAMENT_2024 %>% 
+                       select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) ,
+                     V_TOURNAMENT_2025 %>% 
+                       select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) ,
+                     V_TOURNAMENT_2026 %>% 
+                       select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) )
+
+rm(V_TOURNAMENT_2017_2023,V_TOURNAMENT_2024,V_TOURNAMENT_2025,V_TOURNAMENT_2002_2008,
+   V_TOURNAMENT_2012_2016,V_TOURNAMENT_2009,V_TOURNAMENT_2010,V_TOURNAMENT_2011,V_TOURNAMENT_2026)
+
+
+V_TOURNAMENT_INFO=V_TOURNAMENT_F %>% 
+  select(tournament,Categorie,Country_tournament,Week_tournament,Year,Surface_tournament) %>% 
+  unique() %>% 
+  mutate(Categorie=case_when(Categorie=="ATP 2000"~"Grand Slam",
+                             TRUE~Categorie)) %>% 
+  mutate(CLE_TOURNAMENT=toupper(tournament)) %>% 
+  filter(Year>=(year_lim-1))
+
+
+V_MATCH_t=V_MATCH %>% 
+  mutate(CLE_TOURNAMENT=toupper(tournament)) %>% 
+  left_join(V_TOURNAMENT_INFO %>% select(-tournament),by=c("CLE_TOURNAMENT","Season"="Year")) %>% 
+  select(-CLE_TOURNAMENT) %>% 
+  filter(!tournament %in% c("Riyadh - Exhibition","Next Gen Atp Finals")) %>% 
+  mutate(Categorie=case_when(tournament %in% c("United Cup","Atp Cup","Davis Cup")~"Team",
+                             tournament=="Masters Cup Atp"~"Masters",
+                             tournament %like% "Olympics"~"Olympics",
+                             tournament=="Reunion Challenger" & Season==2011~"Challenger 80",
+                             TRUE~Categorie)) %>% 
+  mutate(Surface_tournament=case_when(is.na(Surface_tournament)~Surface,
+                                      Categorie=="Masters" & Season %in% c(2005,2006,2007,2008)~"Indoors",
+                                      tournament=="Madrid" & Season %in% c(2003:2008)~"Indoors",
+                                      tournament=="Bangkok" & Season %in% c(2003:2004)~"Indoors",
+                                      TRUE~Surface_tournament)) %>% 
+  mutate(Surface_tournament=case_when(Surface_tournament=="clay"~"Clay",
+                                      Surface_tournament=="hard"~"Hard",
+                                      Surface_tournament=="grass"~"Grass",
+                                      Surface_tournament=="indoors"~"Indoors",
+                                      TRUE~Surface_tournament)) %>% 
+  mutate(Country_tournament=case_when(tournament=="Olympics - Paris"~"France",
+                                      tournament=="Olympics - Tokyo"~"Japan",
+                                      tournament=="Masters Cup Atp" & Season>=2021~"Italy",
+                                      tournament=="Masters Cup Atp" & Season %in% c(2009:2020)~"Great Britain",
+                                      TRUE~Country_tournament)) 
+
+V_MATCH_t=V_MATCH_t %>% 
+  group_by(tournament,Country_tournament,Season,Phase,Round,Date,Week_tournament,Winner_id,Loser_id) %>% 
+  mutate(CLE_LIGNE=row_number()) %>% 
+  filter(CLE_LIGNE==1) %>% 
+  select(-CLE_LIGNE)
+
+categorie=c("Grand Slam","Olympics","Masters")
+
+tournament=V_MATCH_t %>% 
+  filter(Phase=="Main Draw") %>% 
+  filter(if(length(categorie) == 1 && categorie == "all") TRUE else Categorie %in% categorie) %>%
+  arrange(Date,tournament,desc(N_match),Season) %>% 
+  mutate(Sets=Score_W+Score_L) %>% 
+  ungroup()
+
+print(nrow(tournament))
+
+tournament=tournament %>% 
+  select(Categorie,
+         Season,
+         Week_tournament,
+         tournament,
+         Round,
+         Date,
+         Sets,
+         N_match,
+         Surface_tournament,
+         info,
+         Winner_id,
+         Loser_id)
+
+tournament$Elo_W=NA
+
+tournament$Elo_L=NA
+
+tournament$Elo_W_NEW=NA
+
+tournament$Elo_L_NEW=NA
+
+tournament=as.data.table(tournament)
+
+pb= progress_bar$new(
+  format = "[:bar] :current/:total (:percent) ETA: :eta",
+  total = nrow(tournament),
+  clear = FALSE,
+  width = 60,
+  force = TRUE
+)
+
+for (i in 1:nrow(tournament)){
+  
+  # on récup pour 1 match donné les infos de chaque joueur et du match
+  
+  row=tournament[i,]
+  
+  p1=row$Winner_id
+  
+  p2=row$Loser_id
+  
+  date_match=row$Date
+  
+  n_match=row$N_match
+  
+  Round=row$Round
+  
+  Sets=row$Sets
+  
+  categorie=row$Categorie
+  
+  info=row$info
+  
+  # on regarde l'historique du joueur p1
+  hist_p1=tournament %>% filter((Winner_id==p1|Loser_id==p1) & (Date<=date_match))
+  
+  lim=which(hist_p1$tournament==row$tournament & 
+              hist_p1$Date==date_match & 
+              hist_p1$N_match==n_match & 
+              hist_p1$Round==Round)
+  
+  hist_p1=hist_p1 %>% 
+    slice(1:(lim-1))
+  
+  last_match=tail(hist_p1,1)
+  
+  #hist_p1=hist_p1 %>% filter(N_match==last_match$N_match & tournament==last_match$tournament)
+  
+  # Calcul de la durée entre le match et leur dernier match
+  
+  dday_p1=as.numeric(date_match-last_match$Date)
+  
+  # on prend le dernier elo_rank du joueur
+  last_elo_p1=ifelse(is_empty(ifelse(p1==last_match$Winner_id,last_match$Elo_W_NEW,last_match$Elo_L_NEW))==TRUE,NA,
+                     ifelse(p1==last_match$Winner_id,last_match$Elo_W_NEW,last_match$Elo_L_NEW))
+  
+  # on regarde l'historique du joueur p2
+  hist_p2=tournament %>% filter((Winner_id==p2|Loser_id==p2)&(Date<=date_match))
+  
+  lim=which(hist_p2$tournament==row$tournament & 
+              hist_p2$Date==date_match & 
+              hist_p2$N_match==n_match & 
+              hist_p2$Round==Round)
+  
+  hist_p2=hist_p2 %>% 
+    slice(1:(lim-1))
+  
+  last_match=tail(hist_p2,1)
+  
+  #hist_p2=hist_p2 %>% filter(N_match==last_match$N_match & tournament==last_match$tournament)
+  
+  # Calcul de la durée entre le match et leur dernier match
+  
+  dday_p2=as.numeric(date_match-last_match$Date)
+  
+  # on prend le dernier elo_rank du joueur
+  last_elo_p2=ifelse(is_empty(ifelse(p2==last_match$Winner_id,last_match$Elo_W_NEW,last_match$Elo_L_NEW))==TRUE,NA,
+                     ifelse(p2==last_match$Winner_id,last_match$Elo_W_NEW,last_match$Elo_L_NEW))
+  
+  # on recherche si le joueur 1 a déjà disputé un match ou non
+  
+  threshold=300
+  
+  count_match_p1=hist_p1 %>% nrow()
+  
+  count_match_p1=ifelse(count_match_p1>=threshold,threshold,count_match_p1)
+  
+  count_match_p2=hist_p2 %>% nrow()
+  
+  count_match_p2=ifelse(count_match_p1>=threshold,threshold,count_match_p2)
+  
+  # calcul des dummy pour le k factor
+  
+  Round_adjust <- ifelse(Round == "F", 1,
+                         ifelse(Round == "SF", 0.9,
+                                ifelse(Round == "QF", 0.8, 0.7)))
+  
+  Sets_adjust = case_when(
+    categorie == "Grand Slam" & Sets == 3 ~ 0.70,
+    categorie == "Grand Slam" & Sets == 4 ~ 0.85,
+    categorie == "Grand Slam"             ~ 1.00,  # Sets == 5
+    categorie != "Grand Slam" & Sets == 3 ~ 1.00,
+    categorie != "Grand Slam"             ~ 0.90,  # Sets == 4 (best of 3, pas de 5 sets hors GC)
+    TRUE                          ~ NA_real_
+  )
+    
+  Walkover=ifelse(row$info=="Completed",1,0.5)
+  
+  penalty=function(diff_date){
+    
+    penalty=ifelse(between(diff_date,60,80),0.7,
+                   ifelse(between(diff_date,81,180),0.85,
+                          ifelse(diff_date>180,1,0)))
+    
+    return(penalty)
+  }
+  
+  covid=ifelse(between(date_match,as.Date("2020-08-01"),as.Date("2021-02-01")) ,0,1)
+  
+  penalty_p1=penalty(dday_p1)*covid
+  
+  penalty_p2=penalty(dday_p2)*covid
+  
+  if (length(categorie) != 1|(length(categorie) == 1 && categorie!="all")){
+    
+    penalty_p1=0
+    
+    penalty_p2=0
+    
+  }
+  # on reprend le dernier elo (1500 si pas d'historique)
+  
+  elo_p1=ifelse(is.na(last_elo_p1)==T,1500,last_elo_p1-(penalty_p1*100)) # Si pas de elo on met 1500
+  
+  elo_p2=ifelse(is.na(last_elo_p2)==T,1500,last_elo_p2-(penalty_p2*100))
+  
+  proba_p1 <- 1 / (1 + 10 ^ ((elo_p2 - elo_p1)/400)) # calcul des probas données par le Elo
+  proba_p2 <- 1 / (1 + 10 ^ ((elo_p1 - elo_p2)/400)) 
+  
+  rating=function(elo_p){
+    
+    rating=1+ 18/(1+(2^((elo_p-1500)/100)))
+    
+    return(rating)
+  }
+  
+  k_p1=32*Sets_adjust*Round_adjust*Walkover*rating(elo_p1)
+  k_p2=32*Sets_adjust*Round_adjust*Walkover*rating(elo_p2)
+  
+  # dummy pour calculer le nouveau elo
+  s_p1=1 
+  s_p2=0
+  
+  elo_p1_new=elo_p1+(k_p1)*(s_p1-proba_p1)
+  
+  elo_p2_new=elo_p2+(k_p2)*(s_p2-proba_p2)
+  
+  # tournament$Elo_W_prec[i]=round(elo_p1,2)
+  # tournament$Elo_L_prec[i]=round(elo_p2,2)
+  
+  
+  tournament$Elo_W[i]=round(elo_p1,1)
+  
+  tournament$Elo_L[i]=round(elo_p2,1)
+  
+  tournament$Elo_W_NEW[i]=round(elo_p1_new,1)
+  
+  tournament$Elo_L_NEW[i]=round(elo_p2_new,1)
+  
+  #print(i)
+  pb$tick()
+}
+
+
+tournament=tournament %>% 
+  select(Categorie,Season,Week_tournament,tournament,Round,Date,N_match,Surface_tournament,info,
+         Winner_id,Loser_id,Elo_W_NEW,Elo_L_NEW)
+
+categorie=case_when(categorie %in% c("Grand Slam","Olympics","Masters")~"major",
+                    categorie=="ATP 1000"~"ATP_1000",
+                    categorie %in% c("ATP 500","Team")~"ATP_500",
+                    categorie=="ATP 250"~"ATP_250")
+  
+assign(paste0("ELO_RATING_",toupper(categorie)),tournament)
+
+save(list = paste0("ELO_RATING_", toupper(categorie)),
+     file=paste0(here(),"/Scrapping tennis data/Rank/ELO_RATING_",toupper(categorie),".RData"),
+     compress = "xz")

@@ -202,8 +202,8 @@ V_RANK=V_RANK %>%
   rename("Player_name"="Player name") %>% 
   mutate(Week_Rank = sapply(Date, get_tennis_week))
 
-save(V_RANK,file=paste0(here(),"/Scrapping tennis data/ML_engenering/V_RANK.RData"),
-     compress="xz")
+# save(V_RANK,file=paste0(here(),"/Scrapping tennis data/ML_engenering/V_RANK.RData"),
+#      compress="xz")
 
 rm(rank)
 rm(V_TOURNAMENT_INFO)
@@ -280,6 +280,9 @@ V_MATCH_t = V_MATCH_t %>%
   select(-CLE_LIGNE)
 
 V_MATCH_t = as.data.table(V_MATCH_t)
+
+save(V_MATCH_t,file=paste0(here(),"/Scrapping tennis data/ML_engenering/V_MATCH_t.RData"),
+     compress="xz")
 
 save(V_MATCH_HIST,file=paste0(here(),"/Scrapping tennis data/ML_engenering/V_MATCH_HIST.RData"),
      compress="xz")

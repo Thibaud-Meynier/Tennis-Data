@@ -7,15 +7,17 @@ conflicts_prefer(dplyr::between)
 conflicts_prefer(dplyr::filter)
 conflicts_prefer(sjmisc::is_empty)
 
-surface=c(s)
+categorie=c(c)
+
+categorie <- gsub(" ", "_", categorie)
 
 year=2026
 
-load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING_",toupper(surface),".RData"))
+load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING_",toupper(categorie),".RData"))
 
-ELO_RATING=get(paste0("ELO_RATING_",toupper(surface)))
+ELO_RATING=get(paste0("ELO_RATING_",toupper(categorie)))
 
-rm(list=paste0("ELO_RATING_",toupper(surface)))
+rm(list=paste0("ELO_RATING_",toupper(categorie)))
 
 load(paste0(getwd(),"/Scrapping tennis data/Extraction/ATP_",year,"_Extraction.RData"))
 
@@ -59,12 +61,20 @@ V_MATCH=V_MATCH %>%
                                       Surface_tournament=="indoors"~"Indoors",
                                       TRUE~Surface_tournament))
 
-if (s=="Indoors"){
-  surface=c("Indoors","Various")
-}else{
-  surface=s
-}
+cat_mapping <- list(
+  major    = c("Grand Slam", "Olympics", "Masters"),
+  ATP_500  = c("ATP 500", "Team"),
+  ATP_1000 = c("ATP 1000"),
+  ATP_250  = c("ATP 250")
+)
 
+cat_key <- if (categorie %in% names(cat_mapping)) {
+  # categorie est déjà une clé ("major", "ATP_1000"...)
+  categorie
+} else {
+  # categorie est une valeur ("Grand Slam", "ATP 1000"...)
+  names(Filter(function(x) categorie %in% x, cat_mapping))
+}
 
 # Def du périmètre pour MAJ 
 
@@ -72,7 +82,7 @@ max_date=max(ELO_RATING$Date)
 
 tournament=V_MATCH %>% 
   filter(Phase=="Main Draw" & Date>max_date) %>% 
-  filter(if(length(surface) == 1 && surface == "all") TRUE else Surface_tournament %in% surface) %>% 
+  filter(if(length(Categorie) == 1 && Categorie == "all") TRUE else Categorie %in% cat_mapping[[cat_key]]) %>% 
   arrange(Date,tournament,desc(N_match),Season)
 
 if (nrow(tournament)>0){
@@ -187,6 +197,15 @@ for (i in first_row:nrow(tournament)){
                          ifelse(Round == "SF", 0.9,
                                 ifelse(Round == "QF", 0.8, 0.7)))
   
+  Sets_adjust = case_when(
+    categorie == "Grand Slam" & Sets == 3 ~ 0.70,
+    categorie == "Grand Slam" & Sets == 4 ~ 0.85,
+    categorie == "Grand Slam"             ~ 1.00,  # Sets == 5
+    categorie != "Grand Slam" & Sets == 3 ~ 1.00,
+    categorie != "Grand Slam"             ~ 0.90,  # Sets == 4 (best of 3, pas de 5 sets hors GC)
+    TRUE                          ~ NA_real_
+  )
+  
   Walkover=ifelse(row$info=="Completed",1,0.5)
   
   penalty=function(diff_date){
@@ -204,7 +223,7 @@ for (i in first_row:nrow(tournament)){
   
   penalty_p2=penalty(dday_p2)*covid
   
-  if (length(surface) != 1|(length(surface) == 1 && surface!="all")){
+  if (length(categorie) != 1|(length(categorie) == 1 && categorie!="all")){
     
     penalty_p1=0
     
@@ -227,25 +246,8 @@ for (i in first_row:nrow(tournament)){
     return(rating)
   }
   
-  # Prime de GC
-  
-  level=ifelse(is.na(row$Categorie) | grepl("Challenger", row$Categorie, ignore.case = TRUE), 0.65,
-               ifelse(row$Categorie == "Grand Slam", 1,
-                      ifelse(row$Categorie %in% c("Olympics", "Masters"), 0.95,
-                             ifelse(row$Categorie == "ATP 1000", 0.9,
-                                    ifelse(row$Categorie %in% c("ATP 500", "Team"), 0.8,
-                                           ifelse(row$Categorie == "ATP 250", 0.7, 0.65)
-                                    )
-                             )
-                      )
-               )
-  )
-  
-  # k_p1=250/((count_match_p1+5)^0.4)*level*Round_adjust*Walkover*rating(elo_p1) # calcul du facteur k pour chaque joueur
-  # k_p2=250/((count_match_p2+5)^0.4)*level*Round_adjust*Walkover*rating(elo_p2)
-  
-  k_p1=32*level*Round_adjust*Walkover*rating(elo_p1)
-  k_p2=32*level*Round_adjust*Walkover*rating(elo_p2)
+  k_p1=32*Sets_adjust*Round_adjust*Walkover*rating(elo_p1)
+  k_p2=32*Sets_adjust*Round_adjust*Walkover*rating(elo_p2)
   
   # dummy pour calculer le nouveau elo
   s_p1=1 
@@ -255,13 +257,9 @@ for (i in first_row:nrow(tournament)){
   
   elo_p2_new=elo_p2+(k_p2)*(s_p2-proba_p2)
   
-  # tournament$Elo_W_prec[i]=round(elo_p1,2)
-  # tournament$Elo_L_prec[i]=round(elo_p2,2)
+  tournament$Elo_W[i]=round(elo_p1,1)
   
-  
-  # tournament$Elo_W[i]=round(elo_p1,1)
-  # 
-  # tournament$Elo_L[i]=round(elo_p2,1)
+  tournament$Elo_L[i]=round(elo_p2,1)
   
   tournament$Elo_W_NEW[i]=round(elo_p1_new,1)
   
@@ -273,12 +271,10 @@ for (i in first_row:nrow(tournament)){
 
 tournament=tournament %>% select(-ETAT)
 
-surface=s
+assign(paste0("ELO_RATING_",toupper(categorie)),tournament)
 
-assign(paste0("ELO_RATING_",toupper(surface)),tournament)
-
-save(list = paste0("ELO_RATING_", toupper(surface)),
-     file=paste0(here(),"/Scrapping tennis data/Rank/ELO_RATING_",toupper(surface),".RData"),
+save(list = paste0("ELO_RATING_", toupper(categorie)),
+     file=paste0(here(),"/Scrapping tennis data/Rank/ELO_RATING_",toupper(categorie),".RData"),
      compress = "xz")
 
 }else{

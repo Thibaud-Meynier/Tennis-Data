@@ -32,9 +32,9 @@ V_RANK = V_RANK %>% filter(Year<year) %>% bind_rows(rank)
 save(V_RANK,file=paste0(here(),"/Scrapping tennis data/ML_engenering/V_RANK.RData"),
      compress="xz")
 
-#date_max = max(V_MATCH_HIST$Date)
+date_max = max(V_MATCH_HIST$Date)
 
-date_max = as.Date("2026-04-19")
+#date_max = as.Date("2026-04-19")
   
 table_stock_new = table_stock %>% 
   filter(Date>date_max) %>% 

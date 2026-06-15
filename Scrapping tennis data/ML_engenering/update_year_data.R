@@ -3,6 +3,7 @@ conflicts_prefer(lubridate::month)
 conflicts_prefer(lubridate::isoweek)
 conflicts_prefer(lubridate::year)
 
+
 year=2026
 
 source(paste0(getwd(),"/Scrapping tennis data/exclusion tournament.R"))
@@ -134,7 +135,7 @@ for (i in date){
   rank_new=rank_new %>% 
     mutate(Date=as.Date(i),
            Year=year,
-           Week=week(as.Date(i)))
+           Week=isoweek(as.Date(i)))
   
   rank <- rbind(rank, rank_new)
   
@@ -254,6 +255,11 @@ list_scrap <- list_scrap %>%
 
 list_scrap=list_scrap %>% 
   mutate(Categorie=paste(Categorie,ifelse(is.na(Points_tournament)==T,"",Points_tournament)))
+# 
+# V_TOURNAMENT_F = list_scrap
+# 
+# V_TOURNAMENT_F = V_TOURNAMENT_F %>% 
+#   mutate(Categorie = case_when(tournament=="French Open"~"ATP 2000",TRUE~Categorie))
 
 V_TOURNAMENT_F=rbind(V_TOURNAMENT_F,list_scrap)
 

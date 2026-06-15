@@ -96,6 +96,13 @@ tournament=ELO_RATING %>% bind_rows(tournament)
 
 first_row <- which(tournament$ETAT == "UPDATE")[1]
 
+pb= progress_bar$new(
+  format = "[:bar] :current/:total (:percent) ETA: :eta",
+  total = (nrow(tournament)-first_row+1),
+  clear = FALSE,
+  width = 60
+)
+
 ##### ELO_RATING_UPDATE #####
 
 for (i in first_row:nrow(tournament)){
@@ -260,7 +267,9 @@ for (i in first_row:nrow(tournament)){
   
   tournament$Elo_L_NEW[i]=round(elo_p2_new,1)
   
-  print(i)
+  #print(i)
+  
+  pb$tick()
 }
 
 tournament=tournament %>% select(-ETAT)
