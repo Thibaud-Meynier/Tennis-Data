@@ -30,11 +30,7 @@ proba_calcul=function(elo_p1,elo_p2){
   return(proba)
 }
 
-p1=0.34
-
-p2=0.33
-
-p3=0.33
+p=0.5
 
 TABLE = V_MATCH_t %>% 
   mutate(
@@ -108,7 +104,7 @@ TABLE = V_MATCH_t %>%
     P_c_F = proba_calcul(Elo_c_F,Elo_c_O),
     P_O = 1-P_F,
     P_s_O = 1-P_s_F,
-    P_F_comb=(p1 * P_s_F) + (p2 * P_F) + (p3 * P_c_F),
+    P_F_comb=(p * P_s_F) + ((1-p) * P_F),
     
     # H2H - Historique complet
     
@@ -485,6 +481,11 @@ TABLE_ML_DIFF=TABLE %>%
     Diff_Hand_Score = Hand_Score_F - Hand_Score_O,
     Diff_Country_score = Country_F_score - Country_O_score,
     
+    Diff_Points_log = log(Points_F) - log(Points_O),
+    Diff_Age_log = log(Age_F) - log(Age_O),
+    Diff_IMC_log = log(IMC_F) - log(IMC_O),
+    Diff_Size_log = log(Size_F) - log(Size_O),
+    Diff_Weight_log = log(Weight_F) - log(Weight_O),
     # --- DIFFÉRENCES - ELO & Probabilités ---
     Diff_Elo = Elo_F - Elo_O,
     Diff_Elo_s = Elo_s_F - Elo_s_O,
