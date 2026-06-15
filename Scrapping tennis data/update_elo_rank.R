@@ -4,6 +4,10 @@ load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING_GRASS.RData"))
 load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING_HARD.RData"))
 load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING_INDOORS.RData"))
 load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING.RData"))
+load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING_MAJOR.RData"))
+load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING_ATP_1000.RData"))
+load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING_ATP_500.RData"))
+load(paste0(getwd(),"/Scrapping tennis data/Rank/ELO_RATING_ATP_250.RData"))
 load("~/work/Tennis-Data/Scrapping tennis data/Rank/ELO_RATING_PLAYERS.RData")
 
 ELO_RATING_G=ELO_RATING %>% 
@@ -25,6 +29,26 @@ ELO_RATING_G=ELO_RATING %>%
   left_join(ELO_RATING_INDOORS %>% 
               rename(Elo_W_NEW_INDOORS=Elo_W_NEW,
                      Elo_L_NEW_INDOORS=Elo_L_NEW) %>% 
+              select(-c(Categorie,Surface_tournament,N_match,info)),
+            by=c("tournament","Round","Week_tournament","Date","Season","Winner_id","Loser_id")) %>% 
+  left_join(ELO_RATING_MAJOR %>% 
+              rename(Elo_W_NEW_MAJOR=Elo_W_NEW,
+                     Elo_L_NEW_MAJOR=Elo_L_NEW) %>% 
+              select(-c(Categorie,Surface_tournament,N_match,info)),
+            by=c("tournament","Round","Week_tournament","Date","Season","Winner_id","Loser_id")) %>% 
+  left_join(ELO_RATING_ATP_1000 %>% 
+              rename(Elo_W_NEW_ATP_1000=Elo_W_NEW,
+                     Elo_L_NEW_ATP_1000=Elo_L_NEW) %>% 
+              select(-c(Categorie,Surface_tournament,N_match,info)),
+            by=c("tournament","Round","Week_tournament","Date","Season","Winner_id","Loser_id")) %>% 
+  left_join(ELO_RATING_ATP_500 %>% 
+              rename(Elo_W_NEW_ATP_500=Elo_W_NEW,
+                     Elo_L_NEW_ATP_500=Elo_L_NEW) %>% 
+              select(-c(Categorie,Surface_tournament,N_match,info)),
+            by=c("tournament","Round","Week_tournament","Date","Season","Winner_id","Loser_id")) %>% 
+  left_join(ELO_RATING_ATP_250 %>% 
+              rename(Elo_W_NEW_ATP_250=Elo_W_NEW,
+                     Elo_L_NEW_ATP_250=Elo_L_NEW) %>% 
               select(-c(Categorie,Surface_tournament,N_match,info)),
             by=c("tournament","Round","Week_tournament","Date","Season","Winner_id","Loser_id")) %>% 
   group_by(tournament,Round,Week_tournament,Date,Season,Winner_id,Loser_id) %>% 
@@ -68,9 +92,9 @@ adjust_to_last_sunday <- function(dates) {
 
 #player_name="Djokovic Novak"
 
-elo_players=function(player_name,df){
+elo_players=function(player_name){
   
-  ELO_PLAYER=df %>% 
+  ELO_PLAYER=ELO_RATING_G %>% 
     filter(Winner_id==player_name|Loser_id==player_name) %>% 
     mutate(Player_name=player_name) %>% 
     mutate(Elo_player=case_when(Winner_id==player_name~Elo_W_NEW,
@@ -82,12 +106,21 @@ elo_players=function(player_name,df){
            Elo_player_grass=case_when(Winner_id==player_name~Elo_W_NEW_GRASS,
                                       TRUE~Elo_L_NEW_GRASS),
            Elo_player_indoors=case_when(Winner_id==player_name~Elo_W_NEW_INDOORS,
-                                        TRUE~Elo_L_NEW_INDOORS)) %>% 
+                                        TRUE~Elo_L_NEW_INDOORS),
+           Elo_player_major=case_when(Winner_id==player_name~Elo_W_NEW_MAJOR,
+                                      TRUE~Elo_L_NEW_MAJOR),
+           Elo_player_atp_1000=case_when(Winner_id==player_name~Elo_W_NEW_ATP_1000,
+                                         TRUE~Elo_L_NEW_ATP_1000),
+           Elo_player_atp_500=case_when(Winner_id==player_name~Elo_W_NEW_ATP_500,
+                                        TRUE~Elo_L_NEW_ATP_500),
+           Elo_player_atp_250=case_when(Winner_id==player_name~Elo_W_NEW_ATP_250,
+                                        TRUE~Elo_L_NEW_ATP_250)) %>% 
     
     mutate(Round = factor(Round, levels=c("-", "1R", "2R", "3R", "R16", "QF", "SF", "F"),ordered = TRUE)) %>% 
     ungroup() %>% 
     select(Player_name,Season,tournament,Date,Week_tournament,Round,
-           Elo_player,Elo_player_hard,Elo_player_clay,Elo_player_grass,Elo_player_indoors) %>% 
+           Elo_player,Elo_player_hard,Elo_player_clay,Elo_player_grass,Elo_player_indoors,
+           Elo_player_major,Elo_player_atp_1000,Elo_player_atp_500,Elo_player_atp_250) %>% 
     group_by(Player_name,Season,tournament) %>% 
     arrange(desc(Date), desc(Round)) %>%
     mutate(ORDRE_DESC_ELO = row_number()) %>% 
@@ -102,6 +135,7 @@ elo_players=function(player_name,df){
   
   return(ELO_PLAYER)
 }
+
 
 pb <- progress_bar$new(
   format = "[:bar] :current/:total (:percent) ETA: :eta",
