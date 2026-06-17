@@ -90,6 +90,7 @@ invisible(capture.output(suppressPackageStartupMessages({
     library(parallel)
     library(furrr)
     library(future)
+    library(rstudioapi)
   })
 }))
 )

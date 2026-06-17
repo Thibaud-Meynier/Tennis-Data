@@ -42,8 +42,9 @@ invisible(capture.output(suppressPackageStartupMessages({
 }))
 )
 
-dir.create(paste0(here(),"/Scrapping tennis data/ML_engenering/forward_selection"),
-           showWarnings = F)
+dir.create(paste0(here(), "/Scrapping tennis data/ML_engenering/forward_selection/", scope, "/", metric),
+           showWarnings = TRUE, 
+           recursive = TRUE)
 
 Start=Sys.time()
 
@@ -55,4 +56,4 @@ res_fs <- forward_selection(train, test, candidates,
 
 Sys.time()-Start
 
-saveRDS(res_fs,file=paste0(here(),"/Scrapping tennis data/ML_engenering/forward_selection/result_",model,".rds"))
+saveRDS(res_fs,file=paste0(here(),"/Scrapping tennis data/ML_engenering/forward_selection/",scope,"/",metric,"/","result_",model,".rds"))

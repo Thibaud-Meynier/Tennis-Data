@@ -2,7 +2,7 @@
 # FORWARD SELECTION GÉNÉRIQUE - MULTI-MODÈLE
 # ============================================================
 
-scope="Global"
+scope="Major"
 
 load(paste0(here(),"/Scrapping tennis data/ML_engenering/TABLE_MOMENTUM.RData"))
 
@@ -47,10 +47,10 @@ candidates <- c( "P_F",
                  "Diff_Win_Rate_12",
                  "Diff_Win_Rate_52",
                  "Diff_Win_Rate_s_52",
-                 "Major",
-                 "ATP_1000",
-                 "ATP_250",
-                 "ATP_500",
+                 # "Major",
+                 # "ATP_1000",
+                 # "ATP_250",
+                 # "ATP_500",
                  "Round_R1",
                  "Round_R2",
                  "Round_R3",
@@ -563,13 +563,13 @@ backward_elimination <- function(train, test,
 
 # --- 4. TEST --------------------------------------
 
-model = "elasticnet"
+model = "lda"
 
 metric = "accuracy"
 
 forced_vars =  c("P_F", "P_s_F","Diff_Final","Diff_Run","Diff_Q","Diff_Rank_evol")
 
-forward_selection(train,test,candidates,forced_vars,"Issue",model,metric)
+#forward_selection(train,test,candidates,forced_vars,"Issue",model,metric)
 
 jobRunScript(
   path      = paste0(here(),"/Scrapping tennis data/ML_engenering/fs_job.R"),
@@ -578,7 +578,7 @@ jobRunScript(
 )
 
 
-backward_elimination(train,test,candidates,forced_vars,"Issue","random_forest","accuracy")
+# backward_elimination(train,test,candidates,forced_vars,"Issue","random_forest","accuracy")
 
 
 
@@ -586,13 +586,13 @@ backward_elimination(train,test,candidates,forced_vars,"Issue","random_forest","
 
 # ---- Modèles à optimiser ----
 
-models_to_run <- c( "random_forest","xgboost", "lightgbm", "knn","nnet",
+models_to_run <- c("random_forest","xgboost", "lightgbm", "knn","nnet",
                     "lasso", "ridge", "elasticnet","lda","naive_bayes","logistic")
 
 
 #models_to_run= c("elasticnet","xgboost","lightgbm")
 
-forced_vars = c("P_F", "P_s_F","Diff_Rank_evol","Diff_Q") 
+forced_vars = c("P_F", "P_s_F","Diff_Rank_evol","Diff_Q","Diff_Final") 
 
 #forced_vars = c()
 
@@ -684,7 +684,7 @@ model_list=c(model_list,"P_F_market")
 
 # Comparer tous les modèles
 all_metrics <- bind_rows(lapply(model_list, function(m) {
-  res <- model_metrics(test_pred, prob_col = m, truth_col = "Issue", by_category = F)
+  res <- model_metrics(test_pred, prob_col = m, truth_col = "Issue", by_category = T)
   
   res$global %>%
     bind_rows(res$by_category) %>%
@@ -692,7 +692,7 @@ all_metrics <- bind_rows(lapply(model_list, function(m) {
 })) %>%
   arrange(Modele, Scope)
 
-print(all_metrics %>% arrange(Scope,desc(Accuracy)))
+print(all_metrics %>% arrange(Scope,desc(Accuracy)) %>% filter(Scope=="Global"))
 
 save(all_metrics,file=paste0(here(),"/Scrapping tennis data/ML_engenering/forward_selection/",scope,"/Models_Metrics_",scope,".RData"))
 
