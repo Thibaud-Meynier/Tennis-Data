@@ -887,7 +887,8 @@ Test = TABLE_MOMENTUM %>%
       list(
         Player_name = Favori,
         Date_match  = Date,
-        Categ = Categorie
+        Categ = Categorie,
+        lag = 365*3
       ),
       get_player_win_rate
     ) ,
@@ -896,7 +897,8 @@ Test = TABLE_MOMENTUM %>%
       list(
         Player_name = Outsider,
         Date_match  = Date,
-        Categ = Categorie
+        Categ = Categorie,
+        lag = 365*3
       ),
       get_player_win_rate
     ) ,
@@ -905,7 +907,8 @@ Test = TABLE_MOMENTUM %>%
       list(
         Player_name = Favori,
         Date_match  = Date,
-        Surf = Surface_tournament
+        Surf = Surface_tournament,
+        lag = 365*3
       ),
       get_player_win_rate_surface
     ) ,
@@ -914,7 +917,8 @@ Test = TABLE_MOMENTUM %>%
       list(
         Player_name = Outsider,
         Date_match  = Date,
-        Surf = Surface_tournament
+        Surf = Surface_tournament,
+        lag = 365*3
       ),
       get_player_win_rate_surface
     ) ,

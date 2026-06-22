@@ -377,7 +377,7 @@ match_count <- function(df, player_id, lag_week, surface, Date_match,tournoi,Cat
 
 ##### INFO ON PLAYERS #####
 
-get_player_win_rate = function(Player_name,Date_match,Categ){
+get_player_win_rate = function(Player_name,Date_match,Categ,lag){
   
   Date_match=as.Date(Date_match)
   
@@ -386,7 +386,9 @@ get_player_win_rate = function(Player_name,Date_match,Categ){
              (Categorie %in% c("Grand Slam", "Olympics", "Masters",
                                "ATP 1000", "ATP 500", 'ATP 250') | 
                 tournament %in% c("Atp Cup", "United Cup"))) %>%  
-    filter((Winner_id == Player_name | Loser_id == Player_name) & Date < Date_match & Categorie==Categ) %>% 
+    filter((Winner_id == Player_name | Loser_id == Player_name) 
+           & Date < Date_match & Date>=(Date_match-lag)
+           & Categorie==Categ) %>% 
     group_by(Categorie) %>% 
     summarise(N=n(),
               PRCT_WIN=mean(Winner_id == Player_name,na.rm=T)*100
@@ -401,7 +403,7 @@ get_player_win_rate = function(Player_name,Date_match,Categ){
 #get_player_win_rate("Djokovic Novak","2025-12-31","Grand Slam")
 
 
-get_player_win_rate_surface = function(Player_name,Date_match,Surf){
+get_player_win_rate_surface = function(Player_name,Date_match,Surf,lag){
   
   Date_match=as.Date(Date_match)
   
@@ -412,7 +414,9 @@ get_player_win_rate_surface = function(Player_name,Date_match,Surf){
              (Categorie %in% c("Grand Slam", "Olympics", "Masters",
                                "ATP 1000", "ATP 500", 'ATP 250') | 
                 tournament %in% c("Atp Cup", "United Cup"))) %>%  
-    filter((Winner_id == Player_name | Loser_id == Player_name) & Date < Date_match & Surface_tournament==Surf) %>% 
+    filter((Winner_id == Player_name | Loser_id == Player_name) 
+           & Date < Date_match & Date>=(Date_match-lag)
+           & Surface_tournament==Surf) %>% 
     group_by(Surface_tournament) %>% 
     summarise(N=n(),
               PRCT_WIN=mean(Winner_id == Player_name,na.rm=T)*100
