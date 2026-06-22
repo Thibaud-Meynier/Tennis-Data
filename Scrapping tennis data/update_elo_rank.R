@@ -92,9 +92,9 @@ adjust_to_last_sunday <- function(dates) {
 
 #player_name="Djokovic Novak"
 
-elo_players=function(player_name){
+elo_players=function(player_name,df){
   
-  ELO_PLAYER=ELO_RATING_G %>% 
+  ELO_PLAYER=df %>% 
     filter(Winner_id==player_name|Loser_id==player_name) %>% 
     mutate(Player_name=player_name) %>% 
     mutate(Elo_player=case_when(Winner_id==player_name~Elo_W_NEW,

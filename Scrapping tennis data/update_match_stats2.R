@@ -824,6 +824,8 @@ source(paste0(getwd(),"/Scrapping tennis data/Stat function.R"))
 
 Start=Sys.time()
 
+TABLE_MOMENTUM = as.data.table(TABLE_MOMENTUM)
+
 # Initialisation des colonnes
 TABLE_MOMENTUM[, Fav_Q               := NA_character_]
 TABLE_MOMENTUM[, Out_Q               := NA_character_]

@@ -200,7 +200,7 @@ V_MATCH_t=V_MATCH_t %>%
   filter(CLE_LIGNE==1) %>% 
   select(-CLE_LIGNE)
 
-categorie=c("Grand Slam","Olympics","Masters")
+categorie=c("ATP 500","Team")
 
 tournament=V_MATCH_t %>% 
   filter(Phase=="Main Draw") %>% 

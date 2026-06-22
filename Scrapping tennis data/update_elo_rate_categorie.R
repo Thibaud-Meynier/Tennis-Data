@@ -83,7 +83,9 @@ max_date=max(ELO_RATING$Date)
 tournament=V_MATCH %>% 
   filter(Phase=="Main Draw" & Date>max_date) %>% 
   filter(if(length(Categorie) == 1 && Categorie == "all") TRUE else Categorie %in% cat_mapping[[cat_key]]) %>% 
-  arrange(Date,tournament,desc(N_match),Season)
+  arrange(Date,tournament,desc(N_match),Season) %>% 
+  mutate(Sets=Score_W+Score_L) %>% 
+  ungroup()
 
 if (nrow(tournament)>0){
   
@@ -92,7 +94,18 @@ tournament$Elo_W_NEW=NA
 tournament$Elo_L_NEW=NA
 
 tournament=tournament %>% 
-  select(colnames(ELO_RATING))
+  select(Categorie,
+         Season,
+         Week_tournament,
+         tournament,
+         Round,
+         Date,
+         Sets,
+         N_match,
+         Surface_tournament,
+         info,
+         Winner_id,
+         Loser_id)
 
 #ELO_RATING=ELO_RATING %>% filter(Season<=2025)
 
@@ -130,6 +143,10 @@ for (i in first_row:nrow(tournament)){
   n_match=row$N_match
   
   Round=row$Round
+  
+  Sets=row$Sets
+  
+  categorie=row$Categorie
   
   info=row$info
   

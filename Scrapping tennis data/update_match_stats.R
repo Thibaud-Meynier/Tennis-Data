@@ -234,7 +234,7 @@ plan(multisession, workers = 10)
 
 with_progress({
   
-  p <- progressor(steps = nrow(V_MATCH_t %>% filter(Date>max_date)))
+  p <- progressor(steps = nrow(V_MATCH_final %>% filter(Date>max_date)))
   
   V_MATCH_final_new <- future_map_dfr(year_list, function(y) {
     

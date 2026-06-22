@@ -736,7 +736,7 @@ evol_rank=function(Player,Date_match,lag){
 
 # evol_rank("Tsitsipas Stefanos",as.Date("2026-03-30"),365)
 
-diff_best_rank = function(Player, Date_match) {
+best_rank = function(Player, Date_match, rank = FALSE) {
   
   week = get_tennis_week(Date_match)
   
@@ -748,22 +748,32 @@ diff_best_rank = function(Player, Date_match) {
     Rank_player = as.numeric(Rank_player$Rank)
   } else {
     Rank_player = 1000
+    
+    Points_player = 10
   }
   
   # Meilleur classement historique (jusqu'à la date du match incluse)
   Best_rank_player = V_RANK %>%
     filter(Player_name == Player & Week_Rank <= week) %>%
-    summarise(best = min(as.numeric(Rank), na.rm = TRUE)) %>%
-    pull(best)
+    summarise(best_rank = min(as.numeric(Rank), na.rm = TRUE),
+              max_points = max(as.numeric(Points)))
   
   if (length(Best_rank_player) == 0 || is.infinite(Best_rank_player)) {
     Best_rank_player = 1000
+    
+    Max_points_player = 10
   }
   
-  # Différence : positif = le joueur est moins bien classé qu'à son meilleur niveau
-  Diff_Best_Rank = Rank_player - Best_rank_player
-  
-  return(Diff_Best_Rank)
+  if (rank==TRUE){
+    
+    return(Best_rank_player %>% pull(best_rank))
+    
+  }else{
+    
+    return(Best_rank_player %>% pull(max_points))
+    
+  }
+
 }
 
 
