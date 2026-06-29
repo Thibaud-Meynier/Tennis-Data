@@ -675,6 +675,8 @@ TABLE_ML_DIFF=TABLE %>%
     Diff_Hand_Score,
     Diff_Country_score,
     
+    Points_F,
+    Points_O,
     Diff_Points_log,
     Diff_Age_log,
     Diff_IMC_log,
@@ -821,7 +823,7 @@ load(paste0(getwd(),"/Scrapping tennis data/ML_engenering/V_MATCH_HIST.RData"))
 
 load(paste0(getwd(),"/Scrapping tennis data/ML_engenering/V_RANK.RData"))
 
-plan(multisession, workers = 25)
+plan(multisession, workers = 15)
 
 rm(list=setdiff(ls(),c("V_MATCH_HIST","TABLE_MOMENTUM","V_RANK")))
 
@@ -959,20 +961,22 @@ Test = TABLE_MOMENTUM %>%
       evol_rank
     ),
     
-    Fav_Diff_from_best = future_pmap_dbl(
+    Fav_Max_Points = future_pmap_dbl(
       list(
         Player = Favori,
-        Date_match  = Date
+        Date_match  = Date,
+        rank=FALSE
       ),
-      diff_best_rank
+      best_rank
     ),
    
-    Out_Diff_from_best = future_pmap_dbl(
+    Out_Max_Points = future_pmap_dbl(
       list(
         Player = Outsider,
-        Date_match  = Date
+        Date_match  = Date,
+        rank=FALSE
       ),
-      diff_best_rank
+      best_rank
     )
   )
 
@@ -1004,7 +1008,9 @@ TABLE_MOMENTUM=Test %>%
          Diff_WR = coalesce(Fav_WR_career,0) - coalesce(Out_WR_career,0),
          Diff_WR_Surface = coalesce(Fav_WR_career_surface,0) - coalesce(Out_WR_career_surface,0),
          Diff_Rank_evol = coalesce(Fav_rank_progression,0) - coalesce(Out_rank_progression,0),
-         Diff_From_Max = coalesce(Fav_Diff_from_best,0) - coalesce(Out_Diff_from_best,0),
+         Diff_From_max_Points_Fav = coalesce(Points_F-ifelse(Fav_Max_Points==-Inf,10,Fav_Max_Points),0),
+         Diff_From_max_Points_Out = coalesce(Points_O-ifelse(Out_Max_Points==-Inf,10,Out_Max_Points),0),
+         Diff_From_Max=Diff_From_max_Points_Fav-Diff_From_max_Points_Out,
          
          Mom_Q = sign(Diff_Q),
          Mom_Giant_Kill = sign(Diff_Giant_Kill),
@@ -1028,7 +1034,8 @@ TABLE_MOMENTUM=Test %>%
             "Fav_best_run" ,"Out_best_run",
             "Fav_Q","Out_Q",
             "Fav_Giant_Killer","Out_Giant_Killer",
-            "Fav_is_finalist","Out_is_finalist"))
+            "Fav_is_finalist","Out_is_finalist",
+            "Diff_From_max_Points_Fav","Diff_From_max_Points_Out"))
 
 closeAllConnections()
 

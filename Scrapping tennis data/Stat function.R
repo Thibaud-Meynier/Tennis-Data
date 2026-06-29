@@ -762,10 +762,10 @@ best_rank = function(Player, Date_match, rank = FALSE) {
     summarise(best_rank = min(as.numeric(Rank), na.rm = TRUE),
               max_points = max(as.numeric(Points)))
   
-  if (length(Best_rank_player) == 0 || is.infinite(Best_rank_player)) {
-    Best_rank_player = 1000
+  if (length(Best_rank_player) == 0 || is.infinite(Best_rank_player$best_rank) || is.infinite(Best_rank_player$max_points)) {
     
-    Max_points_player = 10
+    Best_rank_player <- tibble(best_rank = 1000, max_points = 10)
+    
   }
   
   if (rank==TRUE){
