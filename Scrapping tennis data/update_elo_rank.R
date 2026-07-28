@@ -58,6 +58,8 @@ ELO_RATING_G=ELO_RATING %>%
 
 ELO_RATING_G=as.data.table(ELO_RATING_G)
 
+ELO_RATING_PLAYERS = ELO_RATING_PLAYERS %>% filter(Date<"2026-06-29")
+
 date_max=max(ELO_RATING_PLAYERS$Date,na.rm = T)
 
 ELO_RATING_G_NEW=ELO_RATING_G %>% filter(Date>date_max)
