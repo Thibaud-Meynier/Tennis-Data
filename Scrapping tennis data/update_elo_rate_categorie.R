@@ -146,7 +146,7 @@ for (i in first_row:nrow(tournament)){
   
   Sets=row$Sets
   
-  categorie=row$Categorie
+  cat=row$Categorie
   
   info=row$info
   
@@ -215,11 +215,11 @@ for (i in first_row:nrow(tournament)){
                                 ifelse(Round == "QF", 0.8, 0.7)))
   
   Sets_adjust = case_when(
-    categorie == "Grand Slam" & Sets == 3 ~ 0.70,
-    categorie == "Grand Slam" & Sets == 4 ~ 0.85,
-    categorie == "Grand Slam"             ~ 1.00,  # Sets == 5
-    categorie != "Grand Slam" & Sets == 3 ~ 1.00,
-    categorie != "Grand Slam"             ~ 0.90,  # Sets == 4 (best of 3, pas de 5 sets hors GC)
+    cat == "Grand Slam" & Sets == 3 ~ 0.70,
+    cat == "Grand Slam" & Sets == 4 ~ 0.85,
+    cat == "Grand Slam"             ~ 1.00,  # Sets == 5
+    cat != "Grand Slam" & Sets == 3 ~ 1.00,
+    cat != "Grand Slam"             ~ 0.90,  # Sets == 4 (best of 3, pas de 5 sets hors GC)
     TRUE                          ~ NA_real_
   )
   
