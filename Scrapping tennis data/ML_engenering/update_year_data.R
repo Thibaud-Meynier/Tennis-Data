@@ -32,7 +32,7 @@ to_scrap <- list_new2$tournament[list_all_upper %in% diff_upper]
 
 to_scrap <- unique(to_scrap)
 
-to_scrap <- to_scrap[!to_scrap %in% c("Fujairah 2 chall.")]
+to_scrap <- to_scrap[!to_scrap %in% c("Fujairah 2 chall.","Montreal")]
 
 match_scrap=list_new2 %>% filter(tournament %in% to_scrap)
 

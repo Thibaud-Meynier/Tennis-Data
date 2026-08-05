@@ -169,7 +169,7 @@ for (i in model_list){
   temp=is_value(test_pred,i,margin=0) %>% 
     select(-c(P_F_pred,P_F_market,Ratio_Odd_O,Ratio_Odd_F,Signal)) %>% 
     filter(!is.na(Value)) %>% 
-    filter(between(Odd_played,1.35,4.5)) %>% 
+    filter(between(Odd_played,1.35,5)) %>% 
     mutate(
       Ratio_Bin = cut(
         Ratio_Value,
@@ -181,9 +181,9 @@ for (i in model_list){
       
       Odd_Bin = cut(
         Odd_played,
-        breaks = c(1, 1.35, 1.55, 1.70, 1.85, 2.00, 2.25, 2.60, 3.00, 3.50, 4.00, 4.50),
+        breaks = c(1, 1.35, 1.55, 1.70, 1.85, 2.00, 2.25, 2.60, 3.00, 3.50, 4.00, 4.50, 5),
         labels = c("1.01-1.35","1.35-1.55","1.55-1.70","1.70-1.85","1.85-2.00",
-                   "2.00-2.25","2.25-2.60","2.60-3.00","3.00-3.50","3.50-4.00","4.00-4.50"),
+                   "2.00-2.25","2.25-2.60","2.60-3.00","3.00-3.50","3.50-4.00","4.00-4.50","4.50-5.00"),
         right          = FALSE,
         include.lowest = TRUE
       )) %>% 

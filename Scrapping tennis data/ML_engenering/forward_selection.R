@@ -4,7 +4,7 @@
 
 surfaces <- c("Clay", "Hard", "Grass", "Indoors")
 
-scope="Clay"
+scope="ATP 250"
 
 load(paste0(here(),"/Scrapping tennis data/ML_engenering/TABLE_MOMENTUM.RData"))
 
@@ -25,11 +25,11 @@ candidates <- c( "P_F",
                  "Diff_Giant_Kill",
                  "Diff_Run",
                  "Diff_Final",
-                 "Diff_Points",
-                 "Diff_Points_log",
-                 "Diff_Rank",
-                 "Diff_Rank_Class",
-                 "Diff_Score_Rank",
+                 #"Diff_Points",
+                 #"Diff_Points_log",
+                 #"Diff_Rank",
+                 #"Diff_Rank_Class",
+                 #"Diff_Score_Rank",
                  "Diff_From_Max",
                  "Diff_Rank_evol",
                  "Mom_Statut",
@@ -257,7 +257,7 @@ evaluate_model <- function(train, test, features, target = "Issue", model_type =
       fit <- ranger(
         x           = as.data.frame(X_train),
         y           = as.factor(y_train),
-        num.trees   = 1000,           # réduit vs prod (500-1500) pour la vitesse
+        num.trees   = 500,           # réduit vs prod (500-1500) pour la vitesse
         probability = TRUE,
         num.threads = 15
       )
@@ -603,7 +603,7 @@ models_to_run <- c("random_forest","xgboost", "lightgbm", "knn","nnet",
 forced_vars = c("P_F", "P_s_F",
                 "Diff_Q","Diff_Final","Diff_Run","Diff_Rank_evol") 
 
-metric="logloss"
+metric="accuracy"
 
 for (model in models_to_run){
   
