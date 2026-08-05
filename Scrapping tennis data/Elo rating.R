@@ -250,7 +250,7 @@ for (i in 1:nrow(tournament)){
   
   count_match_p2=hist_p2 %>% nrow()
   
-  count_match_p2=ifelse(count_match_p1>=threshold,threshold,count_match_p2)
+  count_match_p2=ifelse(count_match_p2>=threshold,threshold,count_match_p2)
   
   # calcul des dummy pour le k factor
   

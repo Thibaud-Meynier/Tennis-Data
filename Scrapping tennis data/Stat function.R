@@ -592,6 +592,8 @@ last_elo=function(base,player_name,surface="all",Date_match,tournoi){
       mutate(ORDRE_ELO=row_number()) %>%
       filter(ORDRE_ELO==1) %>%
       select(Player_name,tournament,Date,Elo_player_hard)
+    
+    return(elo_player)
 
 
   }
@@ -648,8 +650,6 @@ last_elo2=function(base,player_name,categorie="all",Date_match,tournoi){
     
     return(elo_player)
     
-    return(elo_player)
-    
   }else if (categorie %in% c("ATP 500","Team")){
     
     elo_player=base %>%
@@ -660,6 +660,7 @@ last_elo2=function(base,player_name,categorie="all",Date_match,tournoi){
       filter(ORDRE_ELO==1) %>%
       select(Player_name,tournament,Date,Elo_player_atp_500)
     
+    return(elo_player)
     
   }
   else{
